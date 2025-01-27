@@ -57,3 +57,36 @@ void closeMap() {
     //Clean-up your map related data structures here
     
 }
+
+double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){return 0;}
+
+double findStreetSegmentLength(StreetSegmentIdx street_segment_id){return 0;}
+
+double findStreetSegmentTravelTime(StreetSegmentIdx street_segment_id){return 0;}
+
+double findStreetSegmentTurnAngle(StreetSegmentIdx src_street_segment_id,
+                                  StreetSegmentIdx dst_street_segment_id){return 0;}
+
+std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersection_id){return new vector();}
+
+IntersectionIdx findClosestIntersection(LatLon my_position){return 0;}
+
+std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection(IntersectionIdx intersection_id){return new vector();}
+
+std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id)
+{return new vector();}
+std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(std::pair<StreetIdx, StreetIdx> street_ids){return new vector();}
+
+std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_prefix){return new vector();}
+
+double findStreetLength(StreetIdx street_id){return 0;}
+
+LatLonBounds findStreetBoundingBox (StreetIdx street_id){return NULL;}
+
+POIIdx findClosestPOI(LatLon my_position, std::string poi_type){return 0;}
+
+double findFeatureArea(FeatureIdx feature_id){return 0;}
+
+double findWayLength(OSMID way_id){return 0;}
+
+std::string getOSMNodeTagValue(OSMID osm_id, std::string key){return NULL;}

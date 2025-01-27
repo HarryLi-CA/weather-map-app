@@ -67,21 +67,21 @@ double findStreetSegmentTravelTime(StreetSegmentIdx street_segment_id){return 0;
 double findStreetSegmentTurnAngle(StreetSegmentIdx src_street_segment_id,
                                   StreetSegmentIdx dst_street_segment_id){return 0;}
 
-std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersection_id){return new vector();}
+std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersection_id){return {};}
 
 IntersectionIdx findClosestIntersection(LatLon my_position){return 0;}
 
-std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection(IntersectionIdx intersection_id){return new vector();}
+std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection(IntersectionIdx intersection_id){return {};}
 
-std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id)
-{return new vector();}
-std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(std::pair<StreetIdx, StreetIdx> street_ids){return new vector();}
+std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){return {};}
 
-std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_prefix){return new vector();}
+std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(std::pair<StreetIdx, StreetIdx> street_ids){return {};}
+
+std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_prefix){return {};}
 
 double findStreetLength(StreetIdx street_id){return 0;}
 
-LatLonBounds findStreetBoundingBox (StreetIdx street_id){return NULL;}
+LatLonBounds findStreetBoundingBox (StreetIdx street_id){return LatLonBounds();}
 
 POIIdx findClosestPOI(LatLon my_position, std::string poi_type){return 0;}
 

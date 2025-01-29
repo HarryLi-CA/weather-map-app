@@ -25,6 +25,7 @@
 #include "StreetsDatabaseAPI.h"
 #include <thread>
 #include <vector>
+#include <cmath>
 
 using namespace std;
 //cache vectors
@@ -88,7 +89,17 @@ void closeMap() {
     
 }
 
-double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){return 0;}
+double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
+    double x1, x2,y1,y2, xDif, yDif, latavg;
+    latavg = (point_1.latitude()+ point_2.latitude())/2;
+    x1 = kEarthRadiusInMeters * point_1.longitude() * cos(latavg);
+    x2 = kEarthRadiusInMeters * point_2.longitude() * cos(latavg);
+    y1 = kEarthRadiusInMeters * point_1.latitude();
+    y2 = kEarthRadiusInMeters * point_2.latitude();
+    xDif = x1-x2;
+    yDif = y1-y2;
+    return sqrt(xDif*xDif+yDif*yDif);
+}
 
 double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
     return 0;

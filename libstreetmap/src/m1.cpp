@@ -25,6 +25,7 @@
 #include "StreetsDatabaseAPI.h"
 #include <thread>
 #include <vector>
+#include <math.h>
 
 using namespace std;
 //cache vectors
@@ -91,6 +92,18 @@ void closeMap() {
 double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){return 0;}
 
 double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
+    cout << "oewijfowjiew" << endl;
+    StreetSegmentInfo street_seg_info = getStreetSegmentInfo(street_segment_id); //get street segment info
+    double street_segment_length = 0; //initialize total segment length to 0
+    //iterate through all curve points
+    LatLon from_curve_point = getStreetSegmentCurvePoint(street_segment_id,0); //get first curve point
+    LatLon to_curve_point; //initialize sequential curve point
+    for(int curve_point_index = 0; curve_point_index < street_seg_info.numCurvePoints - 1; curve_point_index++)
+    {
+        to_curve_point = getStreetSegmentCurvePoint(street_segment_id,curve_point_index+1); //calculate sequential curve point
+        street_segment_length += findDistanceBetweenTwoPoints(from_curve_point, to_curve_point); //add the curve segment length to the total
+        from_curve_point = to_curve_point; //set the next from point to the current to point, since the to point will be updated on the next iteration
+    }
     return 0;
 }
 

@@ -18,10 +18,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+ 
 #include <iostream>
 #include "m1.h"
+#include "loading_utils.h"
 #include "StreetsDatabaseAPI.h"
+#include <thread>
+#include <vector>
 
+using namespace std;
+//cache vectors
+
+//takes intersection segment index and returns vector of indices of all connected street segments
+vector<vector<StreetSegmentIdx>> connectedStreetSegments;
+//total number of intersections
+int num_intersections = 0;
 
 // loadMap will be called with the name of the file that stores the "layer-2"
 // map data accessed through StreetsDatabaseAPI: the street and intersection 
@@ -35,17 +46,36 @@
 // name of the ".osm.bin" file that matches your map -- just change 
 // ".streets" to ".osm" in the map_streets_database_filename to get the proper
 // name.
+
 bool loadMap(std::string map_streets_database_filename) {
     bool load_successful = false; //Indicates whether the map has loaded 
                                   //successfully
-
+    
     std::cout << "loadMap: " << map_streets_database_filename << std::endl;
 
     //
     // Load your map related data structures here.
     //
-
     
+    
+    num_intersections = getNumIntersections(); //load number of intersections once to avoid excessive calculations
+
+    vector<thread*> intersection_load_thread_queue; //array to keep track of all threads to wait for;
+    //load all the segment indices for each intersection index
+    for(IntersectionIdx intersection_index = 0; intersection_index < num_intersections; intersection_index++)
+    {
+        thread* loading_thread = new thread(loadIntersections,ref(connectedStreetSegments),ref(intersection_index)); //create a thread to load each data for each intersection
+        intersection_load_thread_queue.push_back(loading_thread);
+    }
+    //wait for all intersection threads
+    for(int threadIndex = 0; threadIndex < num_intersections; threadIndex++)
+    {
+        intersection_load_thread_queue[threadIndex]->join(); 
+        delete intersection_load_thread_queue[threadIndex];
+        cout << threadIndex << ": " << connectedStreetSegments[threadIndex].size() << endl;  
+    }
+
+    cout << "done!";
 
     load_successful = true; //Make sure this is updated to reflect whether
                             //loading the map succeeded or failed
@@ -60,7 +90,9 @@ void closeMap() {
 
 double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){return 0;}
 
-double findStreetSegmentLength(StreetSegmentIdx street_segment_id){return 0;}
+double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
+    return 0;
+}
 
 double findStreetSegmentTravelTime(StreetSegmentIdx street_segment_id){return 0;}
 

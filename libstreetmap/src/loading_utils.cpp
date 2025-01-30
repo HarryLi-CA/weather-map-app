@@ -3,13 +3,16 @@
 #include "StreetsDatabaseAPI.h"
 
 using namespace std;
-
-void loadIntersections(vector<vector<StreetSegmentIdx>>& connectedStreetSegments, IntersectionIdx& intersectionIndex)
+void loadIntersections(vector<vector<StreetSegmentIdx>*>& connectedStreetSegments, IntersectionIdx& intersectionIndex)
 {
     int numberOfSegments = getNumIntersectionStreetSegment(intersectionIndex); //get number of segments in intersection
-    connectedStreetSegments.push_back(vector<StreetSegmentIdx>()); //create new vector to 
-    for(int intersectionSegmentIndex = 0; intersectionSegmentIndex < numberOfSegments; intersectionSegmentIndex++)
+    
+    //allocate vector to be added to street segments
+    vector<StreetSegmentIdx>* allocatedVector = new vector<StreetSegmentIdx>();
+    connectedStreetSegments[intersectionIndex] = allocatedVector; 
+
+    for(int intersectionSegmentIndex = 0; intersectionSegmentIndex < numberOfSegments-1; intersectionSegmentIndex++)
     {
-        (connectedStreetSegments)[intersectionIndex].push_back(getIntersectionStreetSegment(intersectionIndex, intersectionSegmentIndex));
+        (connectedStreetSegments)[intersectionIndex]->push_back(getIntersectionStreetSegment(intersectionIndex, intersectionSegmentIndex));
     }
 }

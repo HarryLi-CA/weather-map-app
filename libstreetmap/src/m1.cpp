@@ -23,6 +23,7 @@
 #include "m1.h"
 #include "loading_utils.h"
 #include "StreetsDatabaseAPI.h"
+#include "OSMDatabaseAPI.h"
 #include <thread>
 #include <vector>
 #include <cmath>
@@ -31,7 +32,7 @@ using namespace std;
 //cache vectors
 
 //takes intersection segment index and returns vector of indices of all connected street segments
-vector<vector<StreetSegmentIdx>> connectedStreetSegments;
+vector<vector<StreetSegmentIdx>*> connectedStreetSegments;
 //total number of intersections
 int num_intersections = 0;
 
@@ -49,7 +50,8 @@ int num_intersections = 0;
 // name.
 
 bool loadMap(std::string map_streets_database_filename) {
-    bool load_successful = false; //Indicates whether the map has loaded 
+    //load map and check if successful
+    bool load_successful = loadStreetsDatabaseBIN(map_streets_database_filename); //Indicates whether the map has loaded 
                                   //successfully
     
     std::cout << "loadMap: " << map_streets_database_filename << std::endl;
@@ -57,24 +59,18 @@ bool loadMap(std::string map_streets_database_filename) {
     //
     // Load your map related data structures here.
     //
-    
-    
+    //if load fails, return false
+
     num_intersections = getNumIntersections(); //load number of intersections once to avoid excessive calculations
 
-    vector<thread*> intersection_load_thread_queue; //array to keep track of all threads to wait for;
+    connectedStreetSegments.resize(num_intersections);
     //load all the segment indices for each intersection index
     for(IntersectionIdx intersection_index = 0; intersection_index < num_intersections; intersection_index++)
     {
-        thread* loading_thread = new thread(loadIntersections,ref(connectedStreetSegments),ref(intersection_index)); //create a thread to load each data for each intersection
-        intersection_load_thread_queue.push_back(loading_thread);
+        loadIntersections(connectedStreetSegments,intersection_index);
+        cout << intersection_index+1 << "/" << num_intersections << endl;
     }
     //wait for all intersection threads
-    for(int threadIndex = 0; threadIndex < num_intersections; threadIndex++)
-    {
-        intersection_load_thread_queue[threadIndex]->join(); 
-        delete intersection_load_thread_queue[threadIndex];
-        cout << threadIndex << ": " << connectedStreetSegments[threadIndex].size() << endl;  
-    }
 
     cout << "done!";
 
@@ -86,7 +82,7 @@ bool loadMap(std::string map_streets_database_filename) {
 
 void closeMap() {
     //Clean-up your map related data structures here
-    
+    closeOSMDatabase();
 }
 
 double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
@@ -102,7 +98,6 @@ double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
 }
 
 double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
-    cout << "oewijfowjiew" << endl;
     StreetSegmentInfo street_seg_info = getStreetSegmentInfo(street_segment_id); //get street segment info
     double street_segment_length = 0; //initialize total segment length to 0
     //iterate through all curve points

@@ -26,6 +26,7 @@
 #include <thread>
 #include <vector>
 #include <cmath>
+#include <limits>
 
 using namespace std;
 //cache vectors
@@ -112,7 +113,20 @@ double findStreetSegmentTurnAngle(StreetSegmentIdx src_street_segment_id,
 
 std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersection_id){return {};}
 
-IntersectionIdx findClosestIntersection(LatLon my_position){return 0;}
+IntersectionIdx findClosestIntersection(LatLon my_position){
+    int closestNode = 0;
+    double closestDist = DBL_MAX; // initial value as maximum distance
+    for(int i = 0; i < num_intersections; i++){ // loop through intersections
+        OSMNode* = getNodeByIndex(i);
+        LatLon curLatLon = OSMNode->coords();
+        double curDist = findDistanceBetweenTwoPoints(my_position, curLatLon); // find distance of current interection with point
+        if(i==0 || closestDist > curDist){ // save minimum distance
+            closestDist = curDist;
+            closestNode = i;
+        }
+    }
+    return closestNode;
+}
 
 std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection(IntersectionIdx intersection_id){return {};}
 

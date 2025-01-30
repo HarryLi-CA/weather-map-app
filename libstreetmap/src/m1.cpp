@@ -93,8 +93,8 @@ void closeMap() {
 double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
     double x1, x2,y1,y2, xDif, yDif, latavg;
     latavg = (point_1.latitude()+ point_2.latitude())/2;
-    x1 = kEarthRadiusInMeters * point_1.longitude() * cos(latavg);
-    x2 = kEarthRadiusInMeters * point_2.longitude() * cos(latavg);
+    x1 = kEarthRadiusInMeters * point_1.longitude() * cos(latavg*kDegreeToRadian);
+    x2 = kEarthRadiusInMeters * point_2.longitude() * cos(latavg*kDegreeToRadian);
     y1 = kEarthRadiusInMeters * point_1.latitude();
     y2 = kEarthRadiusInMeters * point_2.latitude();
     xDif = x1-x2;

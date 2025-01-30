@@ -27,6 +27,7 @@
 #include <thread>
 #include <vector>
 #include <cmath>
+#include <cfloat>
 #include <limits>
 
 using namespace std;
@@ -89,10 +90,10 @@ void closeMap() {
 double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
     double x1, x2,y1,y2, xDif, yDif, latavg;
     latavg = (point_1.latitude()+ point_2.latitude())/2;
-    x1 = kEarthRadiusInMeters * point_1.longitude() * cos(latavg*kDegreeToRadian);
-    x2 = kEarthRadiusInMeters * point_2.longitude() * cos(latavg*kDegreeToRadian);
-    y1 = kEarthRadiusInMeters * point_1.latitude();
-    y2 = kEarthRadiusInMeters * point_2.latitude();
+    x1 = kEarthRadiusInMeters * point_1.longitude()*kDegreeToRadian * cos(latavg*kDegreeToRadian);
+    x2 = kEarthRadiusInMeters * point_2.longitude()*kDegreeToRadian * cos(latavg*kDegreeToRadian);
+    y1 = kEarthRadiusInMeters * point_1.latitude()*kDegreeToRadian;
+    y2 = kEarthRadiusInMeters * point_2.latitude()*kDegreeToRadian;
     xDif = x1-x2;
     yDif = y1-y2;
     return sqrt(xDif*xDif+yDif*yDif);
@@ -124,8 +125,8 @@ IntersectionIdx findClosestIntersection(LatLon my_position){
     int closestNode = 0;
     double closestDist = DBL_MAX; // initial value as maximum distance
     for(int i = 0; i < num_intersections; i++){ // loop through intersections
-        OSMNode* = getNodeByIndex(i);
-        LatLon curLatLon = OSMNode->coords();
+        //OSMNode* curNode = getNodeByIndex(i);
+        LatLon curLatLon = getNodeByIndex(i)->coords();
         double curDist = findDistanceBetweenTwoPoints(my_position, curLatLon); // find distance of current interection with point
         if(i==0 || closestDist > curDist){ // save minimum distance
             closestDist = curDist;

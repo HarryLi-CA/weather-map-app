@@ -105,15 +105,25 @@ double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
     StreetSegmentInfo street_seg_info = getStreetSegmentInfo(street_segment_id); //get street segment info
     double street_segment_length = 0; //initialize total segment length to 0
     //iterate through all curve points
-    LatLon from_curve_point = getStreetSegmentCurvePoint(street_segment_id,0); //get first curve point
+    LatLon from_curve_point = getIntersectionPosition(street_seg_info.from); //get first curve point
     LatLon to_curve_point; //initialize sequential curve point
-    for(int curve_point_index = 0; curve_point_index < street_seg_info.numCurvePoints - 1; curve_point_index++)
+    for(int curve_point_index = 0; curve_point_index < street_seg_info.numCurvePoints+1; curve_point_index++)
     {
-        to_curve_point = getStreetSegmentCurvePoint(street_segment_id,curve_point_index+1); //calculate sequential curve point
+        //calculate sequential curve point
+        if(curve_point_index >= street_seg_info.numCurvePoints) //if index is over the curve point indices, then it must be the last point (other intersection)
+        {
+            to_curve_point = getIntersectionPosition(street_seg_info.to);
+        }
+        else //if not, then get the get next curve point in the list
+        {
+            to_curve_point = getStreetSegmentCurvePoint(street_segment_id,curve_point_index);
+        }
+        
         street_segment_length += findDistanceBetweenTwoPoints(from_curve_point, to_curve_point); //add the curve segment length to the total
+        
         from_curve_point = to_curve_point; //set the next from point to the current to point, since the to point will be updated on the next iteration
     }
-    return 0;
+    return street_segment_length; //return result
 }
 
 double findStreetSegmentTravelTime(StreetSegmentIdx street_segment_id){
@@ -123,7 +133,7 @@ double findStreetSegmentTravelTime(StreetSegmentIdx street_segment_id){
     double travel_distance = findStreetSegmentLength(street_segment_id);  //get total length of segment
     double travel_time = travel_distance/travel_speed; //calculate travel time using time elapsed = distance/speed
 
-    return travel_time;
+    return travel_time; //return result
 }
 
 double findStreetSegmentTurnAngle(StreetSegmentIdx src_street_segment_id,

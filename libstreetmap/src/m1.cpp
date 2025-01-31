@@ -31,9 +31,10 @@
 using namespace std;
 //cache vectors
 
-//takes intersection segment index and returns vector of indices of all connected street segments
+//takes intersection index and returns vector of indices of all connected street segments
 vector<vector<StreetSegmentIdx>*> connectedStreetSegments;
-//total number of intersections
+//takes street segment index and returns vector of intersections that connect to the street segment
+vector<vector<StreetSegmentIdx>*> connectedIntersections;
 int num_intersections = 0;
 
 // loadMap will be called with the name of the file that stores the "layer-2"
@@ -67,8 +68,8 @@ bool loadMap(std::string map_streets_database_filename) {
     //load all the segment indices for each intersection index
     for(IntersectionIdx intersection_index = 0; intersection_index < num_intersections; intersection_index++)
     {
-        loadIntersections(connectedStreetSegments,intersection_index);
-        cout << intersection_index+1 << "/" << num_intersections << endl;
+        loadIntersections(connectedStreetSegments,connectedIntersections, intersection_index);
+        //cout << intersection_index+1 << "/" << num_intersections << endl;
     }
     //wait for all intersection threads
 
@@ -82,11 +83,12 @@ bool loadMap(std::string map_streets_database_filename) {
 
 void closeMap() {
     //Clean-up your map related data structures here
-    closeOSMDatabase();
+    closeStreetDatabase();
 }
 
 double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
     double x1, x2,y1,y2, xDif, yDif, latavg;
+    double crosssectionRadius = 
     latavg = (point_1.latitude()+ point_2.latitude())/2;
     x1 = kEarthRadiusInMeters * point_1.longitude() * cos(latavg);
     x2 = kEarthRadiusInMeters * point_2.longitude() * cos(latavg);
@@ -112,7 +114,15 @@ double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
     return 0;
 }
 
-double findStreetSegmentTravelTime(StreetSegmentIdx street_segment_id){return 0;}
+double findStreetSegmentTravelTime(StreetSegmentIdx street_segment_id){
+    
+    
+    double travel_speed = getStreetSegmentInfo(street_segment_id).speedLimit; //get maximum speed on road segment (m/s)
+    double travel_distance = findStreetSegmentLength(street_segment_id);  //get total length of segment
+    double travel_time = travel_distance/travel_speed; //calculate travel time using time elapsed = distance/speed
+
+    return travel_time;
+}
 
 double findStreetSegmentTurnAngle(StreetSegmentIdx src_street_segment_id,
                                   StreetSegmentIdx dst_street_segment_id){return 0;}

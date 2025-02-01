@@ -22,6 +22,7 @@
 #include <iostream>
 #include "m1.h"
 #include "loading_utils.h"
+#include "nodeIDHelper.h"
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
 #include <thread>
@@ -29,6 +30,9 @@
 #include <cmath>
 #include <cfloat>
 #include <limits>
+#include <stdexcept>
+#include <unordered_map>
+#include <iomanip>
 
 using namespace std;
 //cache vectors
@@ -58,14 +62,18 @@ bool loadMap(std::string map_streets_database_filename) {
     //load map and check if successful
     bool load_successful = loadStreetsDatabaseBIN(map_streets_database_filename); //Indicates whether the map has loaded 
                                   //successfully
-    
+    string osm_file = map_streets_database_filename.substr(0,map_streets_database_filename.size()-11)+ "osm.bin";
+    bool load_osm_success = loadOSMDatabaseBIN(osm_file);
     std::cout << "loadMap: " << map_streets_database_filename << std::endl;
 
     //
     // Load your map related data structures here.
     //
     //if load fails, return false
-
+    if (!load_successful || !load_osm_success){
+        cout << "load fail" << endl;
+        return false;
+    }
     numIntersections = getNumIntersections(); //load number of intersections once to avoid excessive calculations
     numStreetSegments = getNumStreetSegments(); //load number of street segments once to avoid excessive calculations
     
@@ -84,8 +92,7 @@ bool loadMap(std::string map_streets_database_filename) {
         loadStreetSegmentPoint(streetSegmentPoints,streetSegmentIndex);
     }
     //wait for all intersection threads
-
-    cout << "done!";
+    cout << "done!" << endl;
 
     load_successful = true; //Make sure this is updated to reflect whether
                             //loading the map succeeded or failed
@@ -95,7 +102,9 @@ bool loadMap(std::string map_streets_database_filename) {
 
 void closeMap() {
     //Clean-up your map related data structures here
+    clearIdHelper();
     closeStreetDatabase();
+    closeOSMDatabase();
 }
 
 double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
@@ -246,8 +255,7 @@ IntersectionIdx findClosestIntersection(LatLon my_position){
     int closestNode = 0;
     double closestDist = DBL_MAX; // initial value as maximum distance
     for(int i = 0; i < numIntersections; i++){ // loop through intersections
-        //OSMNode* curNode = getNodeByIndex(i);
-        LatLon curLatLon = getNodeByIndex(i)->coords();
+        LatLon curLatLon = getIntersectionPosition(i);
         double curDist = findDistanceBetweenTwoPoints(my_position, curLatLon); // find distance of current interection with point
         if(i==0 || closestDist > curDist){ // save minimum distance
             closestDist = curDist;
@@ -267,12 +275,107 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
 
 double findStreetLength(StreetIdx street_id){return 0;}
 
-LatLonBounds findStreetBoundingBox (StreetIdx street_id){return LatLonBounds();}
+LatLonBounds findStreetBoundingBox (StreetIdx street_id){
+    LatLonBounds out;
+    //loadNodeValueByID(nodeIDReference);
+    int streetSegments = getNumStreetSegments();
+    vector<OSMID> nodes = {};
+    for(StreetSegmentIdx i = 0; i < streetSegments; i++){
+        StreetSegmentInfo streetSegInfo = getStreetSegmentInfo(i);
+        if(streetSegInfo.streetID == street_id){
+            const OSMWay* osmWay = getWayByID(streetSegInfo.wayOSMID);
+            vector<OSMID> wayNodes = osmWay->ndrefs();
+            /*for(int j = 0; j < wayNodes.size(); j++)
+                if(uint64_t(wayNodes[j]) == 369658513){
+                    cout << "way belong " << streetSegInfo.streetID << endl;
+                    cout << "street belong " << i << endl;
+                    cout << uint64_t(getNodeByID(wayNodes[j])->id()) << endl;
+                }*/
+            nodes.insert(nodes.end(), wayNodes.begin(), wayNodes.end());
+        }
+    };
+    double minLat, minLon, maxLat, maxLon;
+    const OSMNode* curNode = getNodeByID(nodes[0]);
+    minLat = curNode->coords().latitude();
+    maxLat = curNode->coords().latitude();
+    minLon = curNode->coords().longitude();
+    maxLon = curNode->coords().longitude();
+    cout<<setprecision(10);
+    for(int i = 1; i < nodes.size(); i++){
+        curNode = getNodeByID(nodes[i]);
+        double curLat, curLon;
+        curLat = curNode->coords().latitude();
+        curLon = curNode->coords().longitude();
+        /*
+        if(curLat >= 43.577 && curLat <= 43.578){
+            cout << i << " " << uint64_t(nodes[i])<< endl;
+            cout << "lat reach " << curLat << endl;
+            cout << "lat max " << maxLat << endl;
+            cout << "lat max() " << max(maxLat,curLat) << endl;
+        }
+        
+        if(curLon <=  -79.614330 && curLon >= -79.61441){
+            cout << i << endl;
+            cout << "lon reach " << curLon << endl;
+            cout << "lon min " << minLon << endl;
+            cout << "lon min() " << min(minLon,curLon) << endl;
+        }
+        */
+        minLat = min(minLat, curLat);
+        maxLat = max(maxLat, curLat);
+        minLon = min(minLon, curLon);
+        maxLon = max(maxLon, curLon);
+    }
 
-POIIdx findClosestPOI(LatLon my_position, std::string poi_type){return 0;}
+    out.min = LatLon(minLat, minLon);
+    out.max = LatLon(maxLat, maxLon);
+    //cout << out.min << out.max <<endl;
+    //cout << out.min.latitude() << out.min.longitude() <<endl;
+    //cout << out.max.latitude() << out.max.longitude() <<endl;
+    return out;
+}
+
+POIIdx findClosestPOI(LatLon my_position, std::string poi_type){
+    POIIdx closestNode = 0;
+    double closestDist = DBL_MAX; // initial value as maximum distance
+    int numOfPOI = getNumPointsOfInterest();
+    for(POIIdx i = 0; i < numOfPOI; i++){ // loop through POIs
+        if(getPOIType(i) == poi_type){
+        //OSMNode* curNode = getNodeByIndex(i);
+        LatLon curLatLon = getPOIPosition(i);
+        double curDist = findDistanceBetweenTwoPoints(my_position, curLatLon); // find distance of current interection with point
+        if(i==0 || closestDist > curDist){ // save minimum distance
+            closestDist = curDist;
+            closestNode = i;
+        }
+        }
+    }
+    return closestNode;
+}
 
 double findFeatureArea(FeatureIdx feature_id){return 0;}
 
-double findWayLength(OSMID way_id){return 0;}
+double findWayLength(OSMID way_id){
+    const OSMWay* osmWay = getWayByID(way_id);
+    vector<OSMID> wayNodes = getWayMembers(osmWay);
+    const OSMNode* prevNode = getNodeByID(wayNodes[0]);
+    double length = 0;
+    for(int i = 1; i < wayNodes.size(); i++){
+        const OSMNode* curNode = getNodeByID(wayNodes[i]);
+        length += findDistanceBetweenTwoPoints(prevNode->coords(), curNode->coords());
+        prevNode = curNode;
+    }
+    return length;
+}
 
-std::string getOSMNodeTagValue(OSMID osm_id, std::string key){return NULL;}
+std::string getOSMNodeTagValue(OSMID osm_id, std::string key){
+    const OSMNode* node = getNodeByID(osm_id);
+    int tagAmt = getTagCount(node);
+    for(int i = 0; i < tagAmt; i++){
+        string osmKey, value;
+        tie(osmKey, value) = getTagPair(node, i);
+        if(osmKey == key)
+            return value;
+    }
+    return "";
+}

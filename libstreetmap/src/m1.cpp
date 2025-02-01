@@ -58,16 +58,22 @@ int numStreetSegments = 0;
 
 bool loadMap(std::string map_streets_database_filename) {
     //load map and check if successful
+    cout <<"\nCur Name: " << map_streets_database_filename << "\n";
     bool load_successful = loadStreetsDatabaseBIN(map_streets_database_filename); //Indicates whether the map has loaded 
                                   //successfully
-    
+    string osm_file = map_streets_database_filename.substr(0,map_streets_database_filename.size()-11)+ "osm.bin";
+    cout <<"\OSM Name: " << osm_file << "\n";
+    bool load_osm_success = loadOSMDatabaseBIN(osm_file);
     std::cout << "loadMap: " << map_streets_database_filename << std::endl;
 
     //
     // Load your map related data structures here.
     //
     //if load fails, return false
-
+    if (!load_successful || !load_osm_success){
+        cout << "load fail" << endl;
+        return false;
+    }
     numIntersections = getNumIntersections(); //load number of intersections once to avoid excessive calculations
     numStreetSegments = getNumStreetSegments(); //load number of street segments once to avoid excessive calculations
     
@@ -202,8 +208,7 @@ IntersectionIdx findClosestIntersection(LatLon my_position){
     int closestNode = 0;
     double closestDist = DBL_MAX; // initial value as maximum distance
     for(int i = 0; i < numIntersections; i++){ // loop through intersections
-        //OSMNode* curNode = getNodeByIndex(i);
-        LatLon curLatLon = getNodeByIndex(i)->coords();
+        LatLon curLatLon = getIntersectionPosition(i);
         double curDist = findDistanceBetweenTwoPoints(my_position, curLatLon); // find distance of current interection with point
         if(i==0 || closestDist > curDist){ // save minimum distance
             closestDist = curDist;
@@ -253,7 +258,9 @@ LatLonBounds findStreetBoundingBox (StreetIdx street_id){
     return out;
 }
 
-POIIdx findClosestPOI(LatLon my_position, std::string poi_type){return 0;}
+POIIdx findClosestPOI(LatLon my_position, std::string poi_type){
+    
+}
 
 double findFeatureArea(FeatureIdx feature_id){return 0;}
 

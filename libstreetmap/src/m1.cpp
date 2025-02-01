@@ -52,6 +52,8 @@ vector<float> travelTimeCache;
 int numIntersections = 0;
 int numStreetSegments = 0;
 int numStreets = 0;
+
+
 // loadMap will be called with the name of the file that stores the "layer-2"
 // map data accessed through StreetsDatabaseAPI: the street and intersection 
 // data that is higher-level than the raw OSM data). 
@@ -308,7 +310,9 @@ IntersectionIdx findClosestIntersection(LatLon my_position){
     return closestNode;
 }
 
-std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection(IntersectionIdx intersection_id){return {};}
+std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection(IntersectionIdx intersection_id){
+    return *intersectionToStreetSegments[intersection_id];
+}
 
 std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){return {};}
 

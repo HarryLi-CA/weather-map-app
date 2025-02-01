@@ -259,7 +259,21 @@ LatLonBounds findStreetBoundingBox (StreetIdx street_id){
 }
 
 POIIdx findClosestPOI(LatLon my_position, std::string poi_type){
-    
+    POIIdx closestNode = 0;
+    double closestDist = DBL_MAX; // initial value as maximum distance
+    int numOfPOI = getNumPointsOfInterest();
+    for(POIIdx i = 0; i < numOfPOI; i++){ // loop through POIs
+        if(getPOIType(i) == poi_type){
+        //OSMNode* curNode = getNodeByIndex(i);
+        LatLon curLatLon = getPOIPosition(i);
+        double curDist = findDistanceBetweenTwoPoints(my_position, curLatLon); // find distance of current interection with point
+        if(i==0 || closestDist > curDist){ // save minimum distance
+            closestDist = curDist;
+            closestNode = i;
+        }
+        }
+    }
+    return closestNode;
 }
 
 double findFeatureArea(FeatureIdx feature_id){return 0;}

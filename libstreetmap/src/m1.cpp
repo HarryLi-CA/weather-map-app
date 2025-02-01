@@ -22,6 +22,7 @@
 #include <iostream>
 #include "m1.h"
 #include "loading_utils.h"
+#include "nodeIDHelper.h"
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
 #include <thread>
@@ -29,6 +30,7 @@
 #include <cmath>
 #include <cfloat>
 #include <limits>
+#include <unordered_map>
 
 using namespace std;
 //cache vectors
@@ -62,6 +64,8 @@ bool loadMap(std::string map_streets_database_filename) {
     // Load your map related data structures here.
     //
     //if load fails, return false
+    /*if(load_successful == false)
+        return false;*/
 
     num_intersections = getNumIntersections(); //load number of intersections once to avoid excessive calculations
 
@@ -69,11 +73,10 @@ bool loadMap(std::string map_streets_database_filename) {
     //load all the segment indices for each intersection index
     for(IntersectionIdx intersection_index = 0; intersection_index < num_intersections; intersection_index++)
     {
-        loadIntersections(connectedStreetSegments,intersection_index);
+        loadIntersections(connectedStreetSegments, intersection_index);
         cout << intersection_index+1 << "/" << num_intersections << endl;
     }
     //wait for all intersection threads
-
     cout << "done!";
 
     load_successful = true; //Make sure this is updated to reflect whether
@@ -146,7 +149,35 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
 
 double findStreetLength(StreetIdx street_id){return 0;}
 
-LatLonBounds findStreetBoundingBox (StreetIdx street_id){return LatLonBounds();}
+LatLonBounds findStreetBoundingBox (StreetIdx street_id){
+    //loadNodeValueByID(nodeIDReference);
+    const OSMWay* osmWay = getWayByIndex(street_id);
+    const vector<OSMID> nodes = osmWay->ndrefs();
+    LatLonBounds out;
+    double minLat, minLon, maxLat, maxLon;
+    const OSMNode* curNode = getNodeByID(nodes[0]);
+    minLat = curNode->coords().latitude();
+    maxLat = curNode->coords().latitude();
+    minLon = curNode->coords().longitude();
+    maxLon = curNode->coords().longitude();
+
+    for(int i = 1; i < nodes.size(); i++){
+        curNode = getNodeByID(nodes[i]);
+        double curLat, curLon;
+        curLat = curNode->coords().latitude();
+        curLon = curNode->coords().longitude();
+        minLat = min(minLat, curLat);
+        maxLat = max(minLat, curLat);
+        minLon = min(minLon, curLon);
+        maxLon = max(minLon, curLon);
+    }
+    LatLon* minLatLon = new LatLon(minLat, minLon);
+    LatLon* maxLatLon = new LatLon(maxLat, maxLon);
+
+    out.min = *minLatLon;
+    out.max = *maxLatLon;
+    return out;
+}
 
 POIIdx findClosestPOI(LatLon my_position, std::string poi_type){return 0;}
 

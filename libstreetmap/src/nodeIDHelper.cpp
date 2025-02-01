@@ -10,12 +10,11 @@ int totalNodes = -1;
 unordered_map<uint64_t, const OSMNode*> nodeIDReference;
 
 const OSMNode* getNodeByID(OSMID nodeID){
-    if(totalNodes==0)
+    if(totalNodes==-1)
         totalNodes = getNumberOfNodes();
 
     if(nodeIDReference.find(uint64_t(nodeID))!= nodeIDReference.end()) // return if alreadly loaded
         return nodeIDReference[uint64_t(nodeID)];
-
     OSMID curID;
     for(;curNodeIdx <totalNodes || curID == nodeID; curNodeIdx++){ // load until node is found
         const OSMNode* node= getNodeByIndex(curNodeIdx);

@@ -30,7 +30,9 @@
 #include <cmath>
 #include <cfloat>
 #include <limits>
+#include <stdexcept>
 #include <unordered_map>
+#include <iomanip>
 
 using namespace std;
 //cache vectors
@@ -58,11 +60,9 @@ int numStreetSegments = 0;
 
 bool loadMap(std::string map_streets_database_filename) {
     //load map and check if successful
-    cout <<"\nCur Name: " << map_streets_database_filename << "\n";
     bool load_successful = loadStreetsDatabaseBIN(map_streets_database_filename); //Indicates whether the map has loaded 
                                   //successfully
     string osm_file = map_streets_database_filename.substr(0,map_streets_database_filename.size()-11)+ "osm.bin";
-    cout <<"\OSM Name: " << osm_file << "\n";
     bool load_osm_success = loadOSMDatabaseBIN(osm_file);
     std::cout << "loadMap: " << map_streets_database_filename << std::endl;
 
@@ -92,7 +92,7 @@ bool loadMap(std::string map_streets_database_filename) {
         loadStreetSegmentPoint(streetSegmentPoints,streetSegmentIndex);
     }
     //wait for all intersection threads
-    cout << "done!";
+    cout << "done!" << endl;
 
     load_successful = true; //Make sure this is updated to reflect whether
                             //loading the map succeeded or failed
@@ -103,6 +103,7 @@ bool loadMap(std::string map_streets_database_filename) {
 void closeMap() {
     //Clean-up your map related data structures here
     closeStreetDatabase();
+    closeOSMDatabase();
 }
 
 double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
@@ -229,32 +230,62 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
 double findStreetLength(StreetIdx street_id){return 0;}
 
 LatLonBounds findStreetBoundingBox (StreetIdx street_id){
-    //loadNodeValueByID(nodeIDReference);
-    const OSMWay* osmWay = getWayByIndex(street_id);
-    const vector<OSMID> nodes = osmWay->ndrefs();
     LatLonBounds out;
+    //loadNodeValueByID(nodeIDReference);
+    int streetSegments = getNumStreetSegments();
+    vector<OSMID> nodes = {};
+    for(StreetSegmentIdx i = 0; i < streetSegments; i++){
+        StreetSegmentInfo streetSegInfo = getStreetSegmentInfo(i);
+        if(streetSegInfo.streetID == street_id){
+            const OSMWay* osmWay = getWayByID(streetSegInfo.wayOSMID);
+            vector<OSMID> wayNodes = osmWay->ndrefs();
+            /*for(int j = 0; j < wayNodes.size(); j++)
+                if(uint64_t(wayNodes[j]) == 369658513){
+                    cout << "way belong " << streetSegInfo.streetID << endl;
+                    cout << "street belong " << i << endl;
+                    cout << uint64_t(getNodeByID(wayNodes[j])->id()) << endl;
+                }*/
+            nodes.insert(nodes.end(), wayNodes.begin(), wayNodes.end());
+        }
+    };
     double minLat, minLon, maxLat, maxLon;
     const OSMNode* curNode = getNodeByID(nodes[0]);
     minLat = curNode->coords().latitude();
     maxLat = curNode->coords().latitude();
     minLon = curNode->coords().longitude();
     maxLon = curNode->coords().longitude();
-
+    cout<<setprecision(10);
     for(int i = 1; i < nodes.size(); i++){
         curNode = getNodeByID(nodes[i]);
         double curLat, curLon;
         curLat = curNode->coords().latitude();
         curLon = curNode->coords().longitude();
+        /*
+        if(curLat >= 43.577 && curLat <= 43.578){
+            cout << i << " " << uint64_t(nodes[i])<< endl;
+            cout << "lat reach " << curLat << endl;
+            cout << "lat max " << maxLat << endl;
+            cout << "lat max() " << max(maxLat,curLat) << endl;
+        }
+        
+        if(curLon <=  -79.614330 && curLon >= -79.61441){
+            cout << i << endl;
+            cout << "lon reach " << curLon << endl;
+            cout << "lon min " << minLon << endl;
+            cout << "lon min() " << min(minLon,curLon) << endl;
+        }
+        */
         minLat = min(minLat, curLat);
-        maxLat = max(minLat, curLat);
+        maxLat = max(maxLat, curLat);
         minLon = min(minLon, curLon);
-        maxLon = max(minLon, curLon);
+        maxLon = max(maxLon, curLon);
     }
-    LatLon* minLatLon = new LatLon(minLat, minLon);
-    LatLon* maxLatLon = new LatLon(maxLat, maxLon);
 
-    out.min = *minLatLon;
-    out.max = *maxLatLon;
+    out.min = LatLon(minLat, minLon);
+    out.max = LatLon(maxLat, maxLon);
+    //cout << out.min << out.max <<endl;
+    //cout << out.min.latitude() << out.min.longitude() <<endl;
+    //cout << out.max.latitude() << out.max.longitude() <<endl;
     return out;
 }
 

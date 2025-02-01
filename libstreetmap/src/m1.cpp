@@ -311,4 +311,14 @@ double findFeatureArea(FeatureIdx feature_id){return 0;}
 
 double findWayLength(OSMID way_id){return 0;}
 
-std::string getOSMNodeTagValue(OSMID osm_id, std::string key){return NULL;}
+std::string getOSMNodeTagValue(OSMID osm_id, std::string key){
+    const OSMNode* node = getNodeByID(osm_id);
+    int tagAmt = getTagCount(node);
+    for(int i = 0; i < tagAmt; i++){
+        string osmKey, value;
+        tie(osmKey, value) = getTagPair(node, i);
+        if(osmKey == key)
+            return value;
+    }
+    return "";
+}

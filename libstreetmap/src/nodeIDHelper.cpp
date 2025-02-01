@@ -9,12 +9,18 @@ int curNodeIdx = 0;
 int totalNodes = -1;
 unordered_map<uint64_t, const OSMNode*> nodeIDReference;
 
-const OSMNode* getNodeByID(OSMID nodeID){
-    if(totalNodes==-1)
-        totalNodes = getNumberOfNodes();
 
-    if(nodeIDReference.find(uint64_t(nodeID))!= nodeIDReference.end()) // return if alreadly loaded
+const OSMNode* getNodeByID(OSMID nodeID){
+    if(totalNodes==-1){
+        totalNodes = getNumberOfNodes();
+        nodeIDReference.clear();
+    }
+
+    if(nodeIDReference.find(uint64_t(nodeID))!= nodeIDReference.end()){ // return if alreadly loaded
+        //cout<< "alraedy discovered " << nodeID << endl;
         return nodeIDReference[uint64_t(nodeID)];
+    }
+    
     OSMID curID;
     for(;curNodeIdx <totalNodes || curID == nodeID; curNodeIdx++){ // load until node is found
         const OSMNode* node= getNodeByIndex(curNodeIdx);
@@ -41,8 +47,10 @@ int totalWays = -1;
 unordered_map<uint64_t, const OSMWay*> wayIDReference;
 
 const OSMWay* getWayByID(OSMID wayID){
-    if(totalWays==-1)
+    if(totalWays==-1){
         totalWays = getNumberOfWays();
+        wayIDReference.clear();
+    }
 
     if(wayIDReference.find(uint64_t(wayID))!= wayIDReference.end()) // return if alreadly loaded
         return wayIDReference[uint64_t(wayID)];
@@ -70,3 +78,10 @@ void loadWayValueByID(){
 
 
 
+
+void clearIdHelper(){
+    curNodeIdx = 0;
+    totalNodes = -1;
+    curWayIdx = 0;
+    totalWays = -1;
+}

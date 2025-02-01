@@ -102,6 +102,7 @@ bool loadMap(std::string map_streets_database_filename) {
 
 void closeMap() {
     //Clean-up your map related data structures here
+    clearIdHelper();
     closeStreetDatabase();
     closeOSMDatabase();
 }
@@ -309,7 +310,18 @@ POIIdx findClosestPOI(LatLon my_position, std::string poi_type){
 
 double findFeatureArea(FeatureIdx feature_id){return 0;}
 
-double findWayLength(OSMID way_id){return 0;}
+double findWayLength(OSMID way_id){
+    const OSMWay* osmWay = getWayByID(way_id);
+    vector<OSMID> wayNodes = getWayMembers(osmWay);
+    const OSMNode* prevNode = getNodeByID(wayNodes[0]);
+    double length = 0;
+    for(int i = 1; i < wayNodes.size(); i++){
+        const OSMNode* curNode = getNodeByID(wayNodes[i]);
+        length += findDistanceBetweenTwoPoints(prevNode->coords(), curNode->coords());
+        prevNode = curNode;
+    }
+    return length;
+}
 
 std::string getOSMNodeTagValue(OSMID osm_id, std::string key){
     const OSMNode* node = getNodeByID(osm_id);

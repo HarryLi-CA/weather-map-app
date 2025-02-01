@@ -11,10 +11,11 @@ void loadIntersections(vector<vector<StreetSegmentIdx>*>& connectedStreetSegment
     vector<StreetSegmentIdx>* allocatedStreetVector = new vector<StreetSegmentIdx>();
     connectedStreetSegments[intersectionIndex] = allocatedStreetVector; 
 
-    for(StreetSegmentIdx intersectionSegmentIndex = 0; intersectionSegmentIndex < numberOfSegments-1; intersectionSegmentIndex++)
+    for(int intersectionSegmentIndex = 0; intersectionSegmentIndex < numberOfSegments; intersectionSegmentIndex++)
     {
-        (connectedStreetSegments)[intersectionIndex]->push_back(getIntersectionStreetSegment(intersectionIndex, intersectionSegmentIndex));
-        cacheStreetSegmentToIntersection(connectedIntersections,intersectionIndex,intersectionSegmentIndex);
+        StreetSegmentIdx streetSegmentIndex = getIntersectionStreetSegment(intersectionIndex, intersectionSegmentIndex);
+        (connectedStreetSegments)[intersectionIndex]->push_back(streetSegmentIndex);
+        cacheStreetSegmentToIntersection(connectedIntersections,intersectionIndex,streetSegmentIndex);
     }
 }
 
@@ -26,7 +27,6 @@ void cacheStreetSegmentToIntersection(vector<vector<IntersectionIdx>*>& connecte
         vector<IntersectionIdx>* allocatedIntersectionVector = new vector<IntersectionIdx>();
         connectedIntersections[streetSegmentIndex] = allocatedIntersectionVector;
     }
-    
     connectedIntersections[streetSegmentIndex]->push_back(intersectionIndex); //add street segment to intersection
 }
 

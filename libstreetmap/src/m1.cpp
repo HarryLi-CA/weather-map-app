@@ -183,9 +183,7 @@ double findStreetSegmentTurnAngle(StreetSegmentIdx src_street_segment_id,StreetS
         dstEnterPoint = dstCurvePoints[dstCurvePoints.size() - 2]; //get point right before "to" intersection
     } 
     
-    //cout << "src exit point:"<<srcExitPoint<<endl;
-    double srcToDst = findDistanceBetweenTwoPoints(srcExitPoint,dstEnterPoint);
-    //cout << findDistanceBetweenTwoPoints(dstCurvePoints[1],intersectionPoint) << "|" <<  findDistanceBetweenTwoPoints(srcCurvePoints[srcCurvePoints.size() - 2],intersectionPoint) << "|" << findDistanceBetweenTwoPoints(srcExitPoint,dstExitPoint) << endl;
+    double srcToDst = findDistanceBetweenTwoPoints(srcExitPoint,dstEnterPoint); //distance between src exit point and dst enter point
     double srcToIntersection = findDistanceBetweenTwoPoints(srcExitPoint,intersectionPoint); //distance between src exit point and intersection
     double dstToIntersection = findDistanceBetweenTwoPoints(dstEnterPoint,intersectionPoint); //distance between dst enter point and intersection
 
@@ -195,7 +193,54 @@ double findStreetSegmentTurnAngle(StreetSegmentIdx src_street_segment_id,StreetS
     return M_PI - angle;
 }
 
-std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersection_id){return {};}
+
+//helper function to get intersection over a segment from the other intersection
+IntersectionIdx findOppositeIntersection(IntersectionIdx intersection_id, StreetSegmentIdx connect_street_segment_id)
+{
+    
+    //check if the intersection is the first intersection in the connected intersection array for the street segment
+    if(intersection_id == (*streetSegmentsToIntersections[connect_street_segment_id])[0])
+    {
+        return (*streetSegmentsToIntersections[connect_street_segment_id])[1]; //if true, then return the other intersection
+    }
+    else
+    {
+        return (*streetSegmentsToIntersections[connect_street_segment_id])[0]; //if false, then return the intersection that was just checked
+    }
+}
+
+std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersection_id)
+{
+    vector<IntersectionIdx>* adjacentIntersections = new vector<IntersectionIdx>(); //dynamically allocated vector of adjacent intersections
+    vector<StreetSegmentIdx>* connectedStreetSegments = intersectionToStreetSegments[intersection_id]; //vector containing all connected streets to the intersection
+    //iterate through all streets
+    for(int connectedStreetSegmentVectorIndex = 0; connectedStreetSegmentVectorIndex < connectedStreetSegments->size(); connectedStreetSegmentVectorIndex++)
+    {
+        StreetSegmentIdx streetSegmentIndex = (*connectedStreetSegments)[connectedStreetSegmentVectorIndex]; //connected street segment index   
+        IntersectionIdx otherIntersection = findOppositeIntersection(intersection_id,streetSegmentIndex); //other intersection on connected street segment
+
+        bool skipPush = false; //skip flag for whether to add to the vector or not
+        //check for duplicates in allocated vector
+        for(int adjacentIntersectionIndex = 0; adjacentIntersectionIndex < adjacentIntersections->size(); adjacentIntersectionIndex++)
+        {
+            //if duplicate is found, set flag to skip iteration in loop
+            if((*adjacentIntersections)[adjacentIntersectionIndex] == otherIntersection)
+            {
+                skipPush = true;
+                break;
+            }
+        }
+
+        //if skip flag is true, skip over this iteration of the loop
+        if(skipPush)
+        {
+            continue;
+        }
+
+        adjacentIntersections->push_back(otherIntersection); //add intersection to allocated vector
+    }
+    return *adjacentIntersections; //return allocated vector
+}
 
 IntersectionIdx findClosestIntersection(LatLon my_position){
     int closestNode = 0;

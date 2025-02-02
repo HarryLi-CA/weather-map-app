@@ -284,13 +284,21 @@ std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(std::pair<StreetIdx, 
 std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_prefix){return {};}
 
 double findStreetLength(StreetIdx street_id){
+    double out = 0;
+    int streetSegments = getNumStreetSegments();
+    
+    for(StreetSegmentIdx i = 0; i < streetSegments; i++){
+        StreetSegmentInfo streetSegInfo = getStreetSegmentInfo(i);
+        if(streetSegInfo.streetID == street_id){
+            out+= findStreetSegmentLength(i);
+        }
+    };
 
-    return 0;
+    return out;
 }
 
 LatLonBounds findStreetBoundingBox (StreetIdx street_id){
     LatLonBounds out;
-    //loadNodeValueByID(nodeIDReference);
     int streetSegments = getNumStreetSegments();
     vector<OSMID> nodes = {};
     vector<LatLon> locations = {};
@@ -311,9 +319,7 @@ LatLonBounds findStreetBoundingBox (StreetIdx street_id){
     maxLat = locations[0].latitude();
     minLon = locations[0].longitude();
     maxLon = locations[0].longitude();
-    cout<<setprecision(10);
     for(int i = 1; i < locations.size(); i++){
-        //curNode = getNodeByID(nodes[i]);
         double curLat, curLon;
         curLat = locations[i].latitude();
         curLon = locations[i].longitude();
@@ -334,13 +340,13 @@ POIIdx findClosestPOI(LatLon my_position, std::string poi_type){
     int numOfPOI = getNumPointsOfInterest();
     for(POIIdx i = 0; i < numOfPOI; i++){ // loop through POIs
         if(getPOIType(i) == poi_type){
-        //OSMNode* curNode = getNodeByIndex(i);
-        LatLon curLatLon = getPOIPosition(i);
-        double curDist = findDistanceBetweenTwoPoints(my_position, curLatLon); // find distance of current interection with point
-        if(i==0 || closestDist > curDist){ // save minimum distance
-            closestDist = curDist;
-            closestNode = i;
-        }
+            //OSMNode* curNode = getNodeByIndex(i);
+            LatLon curLatLon = getPOIPosition(i);
+            double curDist = findDistanceBetweenTwoPoints(my_position, curLatLon); // find distance of current interection with point
+            if(i==0 || closestDist > curDist){ // save minimum distance
+                closestDist = curDist;
+                closestNode = i;
+            }
         }
     }
     return closestNode;

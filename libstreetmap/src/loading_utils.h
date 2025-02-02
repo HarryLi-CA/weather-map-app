@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <unordered_map>
 #include "StreetsDatabaseAPI.h"
 using namespace std;
 
@@ -31,3 +32,6 @@ void loadStreetSegmentPoint(vector<vector<LatLon>*>& streetSegmentPoints, Street
 
 //Finds intersections asscociated to a street and stores them in a vector
 void loadStreetIntersections(vector<vector<IntersectionIdx>*> &streetToIntersections, int numStreetSegments, StreetIdx currStreet);
+
+//Finds pair ascociated with a given intersectionIndex and stores that pair along with its intersection into the data structure
+void loadTwoStreetsIntersections(unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*> &twoStreetsToIntersections,vector<StreetSegmentIdx> &streetSegmentsOfIntersection,IntersectionIdx currIntersectionIndex);

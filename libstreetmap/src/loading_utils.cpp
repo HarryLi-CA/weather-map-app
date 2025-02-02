@@ -1,6 +1,7 @@
 #include "loading_utils.h"
 #include <vector>
 #include <set>
+#include <unordered_map>
 #include "StreetsDatabaseAPI.h"
 
 using namespace std;
@@ -79,15 +80,49 @@ void loadStreetIntersections(vector<vector<IntersectionIdx>*> &streetToIntersect
         {
             //the intersection is only added to the vector if it was able to be inserted into the list, ie was unique
             intersectionTracker.insert(segInfo.from);
-            if(intersectionTracker.size() != numAddedIntersections){
+            if(intersectionTracker.size() != numAddedIntersections)
+            {
                 streetToIntersections[currStreet]->push_back(segInfo.from);
                 numAddedIntersections++;
             }
 
             intersectionTracker.insert(segInfo.to);
-            if(intersectionTracker.size() != numAddedIntersections){
+            if(intersectionTracker.size() != numAddedIntersections)
+            {
                 streetToIntersections[currStreet]->push_back(segInfo.to);
                 numAddedIntersections++;
+            }
+        }
+    }
+}
+
+void loadTwoStreetsIntersections(unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*> &twoStreetsToIntersections,vector<StreetSegmentIdx> &streetSegmentsOfIntersection,IntersectionIdx currIntersectionIndex)
+{
+    set<StreetIdx> tempPair;
+    for(StreetSegmentIdx streetSegmentIndex; streetSegmentIndex < streetSegmentsOfIntersection.size(); streetSegmentIndex++)
+    {
+        StreetSegmentInfo segInfo = getStreetSegmentInfo(streetSegmentIndex);
+        tempPair.insert(segInfo.streetID);
+
+        //if or once we find a pair of two unique streets for this given intersectionIdx, add this pair to the container
+        if(tempPair.size() == 2)
+        {
+            //determines if this pair is already in the container and does not need to allocate it's vector
+            bool prevInserted = twoStreetsToIntersections.find({*tempPair.begin(),*--tempPair.end()}) != twoStreetsToIntersections.end();
+
+            if(prevInserted)
+            {
+                twoStreetsToIntersections.at({*tempPair.begin(),*--tempPair.end()})->push_back(currIntersectionIndex);
+                twoStreetsToIntersections.at({*--tempPair.end(),*tempPair.begin()})->push_back(currIntersectionIndex);
+                return;
+            }
+            else
+            {
+                vector<IntersectionIdx>* newVector = new vector<IntersectionIdx>();
+                newVector->push_back(currIntersectionIndex);
+                twoStreetsToIntersections[{*tempPair.begin(),*--tempPair.end()}] = newVector;
+                twoStreetsToIntersections[{*--tempPair.end(),*tempPair.begin()}] = newVector;
+                return;
             }
         }
     }

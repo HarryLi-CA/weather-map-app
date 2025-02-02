@@ -290,32 +290,43 @@ LatLonBounds findStreetBoundingBox (StreetIdx street_id){
     //loadNodeValueByID(nodeIDReference);
     int streetSegments = getNumStreetSegments();
     vector<OSMID> nodes = {};
+    vector<LatLon> locations = {};
+    
     for(StreetSegmentIdx i = 0; i < streetSegments; i++){
         StreetSegmentInfo streetSegInfo = getStreetSegmentInfo(i);
         if(streetSegInfo.streetID == street_id){
+            int curvesAmt = streetSegInfo.numCurvePoints;
+            locations.push_back(getIntersectionPosition(streetSegInfo.from));
+            locations.push_back(getIntersectionPosition(streetSegInfo.to));
+            for(int j = 0; j < curvesAmt; j++){
+                locations.push_back(getStreetSegmentCurvePoint(i,j));
+            }
+            /*
             const OSMWay* osmWay = getWayByID(streetSegInfo.wayOSMID);
             vector<OSMID> wayNodes = getWayMembers(osmWay);
-            /*for(int j = 0; j < wayNodes.size(); j++)
-                if(uint64_t(wayNodes[j]) == 369658513){
-                    cout << "way belong " << streetSegInfo.streetID << endl;
-                    cout << "street belong " << i << endl;
-                    cout << uint64_t(getNodeByID(wayNodes[j])->id()) << endl;
-                }*/
             nodes.insert(nodes.end(), wayNodes.begin(), wayNodes.end());
+            for(int j = 0; j < wayNodes.size(); j++)
+                if(uint64_t(wayNodes[j]) == 369658513){
+                    cout << "StreetID of StreetSeg" << streetSegInfo.streetID << endl;
+                    cout << "StreetID of Way" << streetSegInfo.streetID << endl;
+                    cout << "WayID of Node" << streetSegInfo.wayOSMID << endl;
+                    cout << uint64_t(getNodeByID(wayNodes[j])->id()) << endl;
+                }
+            */
         }
     };
     double minLat, minLon, maxLat, maxLon;
-    const OSMNode* curNode = getNodeByID(nodes[0]);
-    minLat = curNode->coords().latitude();
-    maxLat = curNode->coords().latitude();
-    minLon = curNode->coords().longitude();
-    maxLon = curNode->coords().longitude();
+    //const OSMNode* curNode = getNodeByID(nodes[0]);
+    minLat = locations[0].latitude();
+    maxLat = locations[0].latitude();
+    minLon = locations[0].longitude();
+    maxLon = locations[0].longitude();
     cout<<setprecision(10);
-    for(int i = 1; i < nodes.size(); i++){
-        curNode = getNodeByID(nodes[i]);
+    for(int i = 1; i < locations.size(); i++){
+        //curNode = getNodeByID(nodes[i]);
         double curLat, curLon;
-        curLat = curNode->coords().latitude();
-        curLon = curNode->coords().longitude();
+        curLat = locations[i].latitude();
+        curLon = locations[i].longitude();
         /*
         if(curLat >= 43.577 && curLat <= 43.578){
             cout << i << " " << uint64_t(nodes[i])<< endl;

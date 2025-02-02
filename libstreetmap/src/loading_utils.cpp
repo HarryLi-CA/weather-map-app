@@ -2,9 +2,11 @@
 #include <vector>
 #include <set>
 #include <unordered_map>
+#include <utility>
 #include "StreetsDatabaseAPI.h"
 
 using namespace std;
+
 void loadIntersections(vector<vector<StreetSegmentIdx>*>& connectedStreetSegments, vector<vector<IntersectionIdx>*>& connectedIntersections, IntersectionIdx& intersectionIndex)
 {
     int numberOfSegments = getNumIntersectionStreetSegment(intersectionIndex); //get number of segments in intersection
@@ -96,7 +98,7 @@ void loadStreetIntersections(vector<vector<IntersectionIdx>*> &streetToIntersect
     }
 }
 
-void loadTwoStreetsIntersections(unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*> &twoStreetsToIntersections,vector<StreetSegmentIdx> &streetSegmentsOfIntersection,IntersectionIdx currIntersectionIndex)
+void loadTwoStreetsIntersections(unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual> &twoStreetsToIntersections,vector<StreetSegmentIdx> &streetSegmentsOfIntersection,IntersectionIdx currIntersectionIndex)
 {
     set<StreetIdx> tempPair;
     for(StreetSegmentIdx streetSegmentIndex; streetSegmentIndex < streetSegmentsOfIntersection.size(); streetSegmentIndex++)
@@ -113,7 +115,6 @@ void loadTwoStreetsIntersections(unordered_map<pair<StreetIdx,StreetIdx>,vector<
             if(prevInserted)
             {
                 twoStreetsToIntersections.at({*tempPair.begin(),*--tempPair.end()})->push_back(currIntersectionIndex);
-                twoStreetsToIntersections.at({*--tempPair.end(),*tempPair.begin()})->push_back(currIntersectionIndex);
                 return;
             }
             else
@@ -121,7 +122,6 @@ void loadTwoStreetsIntersections(unordered_map<pair<StreetIdx,StreetIdx>,vector<
                 vector<IntersectionIdx>* newVector = new vector<IntersectionIdx>();
                 newVector->push_back(currIntersectionIndex);
                 twoStreetsToIntersections[{*tempPair.begin(),*--tempPair.end()}] = newVector;
-                twoStreetsToIntersections[{*--tempPair.end(),*tempPair.begin()}] = newVector;
                 return;
             }
         }

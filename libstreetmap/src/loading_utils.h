@@ -4,6 +4,19 @@
 #include "StreetsDatabaseAPI.h"
 using namespace std;
 
+struct StreetPairHash {
+    size_t operator () (const std::pair<StreetIdx, StreetIdx>& streetPair) const {
+    auto hash1 = hash<StreetIdx>{}(streetPair.first);
+    auto hash2 = hash<StreetIdx>{}(streetPair.second);
+    return hash1 ^ hash2;
+    }
+};
+
+struct StreetPairEqual {
+    bool operator () (const std::pair<StreetIdx, StreetIdx>& streetPair1, const std::pair<StreetIdx, StreetIdx>& streetPair2) const {
+    return (streetPair1.first == streetPair2.first && streetPair1.second == streetPair2.second) || (streetPair1.first == streetPair2.second && streetPair1.second == streetPair2.first);
+    }
+};
 
 //Finds connected street segments to a given intersection and store them in a vector 
 void loadIntersections(vector<vector<StreetSegmentIdx>*>& connectedStreetSegments, vector<vector<IntersectionIdx>*>& connectedIntersections, IntersectionIdx& intersectionIndex);
@@ -34,4 +47,4 @@ void loadStreetSegmentPoint(vector<vector<LatLon>*>& streetSegmentPoints, Street
 void loadStreetIntersections(vector<vector<IntersectionIdx>*> &streetToIntersections, int numStreetSegments, StreetIdx currStreet);
 
 //Finds pair ascociated with a given intersectionIndex and stores that pair along with its intersection into the data structure
-void loadTwoStreetsIntersections(unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*> &twoStreetsToIntersections,vector<StreetSegmentIdx> &streetSegmentsOfIntersection,IntersectionIdx currIntersectionIndex);
+void loadTwoStreetsIntersections(unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual> &twoStreetsToIntersections,vector<StreetSegmentIdx> &streetSegmentsOfIntersection,IntersectionIdx currIntersectionIndex);

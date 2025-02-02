@@ -22,14 +22,17 @@
 #include <iostream>
 #include "m1.h"
 #include "loading_utils.h"
+#include "nodeIDHelper.h"
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
 #include <thread>
 #include <vector>
-#include <unordered_map>
 #include <cmath>
 #include <cfloat>
 #include <limits>
+#include <stdexcept>
+#include <unordered_map>
+#include <iomanip>
 
 using namespace std;
 //cache vectors
@@ -41,7 +44,7 @@ vector<vector<IntersectionIdx>*> streetSegmentsToIntersections;
 //takes street index and returns vector of intersections that connect to the street
 vector<vector<IntersectionIdx>*> streetToIntersections;
 //takes two street indexs as a pair and returns vector of intersections that the two streets intersect at
-unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*> twoStreetsToIntersections;
+unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual> twoStreetsToIntersections;
 //takes street segment index and returns lat lon positions for all points in sequnce including intersections and curve points
 vector<vector<LatLon>*> streetSegmentPoints;
 // stores street segments of streets
@@ -81,7 +84,10 @@ bool loadMap(std::string map_streets_database_filename) {
     // Load your map related data structures here.
     //
     //if load fails, return false
-
+    if (!load_successful || !load_osm_success){
+        cout << "load fail" << endl;
+        return false;
+    }
     numIntersections = getNumIntersections(); //load number of intersections once to avoid excessive calculations
     numStreetSegments = getNumStreetSegments(); //load number of street segments once to avoid excessive calculations
     numStreets = getNumStreets(); //load number of streets
@@ -94,7 +100,6 @@ bool loadMap(std::string map_streets_database_filename) {
     //streetToStreetSegments.resize(numStreets, new vector<StreetSegmentIdx>());
     numStreets = getNumStreets();
     streetToIntersections.resize(numStreets);
-    twoStreetsToIntersections.resize(2*numIntersections);
 
     //load all the segment indices for each intersection index
     for(IntersectionIdx intersectionIndex = 0; intersectionIndex < numIntersections; intersectionIndex++)
@@ -114,8 +119,7 @@ bool loadMap(std::string map_streets_database_filename) {
         loadStreetIntersections(streetToIntersections,numStreetSegments,streetIndex);
     }
     //wait for all intersection threads
-
-    cout << "done!";
+    cout << "done!" << endl;
 
     load_successful = true; //Make sure this is updated to reflect whether
                             //loading the map succeeded or failed
@@ -150,14 +154,20 @@ void closeMap() {
     //     delete streetSegmentsToIntersections[streetSegmentIndex];
     // }
 
+    for(StreetIdx streetIndex = 0; streetIndex < numStreets; streetIndex++)
+    {
+        delete streetToIntersections[streetIndex];
+    }
 
-    unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*>::iterator twoStreetIntersectionIt = twoStreetsToIntersections.begin();
+    //Possibly could cause problems deleting vectors not allocated yet?
+    unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual>::iterator twoStreetIntersectionIt = twoStreetsToIntersections.begin();
     while(twoStreetIntersectionIt != twoStreetsToIntersections.end()){
         delete twoStreetIntersectionIt->second;
         twoStreetIntersectionIt++;
     }
 
     closeStreetDatabase();
+    closeOSMDatabase();
 }
 
 double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
@@ -260,9 +270,7 @@ double findStreetSegmentTurnAngle(StreetSegmentIdx src_street_segment_id,StreetS
         dstEnterPoint = dstCurvePoints[dstCurvePoints.size() - 2]; //get point right before "to" intersection
     } 
     
-    //cout << "src exit point:"<<srcExitPoint<<endl;
-    double srcToDst = findDistanceBetweenTwoPoints(srcExitPoint,dstEnterPoint);
-    //cout << findDistanceBetweenTwoPoints(dstCurvePoints[1],intersectionPoint) << "|" <<  findDistanceBetweenTwoPoints(srcCurvePoints[srcCurvePoints.size() - 2],intersectionPoint) << "|" << findDistanceBetweenTwoPoints(srcExitPoint,dstExitPoint) << endl;
+    double srcToDst = findDistanceBetweenTwoPoints(srcExitPoint,dstEnterPoint); //distance between src exit point and dst enter point
     double srcToIntersection = findDistanceBetweenTwoPoints(srcExitPoint,intersectionPoint); //distance between src exit point and intersection
     double dstToIntersection = findDistanceBetweenTwoPoints(dstEnterPoint,intersectionPoint); //distance between dst enter point and intersection
 
@@ -335,8 +343,7 @@ IntersectionIdx findClosestIntersection(LatLon my_position){
     int closestNode = 0;
     double closestDist = DBL_MAX; // initial value as maximum distance
     for(int i = 0; i < numIntersections; i++){ // loop through intersections
-        //OSMNode* curNode = getNodeByIndex(i);
-        LatLon curLatLon = getNodeByIndex(i)->coords();
+        LatLon curLatLon = getIntersectionPosition(i);
         double curDist = findDistanceBetweenTwoPoints(my_position, curLatLon); // find distance of current interection with point
         if(i==0 || closestDist > curDist){ // save minimum distance
             closestDist = curDist;

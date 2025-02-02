@@ -294,7 +294,7 @@ LatLonBounds findStreetBoundingBox (StreetIdx street_id){
         StreetSegmentInfo streetSegInfo = getStreetSegmentInfo(i);
         if(streetSegInfo.streetID == street_id){
             const OSMWay* osmWay = getWayByID(streetSegInfo.wayOSMID);
-            vector<OSMID> wayNodes = osmWay->ndrefs();
+            vector<OSMID> wayNodes = getWayMembers(osmWay);
             /*for(int j = 0; j < wayNodes.size(); j++)
                 if(uint64_t(wayNodes[j]) == 369658513){
                     cout << "way belong " << streetSegInfo.streetID << endl;

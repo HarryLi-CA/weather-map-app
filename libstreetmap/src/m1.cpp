@@ -43,8 +43,11 @@ vector<vector<StreetSegmentIdx>*> intersectionToStreetSegments;
 vector<vector<IntersectionIdx>*> streetSegmentsToIntersections;
 //takes street segment index and returns lat lon positions for all points in sequnce including intersections and curve points
 vector<vector<LatLon>*> streetSegmentPoints;
+// stores street segments of streets
+vector<vector<StreetSegmentIdx>*> streetToStreetSegments;
 int numIntersections = 0;
 int numStreetSegments = 0;
+int numStreets = 0;
 // loadMap will be called with the name of the file that stores the "layer-2"
 // map data accessed through StreetsDatabaseAPI: the street and intersection 
 // data that is higher-level than the raw OSM data). 
@@ -63,7 +66,7 @@ bool loadMap(std::string map_streets_database_filename) {
     bool load_successful = loadStreetsDatabaseBIN(map_streets_database_filename); //Indicates whether the map has loaded 
                                   //successfully
     string osm_file = map_streets_database_filename.substr(0,map_streets_database_filename.size()-11)+ "osm.bin";
-    bool load_osm_success = loadOSMDatabaseBIN(osm_file);
+    bool load_osm_success = loadOSMDatabaseBIN(osm_file); // load OSM database
     std::cout << "loadMap: " << map_streets_database_filename << std::endl;
 
     //
@@ -76,10 +79,11 @@ bool loadMap(std::string map_streets_database_filename) {
     }
     numIntersections = getNumIntersections(); //load number of intersections once to avoid excessive calculations
     numStreetSegments = getNumStreetSegments(); //load number of street segments once to avoid excessive calculations
-    
+    numStreets = getNumStreets(); //load number of streets
     intersectionToStreetSegments.resize(numIntersections);
     streetSegmentsToIntersections.resize(numStreetSegments,nullptr);
     streetSegmentPoints.resize(numStreetSegments, nullptr);
+    //streetToStreetSegments.resize(numStreets, new vector<StreetSegmentIdx>());
 
     //load all the segment indices for each intersection index
     for(IntersectionIdx intersectionIndex = 0; intersectionIndex < numIntersections; intersectionIndex++)
@@ -91,6 +95,7 @@ bool loadMap(std::string map_streets_database_filename) {
     {
         loadStreetSegmentPoint(streetSegmentPoints,streetSegmentIndex);
     }
+    loadStreetToStreetSegments(streetToStreetSegments);
     //wait for all intersection threads
     cout << "done!" << endl;
 
@@ -102,7 +107,11 @@ bool loadMap(std::string map_streets_database_filename) {
 
 void closeMap() {
     //Clean-up your map related data structures here
-    clearIdHelper();
+    intersectionToStreetSegments.clear();
+    streetSegmentsToIntersections.clear();
+    streetSegmentPoints.clear();
+    streetToStreetSegments.clear();
+    clearIdHelper(); // marks OSMID hashtable for reset
     closeStreetDatabase();
     closeOSMDatabase();
 }
@@ -285,29 +294,24 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
 
 double findStreetLength(StreetIdx street_id){
     double out = 0;
-    int streetSegments = getNumStreetSegments();
-    
-    for(StreetSegmentIdx i = 0; i < streetSegments; i++){
-        StreetSegmentInfo streetSegInfo = getStreetSegmentInfo(i);
-        if(streetSegInfo.streetID == street_id){
-            out+= findStreetSegmentLength(i);
-        }
+    vector<StreetSegmentIdx> streetSegs = *(streetToStreetSegments[street_id]);
+    int streetSegments = streetSegs.size();
+    for(int i = 0; i < streetSegments; i++){
+        out+= findStreetSegmentLength(streetSegs[i]);
     };
-
     return out;
 }
 
 LatLonBounds findStreetBoundingBox (StreetIdx street_id){
-    LatLonBounds out;
+    LatLonBounds out; // output of cuntion
     int streetSegments = getNumStreetSegments();
-    vector<OSMID> nodes = {};
     vector<LatLon> locations = {};
     
-    for(StreetSegmentIdx i = 0; i < streetSegments; i++){
+    for(StreetSegmentIdx i = 0; i < streetSegments; i++){ // loop through each street segment
         StreetSegmentInfo streetSegInfo = getStreetSegmentInfo(i);
-        if(streetSegInfo.streetID == street_id){
+        if(streetSegInfo.streetID == street_id){ //check if current segment is part of the street
             int curvesAmt = streetSegInfo.numCurvePoints;
-            locations.push_back(getIntersectionPosition(streetSegInfo.from));
+            locations.push_back(getIntersectionPosition(streetSegInfo.from)); // push all points to vector
             locations.push_back(getIntersectionPosition(streetSegInfo.to));
             for(int j = 0; j < curvesAmt; j++){
                 locations.push_back(getStreetSegmentCurvePoint(i,j));
@@ -315,7 +319,7 @@ LatLonBounds findStreetBoundingBox (StreetIdx street_id){
         }
     };
     double minLat, minLon, maxLat, maxLon;
-    minLat = locations[0].latitude();
+    minLat = locations[0].latitude(); // go through each location and find the max and min values
     maxLat = locations[0].latitude();
     minLon = locations[0].longitude();
     maxLon = locations[0].longitude();
@@ -358,11 +362,11 @@ double findFeatureArea(FeatureIdx feature_id)
 }
 
 double findWayLength(OSMID way_id){
-    const OSMWay* osmWay = getWayByID(way_id);
+    const OSMWay* osmWay = getWayByID(way_id); // use helper function to speed up receiving the way
     vector<OSMID> wayNodes = getWayMembers(osmWay);
-    const OSMNode* prevNode = getNodeByID(wayNodes[0]);
+    const OSMNode* prevNode = getNodeByID(wayNodes[0]); // use helper function to speed up receiving each node
     double length = 0;
-    for(int i = 1; i < wayNodes.size(); i++){
+    for(int i = 1; i < wayNodes.size(); i++){ // loop through all ways to find the distance between them
         const OSMNode* curNode = getNodeByID(wayNodes[i]);
         length += findDistanceBetweenTwoPoints(prevNode->coords(), curNode->coords());
         prevNode = curNode;
@@ -371,9 +375,9 @@ double findWayLength(OSMID way_id){
 }
 
 std::string getOSMNodeTagValue(OSMID osm_id, std::string key){
-    const OSMNode* node = getNodeByID(osm_id);
+    const OSMNode* node = getNodeByID(osm_id); //use helper function to speed up finding correct node
     int tagAmt = getTagCount(node);
-    for(int i = 0; i < tagAmt; i++){
+    for(int i = 0; i < tagAmt; i++){ // loop until correct key found
         string osmKey, value;
         tie(osmKey, value) = getTagPair(node, i);
         if(osmKey == key)

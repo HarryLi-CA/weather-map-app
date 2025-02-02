@@ -11,3 +11,6 @@ void cacheStreetSegmentToIntersection(vector<vector<IntersectionIdx>*>& connecte
 
 //Finds all position points of a street segment corrosponding to a given street segment index and loads it into an array
 void loadStreetSegmentPoint(vector<vector<LatLon>*>& streetSegmentPoints, StreetSegmentIdx streetSegmentIndex);
+
+// Stores all segments part of a street
+void loadStreetToStreetSegments(vector<vector<StreetSegmentIdx>*>& streetToStreetSegments);

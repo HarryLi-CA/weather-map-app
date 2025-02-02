@@ -43,3 +43,19 @@ void loadStreetSegmentPoint(vector<vector<LatLon>*>& streetSegmentPoints, Street
     }
     pointVector->push_back(getIntersectionPosition(segmentInfo.to)); //add position of "to" intersection as final point
 }
+
+void loadStreetToStreetSegments(vector<vector<StreetSegmentIdx>*>& streetToStreetSegments){
+    int numStreets = getNumStreets();
+    for(int i = 0; i < numStreets;i++){
+        //cout << "loaded " <<  i <<endl;
+        streetToStreetSegments.push_back(new vector<StreetSegmentIdx>());
+        //cout << streetToStreetSegments[i]->size() << endl;
+    }
+    int streetSegments = getNumStreetSegments();
+    for(StreetSegmentIdx i = 0; i < streetSegments; i++){ 
+        StreetSegmentInfo streetSegInfo = getStreetSegmentInfo(i);
+        //cout << streetToStreetSegments[streetSegInfo.streetID]->size() << " "<< streetSegInfo.streetID << endl;
+        streetToStreetSegments[streetSegInfo.streetID]->push_back(i);
+        //cout << streetToStreetSegments[streetSegInfo.streetID]->size()<<endl;
+    }
+}

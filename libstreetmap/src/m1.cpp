@@ -283,7 +283,10 @@ std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(std::pair<StreetIdx, 
 
 std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_prefix){return {};}
 
-double findStreetLength(StreetIdx street_id){return 0;}
+double findStreetLength(StreetIdx street_id){
+
+    return 0;
+}
 
 LatLonBounds findStreetBoundingBox (StreetIdx street_id){
     LatLonBounds out;
@@ -301,22 +304,9 @@ LatLonBounds findStreetBoundingBox (StreetIdx street_id){
             for(int j = 0; j < curvesAmt; j++){
                 locations.push_back(getStreetSegmentCurvePoint(i,j));
             }
-            /*
-            const OSMWay* osmWay = getWayByID(streetSegInfo.wayOSMID);
-            vector<OSMID> wayNodes = getWayMembers(osmWay);
-            nodes.insert(nodes.end(), wayNodes.begin(), wayNodes.end());
-            for(int j = 0; j < wayNodes.size(); j++)
-                if(uint64_t(wayNodes[j]) == 369658513){
-                    cout << "StreetID of StreetSeg" << streetSegInfo.streetID << endl;
-                    cout << "StreetID of Way" << streetSegInfo.streetID << endl;
-                    cout << "WayID of Node" << streetSegInfo.wayOSMID << endl;
-                    cout << uint64_t(getNodeByID(wayNodes[j])->id()) << endl;
-                }
-            */
         }
     };
     double minLat, minLon, maxLat, maxLon;
-    //const OSMNode* curNode = getNodeByID(nodes[0]);
     minLat = locations[0].latitude();
     maxLat = locations[0].latitude();
     minLon = locations[0].longitude();
@@ -327,21 +317,6 @@ LatLonBounds findStreetBoundingBox (StreetIdx street_id){
         double curLat, curLon;
         curLat = locations[i].latitude();
         curLon = locations[i].longitude();
-        /*
-        if(curLat >= 43.577 && curLat <= 43.578){
-            cout << i << " " << uint64_t(nodes[i])<< endl;
-            cout << "lat reach " << curLat << endl;
-            cout << "lat max " << maxLat << endl;
-            cout << "lat max() " << max(maxLat,curLat) << endl;
-        }
-        
-        if(curLon <=  -79.614330 && curLon >= -79.61441){
-            cout << i << endl;
-            cout << "lon reach " << curLon << endl;
-            cout << "lon min " << minLon << endl;
-            cout << "lon min() " << min(minLon,curLon) << endl;
-        }
-        */
         minLat = min(minLat, curLat);
         maxLat = max(maxLat, curLat);
         minLon = min(minLon, curLon);
@@ -350,9 +325,6 @@ LatLonBounds findStreetBoundingBox (StreetIdx street_id){
 
     out.min = LatLon(minLat, minLon);
     out.max = LatLon(maxLat, maxLon);
-    //cout << out.min << out.max <<endl;
-    //cout << out.min.latitude() << out.min.longitude() <<endl;
-    //cout << out.max.latitude() << out.max.longitude() <<endl;
     return out;
 }
 

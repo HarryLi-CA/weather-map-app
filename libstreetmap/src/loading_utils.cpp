@@ -1,5 +1,6 @@
 #include "loading_utils.h"
 #include <vector>
+#include <set>
 #include "StreetsDatabaseAPI.h"
 
 using namespace std;
@@ -61,3 +62,33 @@ void loadStreetToStreetSegments(vector<vector<StreetSegmentIdx>*>& streetToStree
     }
 }
 
+void loadStreetIntersections(vector<vector<IntersectionIdx>*> &streetToIntersections, int numStreetSegments, StreetIdx currStreet)
+{
+    streetToIntersections[currStreet] = new vector<IntersectionIdx>();
+
+    //store UNIQUE intersectionIdxs of the currStreet into this set, this is used to track whether an intersection has already been inserted into the vector
+    set<IntersectionIdx> intersectionTracker;
+    int numAddedIntersections = 0;
+
+    //loop through all the street segments in the city, look at the street they are a part of, if the street is the one we want, add their connected intersections into the vector
+    for(StreetSegmentIdx streetSegmentIndex = 0; streetSegmentIndex < numStreetSegments; streetSegmentIndex++)
+    {
+        StreetSegmentInfo segInfo = getStreetSegmentInfo(streetSegmentIndex);
+        
+        if(segInfo.streetID == currStreet)
+        {
+            //the intersection is only added to the vector if it was able to be inserted into the list, ie was unique
+            intersectionTracker.insert(segInfo.from);
+            if(intersectionTracker.size() != numAddedIntersections){
+                streetToIntersections[currStreet]->push_back(segInfo.from);
+                numAddedIntersections++;
+            }
+
+            intersectionTracker.insert(segInfo.to);
+            if(intersectionTracker.size() != numAddedIntersections){
+                streetToIntersections[currStreet]->push_back(segInfo.to);
+                numAddedIntersections++;
+            }
+        }
+    }
+}

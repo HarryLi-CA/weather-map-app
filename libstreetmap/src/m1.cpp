@@ -41,6 +41,8 @@ using namespace std;
 vector<vector<StreetSegmentIdx>*> intersectionToStreetSegments;
 //takes street segment index and returns vector of intersections that connect to the street segment
 vector<vector<IntersectionIdx>*> streetSegmentsToIntersections;
+//takes street index and returns vector of intersections that connect to the street
+vector<vector<IntersectionIdx>*> streetToIntersections;
 //takes street segment index and returns lat lon positions for all points in sequnce including intersections and curve points
 vector<vector<LatLon>*> streetSegmentPoints;
 // stores street segments of streets
@@ -93,6 +95,8 @@ bool loadMap(std::string map_streets_database_filename) {
     streetSpeedLimitCache.resize(numStreetSegments, -1);
     travelTimeCache.resize(numStreetSegments, -1);
     //streetToStreetSegments.resize(numStreets, new vector<StreetSegmentIdx>());
+    numStreets = getNumStreets();
+    streetToIntersections.resize(numStreets);
 
     //load all the segment indices for each intersection index
     for(IntersectionIdx intersectionIndex = 0; intersectionIndex < numIntersections; intersectionIndex++)
@@ -105,6 +109,10 @@ bool loadMap(std::string map_streets_database_filename) {
         loadStreetSegmentPoint(streetSegmentPoints,streetSpeedLimitCache,streetSegmentIndex);
     }
     loadStreetToStreetSegments(streetToStreetSegments);
+    for(StreetIdx streetIndex = 0; streetIndex < numStreets; streetIndex++)
+    {
+        loadStreetIntersections(streetToIntersections,numStreetSegments,streetIndex);
+    }
     //wait for all intersection threads
     cout << "done!" << endl;
 
@@ -123,6 +131,14 @@ void closeMap() {
     delete2DVectorPointers<IntersectionIdx>(streetToStreetSegments);
 
     clearIdHelper(); // marks OSMID hashtable for reset
+
+    //PATRICK's comment
+    // for(StreetIdx streetIndex = 0; streetIndex < numStreets; streetIndex++)
+    // {
+    //     delete streetSegmentsToIntersections[streetIndex];
+    // }
+
+
     closeStreetDatabase();
     closeOSMDatabase();
 }
@@ -314,7 +330,9 @@ std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection(IntersectionIdx i
     return *intersectionToStreetSegments[intersection_id];
 }
 
-std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){return {};}
+std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
+    return *streetToIntersections[street_id];
+}
 
 std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(std::pair<StreetIdx, StreetIdx> street_ids){return {};}
 

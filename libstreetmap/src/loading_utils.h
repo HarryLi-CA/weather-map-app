@@ -27,3 +27,7 @@ void delete2DVectorPointers(vector<vector<P>*>& toDeleteFrom)
     }
     toDeleteFrom.clear(); //remove allocated space in vector
 }
+void loadStreetSegmentPoint(vector<vector<LatLon>*>& streetSegmentPoints, StreetSegmentIdx streetSegmentIndex);
+
+//Finds intersections asscociated to a street and stores them in a vector
+void loadStreetIntersections(vector<vector<IntersectionIdx>*> &streetToIntersections, int numStreetSegments, StreetIdx currStreet);

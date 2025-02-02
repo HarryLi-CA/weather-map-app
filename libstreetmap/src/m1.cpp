@@ -226,7 +226,17 @@ std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersect
     for(int connectedStreetSegmentVectorIndex = 0; connectedStreetSegmentVectorIndex < connectedStreetSegments->size(); connectedStreetSegmentVectorIndex++)
     {
         StreetSegmentIdx streetSegmentIndex = (*connectedStreetSegments)[connectedStreetSegmentVectorIndex]; //connected street segment index   
+        StreetSegmentInfo segInfo = getStreetSegmentInfo(streetSegmentIndex); //info of connected street segment
+        
+        //if the segment is a one-way road and the intersection is not the roading being driven out of, skip this iteration
+        if(segInfo.oneWay && segInfo.from != intersection_id)
+        {
+            continue;
+        }
+        
         IntersectionIdx otherIntersection = findOppositeIntersection(intersection_id,streetSegmentIndex); //other intersection on connected street segment
+
+        
 
         bool skipPush = false; //skip flag for whether to add to the vector or not
         //check for duplicates in allocated vector
@@ -353,7 +363,10 @@ POIIdx findClosestPOI(LatLon my_position, std::string poi_type){
     return closestNode;
 }
 
-double findFeatureArea(FeatureIdx feature_id){return 0;}
+double findFeatureArea(FeatureIdx feature_id)
+{
+
+}
 
 double findWayLength(OSMID way_id){
     const OSMWay* osmWay = getWayByID(way_id);

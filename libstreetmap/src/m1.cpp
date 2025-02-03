@@ -126,16 +126,17 @@ void closeMap() {
 }
 
 double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
-    double x1, x2,y1,y2, xDif, yDif, latavg;
-    double crosssectionRadius = 
-    latavg = (point_1.latitude()+ point_2.latitude())/2;
+    double x1,x2,y1,y2; //cartesian points based on Earth's surface LatLon points
+    double latavg = (point_1.latitude()+ point_2.latitude())/2; //average latitude
+
+    //Calculate equivalent cartesian points using equirectangular projection
     x1 = kEarthRadiusInMeters * point_1.longitude()*kDegreeToRadian * cos(latavg*kDegreeToRadian);
     x2 = kEarthRadiusInMeters * point_2.longitude()*kDegreeToRadian * cos(latavg*kDegreeToRadian);
     y1 = kEarthRadiusInMeters * point_1.latitude()*kDegreeToRadian;
     y2 = kEarthRadiusInMeters * point_2.latitude()*kDegreeToRadian;
-    xDif = x1-x2;
-    yDif = y1-y2;
-    return sqrt(xDif*xDif+yDif*yDif);
+    double xDif = x1-x2; //horizontal distance between point 1 and point 2 
+    double yDif = y1-y2; //vertical distance between point 1 and point 2
+    return sqrt(xDif*xDif+yDif*yDif); //use pythagorean theorem to calculate final distance, return result
 }
 
 double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
@@ -433,8 +434,6 @@ double findFeatureArea(FeatureIdx feature_id)
 
         //add to total area of shape
         totalArea += area;
-
-        //cout << "("<<y2 << "-"<<y1<<")*("<<x2<<"+"<<x1<<")/2 = "<<area << " -> " << totalArea << endl;
 
         //set current feature to next feature
         currentFeaturePoint = nextFeaturePoint;

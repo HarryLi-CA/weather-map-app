@@ -32,6 +32,7 @@
 #include <limits>
 #include <stdexcept>
 #include <unordered_map>
+#include <map>
 #include <iomanip>
 
 using namespace std;
@@ -45,6 +46,8 @@ vector<vector<IntersectionIdx>*> streetSegmentsToIntersections;
 vector<vector<IntersectionIdx>*> streetToIntersections;
 //takes two street indexs as a pair and returns vector of intersections that the two streets intersect at
 unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual> twoStreetsToIntersections;
+//contains all street names and can access with just a partial string of the name
+multimap<string,StreetIdx,stringComparator> streetNames;
 //takes street segment index and returns lat lon positions for all points in sequnce including intersections and curve points
 vector<vector<LatLon>*> streetSegmentPoints;
 // stores street segments of streets
@@ -117,6 +120,7 @@ bool loadMap(std::string map_streets_database_filename) {
     for(StreetIdx streetIndex = 0; streetIndex < numStreets; streetIndex++)
     {
         loadStreetIntersections(streetToIntersections,numStreetSegments,streetIndex);
+        streetNames.insert({getStreetName(streetIndex),streetIndex});
     }
     //wait for all intersection threads
     cout << "done!" << endl;
@@ -373,7 +377,22 @@ std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(std::pair<StreetIdx, 
     }
 }
 
-std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_prefix){return {};}
+std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_prefix){
+    
+    vector<StreetIdx> newVector = {};
+    if(street_prefix.length() == 0){
+        newVector.push_back(-1);
+        return newVector;
+    }
+
+    auto matchRange = streetNames.equal_range(street_prefix);
+    for(auto low = matchRange.first; low != matchRange.second; ++low){
+        StreetIdx streetIdxInRange = low->second;
+        newVector.push_back(streetIdxInRange);
+    }
+    
+    return newVector;
+}
 
 double findStreetLength(StreetIdx street_id){
     double out = 0;

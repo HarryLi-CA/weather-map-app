@@ -14,6 +14,3 @@ void loadStreetSegmentPoint(vector<vector<LatLon>*>& streetSegmentPoints, vector
 
 // Stores all segments part of a street
 void loadStreetToStreetSegments(vector<vector<StreetSegmentIdx>*>& streetToStreetSegments);
-
-// Stores all travel times for each s
-void cacheTravelTime(vector<float>& segmentTravelTimeCache, vector<float>& streetSpeedLimitCache, vector<float>& streetSegmentLengthCache,  StreetSegmentIdx street_segment_id);

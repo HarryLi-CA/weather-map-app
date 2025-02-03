@@ -60,11 +60,3 @@ void loadStreetToStreetSegments(vector<vector<StreetSegmentIdx>*>& streetToStree
         //cout << streetToStreetSegments[streetSegInfo.streetID]->size()<<endl;
     }
 }
-
-void cacheTravelTime(vector<float>& segmentTravelTimeCache, vector<float>& streetSpeedLimitCache, vector<float>& streetSegmentLengthCache,  StreetSegmentIdx street_segment_id){
-    double travelSpeed = streetSpeedLimitCache[street_segment_id]; //get maximum speed on road segment (m/s)
-    double travelDistance = streetSegmentLengthCache[street_segment_id];  //get total length of segment
-    double travelTime = travelDistance/travelSpeed; //calculate travel time using time elapsed = distance/speed
-
-    segmentTravelTimeCache[street_segment_id] = travelTime; //return result
-}

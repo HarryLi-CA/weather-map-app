@@ -101,8 +101,6 @@ bool loadMap(std::string map_streets_database_filename) {
     for(StreetSegmentIdx streetSegmentIndex = 0; streetSegmentIndex < numStreetSegments; streetSegmentIndex++)
     {
         loadStreetSegmentPoint(streetSegmentPoints,streetSpeedLimitCache,streetSegmentIndex);
-        findStreetSegmentLength(streetSegmentIndex);
-        cacheTravelTime(travelTimeCache, streetSpeedLimitCache, streetSegmentLengthCache, streetSegmentIndex);
     }
     loadStreetToStreetSegments(streetToStreetSegments);
     //wait for all intersection threads
@@ -167,7 +165,16 @@ double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
 
 
 double findStreetSegmentTravelTime(StreetSegmentIdx street_segment_id){
-    return travelTimeCache[street_segment_id]; //return result
+    //if travel time is not cached, calculate it
+    if(travelTimeCache[street_segment_id] == -1)
+    {
+        double travelSpeed = streetSpeedLimitCache[street_segment_id]; //get maximum speed on road segment (m/s)
+        double travelDistance = findStreetSegmentLength(street_segment_id);  //get total length of segment
+        double travelTime = travelDistance/travelSpeed; //calculate travel time using time elapsed = distance/speed
+
+        travelTimeCache[street_segment_id] = travelTime; //return result
+    }
+    return travelTimeCache[street_segment_id]; //return result from cache
 }
 
 double findStreetSegmentTurnAngle(StreetSegmentIdx src_street_segment_id,StreetSegmentIdx dst_street_segment_id){

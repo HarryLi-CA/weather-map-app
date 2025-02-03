@@ -1,3 +1,4 @@
+#pragma once
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
 #include <unordered_map>

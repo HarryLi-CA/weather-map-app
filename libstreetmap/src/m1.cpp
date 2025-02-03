@@ -384,8 +384,8 @@ double findFeatureArea(FeatureIdx feature_id)
 
 
     //find boundbox (minimum latitude and longitude in feature)
-    double latBound = INFINITY;
-    double lonBound = INFINITY;
+    double latBound = DBL_MAX; //initialize bounds to max
+    double lonBound = DBL_MAX; //initialize bounds to max
     for(int pointIndex = 0; pointIndex < numPoints; pointIndex++)
     {
         LatLon featurePoint = getFeaturePoint(feature_id, pointIndex); //current point in feature
@@ -395,12 +395,11 @@ double findFeatureArea(FeatureIdx feature_id)
             latBound = featurePoint.latitude();
         }
         //check for minimum longitude
-        if(featurePoint.latitude() < lonBound)
+        if(featurePoint.longitude() < lonBound)
         {
             lonBound = featurePoint.longitude();
         }
     }
-    cout << latBound << ", " << lonBound << endl;
     
     double totalArea = 0; //total area of the feature
     LatLon currentFeaturePoint = getFeaturePoint(feature_id, 0); 

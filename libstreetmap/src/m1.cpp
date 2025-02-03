@@ -372,7 +372,67 @@ POIIdx findClosestPOI(LatLon my_position, std::string poi_type){
 
 double findFeatureArea(FeatureIdx feature_id)
 {
+    int numPoints = getNumFeaturePoints(feature_id); //number of vertices in feature
+    //check if shape is polygon by checking if first point is equal to last point
+    bool isPolygon = getFeaturePoint(feature_id, 0) == getFeaturePoint(feature_id, numPoints - 1); //whether the feature is a closed polygon or not
 
+    //if feature is not a closed polygon, return 0
+    if(!isPolygon)
+    {
+        return 0;
+    }
+
+
+    //find boundbox (minimum latitude and longitude in feature)
+    double latBound = INFINITY;
+    double lonBound = INFINITY;
+    for(int pointIndex = 0; pointIndex < numPoints; pointIndex++)
+    {
+        LatLon featurePoint = getFeaturePoint(feature_id, pointIndex); //current point in feature
+        //check for minimum latitude
+        if(featurePoint.latitude() < latBound)
+        {
+            latBound = featurePoint.latitude();
+        }
+        //check for minimum longitude
+        if(featurePoint.latitude() < lonBound)
+        {
+            lonBound = featurePoint.longitude();
+        }
+    }
+    cout << latBound << ", " << lonBound << endl;
+    
+    double totalArea = 0; //total area of the feature
+    LatLon currentFeaturePoint = getFeaturePoint(feature_id, 0); 
+    for(int pointIndex = 1; pointIndex < numPoints; pointIndex++)
+    {
+        LatLon nextFeaturePoint = getFeaturePoint(feature_id, pointIndex); //current point in feature
+
+        //get points on the y/x axis to calculate the vertical and horizontal distances from the relative axis bounds
+        LatLon relativeNextLonAxisPoint = LatLon(nextFeaturePoint.latitude(), lonBound); //point on the longitude axis that shares a latitude with nextFeaturePoint
+        LatLon relativeNextLatAxisPoint = LatLon(latBound, nextFeaturePoint.longitude()); //point on the latitude axis that shares a longitude with nextFeaturePoint
+        LatLon relativeCurrentLonAxisPoint = LatLon(currentFeaturePoint.latitude(), lonBound); //point on the longitude axis that shares a latitude with currentFeaturePoint
+        LatLon relativeCurrentLatAxisPoint = LatLon(latBound, currentFeaturePoint.longitude()); //point on the latitude axis that shares a longitude with currentFeaturePoint
+
+        //find values required to calculate area of trapezoid
+        double y2 = findDistanceBetweenTwoPoints(nextFeaturePoint, relativeNextLonAxisPoint);
+        double x2 = findDistanceBetweenTwoPoints(nextFeaturePoint, relativeNextLatAxisPoint);
+        
+        double y1 = findDistanceBetweenTwoPoints(currentFeaturePoint, relativeCurrentLonAxisPoint);
+        double x1 = findDistanceBetweenTwoPoints(currentFeaturePoint, relativeCurrentLatAxisPoint);
+
+        double area = (y2 - y1)*(x2 + x1)/2; //area of trapezoid created by the current point, the next point and the latitude/longitude bounds
+
+        //add to total area of shape
+        totalArea += area;
+
+        //cout << "("<<y2 << "-"<<y1<<")*("<<x2<<"+"<<x1<<")/2 = "<<area << " -> " << totalArea << endl;
+
+        //set current feature to next feature
+        currentFeaturePoint = nextFeaturePoint;
+    }
+    //to account for differences the starting height of the first point (which may cause negative values), return the absolute value of the area
+    return abs(totalArea);
 }
 
 double findWayLength(OSMID way_id){

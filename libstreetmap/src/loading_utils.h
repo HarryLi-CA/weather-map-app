@@ -1,3 +1,4 @@
+#pragma once
 #include <vector>
 #include "StreetsDatabaseAPI.h"
 using namespace std;

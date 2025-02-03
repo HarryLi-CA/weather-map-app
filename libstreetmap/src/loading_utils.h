@@ -14,3 +14,15 @@ void loadStreetSegmentPoint(vector<vector<LatLon>*>& streetSegmentPoints, vector
 
 // Stores all segments part of a street
 void loadStreetToStreetSegments(vector<vector<StreetSegmentIdx>*>& streetToStreetSegments);
+
+// Delete all pointers in a vector
+template <typename P>
+void delete2DVectorPointers(vector<vector<P>*>& toDeleteFrom)
+{
+    //loop through every pointer in vector
+    for(int vectorIndex = 0; vectorIndex < toDeleteFrom.size(); vectorIndex++)
+    {
+        delete toDeleteFrom[vectorIndex]; //delete vector
+    }
+    toDeleteFrom.clear(); //remove allocated space in vector
+}

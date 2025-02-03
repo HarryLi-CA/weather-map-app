@@ -60,3 +60,4 @@ void loadStreetToStreetSegments(vector<vector<StreetSegmentIdx>*>& streetToStree
         //cout << streetToStreetSegments[streetSegInfo.streetID]->size()<<endl;
     }
 }
+

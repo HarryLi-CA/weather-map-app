@@ -114,10 +114,12 @@ bool loadMap(std::string map_streets_database_filename) {
 
 void closeMap() {
     //Clean-up your map related data structures here
-    intersectionToStreetSegments.clear();
-    streetSegmentsToIntersections.clear();
-    streetSegmentPoints.clear();
-    streetToStreetSegments.clear();
+    //delete and clear all elements in vectors with dynamically allocated data
+    delete2DVectorPointers<StreetSegmentIdx>(intersectionToStreetSegments);
+    delete2DVectorPointers<IntersectionIdx>(streetSegmentsToIntersections);
+    delete2DVectorPointers<LatLon>(streetSegmentPoints);
+    delete2DVectorPointers<IntersectionIdx>(streetToStreetSegments);
+
     clearIdHelper(); // marks OSMID hashtable for reset
     closeStreetDatabase();
     closeOSMDatabase();
@@ -250,7 +252,7 @@ IntersectionIdx findOppositeIntersection(IntersectionIdx intersection_id, Street
 
 std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersection_id)
 {
-    vector<IntersectionIdx>* adjacentIntersections = new vector<IntersectionIdx>(); //dynamically allocated vector of adjacent intersections
+    vector<IntersectionIdx> adjacentIntersections; //dynamically allocated vector of adjacent intersections
     vector<StreetSegmentIdx>* connectedStreetSegments = intersectionToStreetSegments[intersection_id]; //vector containing all connected streets to the intersection
     //iterate through all streets
     for(int connectedStreetSegmentVectorIndex = 0; connectedStreetSegmentVectorIndex < connectedStreetSegments->size(); connectedStreetSegmentVectorIndex++)
@@ -270,10 +272,10 @@ std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersect
 
         bool skipPush = false; //skip flag for whether to add to the vector or not
         //check for duplicates in allocated vector
-        for(int adjacentIntersectionIndex = 0; adjacentIntersectionIndex < adjacentIntersections->size(); adjacentIntersectionIndex++)
+        for(int adjacentIntersectionIndex = 0; adjacentIntersectionIndex < adjacentIntersections.size(); adjacentIntersectionIndex++)
         {
             //if duplicate is found, set flag to skip iteration in loop
-            if((*adjacentIntersections)[adjacentIntersectionIndex] == otherIntersection)
+            if((adjacentIntersections)[adjacentIntersectionIndex] == otherIntersection)
             {
                 skipPush = true;
                 break;
@@ -286,9 +288,9 @@ std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersect
             continue;
         }
 
-        adjacentIntersections->push_back(otherIntersection); //add intersection to allocated vector
+        adjacentIntersections.push_back(otherIntersection); //add intersection to allocated vector
     }
-    return *adjacentIntersections; //return allocated vector
+    return adjacentIntersections; //return allocated vector
 }
 
 IntersectionIdx findClosestIntersection(LatLon my_position){

@@ -30,11 +30,12 @@ void cacheStreetSegmentToIntersection(vector<vector<IntersectionIdx>*>& connecte
     connectedIntersections[streetSegmentIndex]->push_back(intersectionIndex); //add street segment to intersection
 }
 
-void loadStreetSegmentPoint(vector<vector<LatLon>*>& streetSegmentPoints, StreetSegmentIdx streetSegmentIndex)
+void loadStreetSegmentPoint(vector<vector<LatLon>*>& streetSegmentPoints, vector<float>& speedLimitCache, StreetSegmentIdx streetSegmentIndex)
 {
     StreetSegmentInfo segmentInfo = getStreetSegmentInfo(streetSegmentIndex);
     vector<LatLon>* pointVector = new vector<LatLon>(); //allocate vector of segment points
     streetSegmentPoints[streetSegmentIndex] = pointVector; //add pointer of vector to loading vector
+    speedLimitCache[streetSegmentIndex] = segmentInfo.speedLimit;
     pointVector->push_back(getIntersectionPosition(segmentInfo.from)); //add position of "from" intersection
     //iterate through all intermediate curve points
     for(int curvePointIndex = 0; curvePointIndex < segmentInfo.numCurvePoints; curvePointIndex++)
@@ -58,4 +59,12 @@ void loadStreetToStreetSegments(vector<vector<StreetSegmentIdx>*>& streetToStree
         streetToStreetSegments[streetSegInfo.streetID]->push_back(i);
         //cout << streetToStreetSegments[streetSegInfo.streetID]->size()<<endl;
     }
+}
+
+void cacheTravelTime(vector<float>& segmentTravelTimeCache, vector<float>& streetSpeedLimitCache, vector<float>& streetSegmentLengthCache,  StreetSegmentIdx street_segment_id){
+    double travelSpeed = streetSpeedLimitCache[street_segment_id]; //get maximum speed on road segment (m/s)
+    double travelDistance = streetSegmentLengthCache[street_segment_id];  //get total length of segment
+    double travelTime = travelDistance/travelSpeed; //calculate travel time using time elapsed = distance/speed
+
+    segmentTravelTimeCache[street_segment_id] = travelTime; //return result
 }

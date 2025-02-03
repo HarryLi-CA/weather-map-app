@@ -45,6 +45,10 @@ vector<vector<IntersectionIdx>*> streetSegmentsToIntersections;
 vector<vector<LatLon>*> streetSegmentPoints;
 // stores street segments of streets
 vector<vector<StreetSegmentIdx>*> streetToStreetSegments;
+//stores length of street segment
+vector<float> streetSegmentLengthCache;
+vector<float> streetSpeedLimitCache;
+vector<float> travelTimeCache;
 int numIntersections = 0;
 int numStreetSegments = 0;
 int numStreets = 0;
@@ -83,6 +87,9 @@ bool loadMap(std::string map_streets_database_filename) {
     intersectionToStreetSegments.resize(numIntersections);
     streetSegmentsToIntersections.resize(numStreetSegments,nullptr);
     streetSegmentPoints.resize(numStreetSegments, nullptr);
+    streetSegmentLengthCache.resize(numStreetSegments, -1);
+    streetSpeedLimitCache.resize(numStreetSegments, -1);
+    travelTimeCache.resize(numStreetSegments, -1);
     //streetToStreetSegments.resize(numStreets, new vector<StreetSegmentIdx>());
 
     //load all the segment indices for each intersection index
@@ -93,7 +100,9 @@ bool loadMap(std::string map_streets_database_filename) {
     }
     for(StreetSegmentIdx streetSegmentIndex = 0; streetSegmentIndex < numStreetSegments; streetSegmentIndex++)
     {
-        loadStreetSegmentPoint(streetSegmentPoints,streetSegmentIndex);
+        loadStreetSegmentPoint(streetSegmentPoints,streetSpeedLimitCache,streetSegmentIndex);
+        findStreetSegmentLength(streetSegmentIndex);
+        cacheTravelTime(travelTimeCache, streetSpeedLimitCache, streetSegmentLengthCache, streetSegmentIndex);
     }
     loadStreetToStreetSegments(streetToStreetSegments);
     //wait for all intersection threads
@@ -130,6 +139,11 @@ double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
 }
 
 double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
+    //check if length is cached
+    if(streetSegmentLengthCache[street_segment_id] != -1)
+    {
+        return streetSegmentLengthCache[street_segment_id]; //if segment length is cached, return cached value
+    }
     StreetSegmentInfo streetSegInfo = getStreetSegmentInfo(street_segment_id); //get street segment info
     double streetSegmentLength = 0; //initialize total segment length to 0
     //iterate through all curve points
@@ -143,17 +157,17 @@ double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
         
         fromCurvePoint = toCurvePoint; //set the next from point to the current to point, since the to point will be updated on the next iteration
     }
+    //add street segment to global cache
+    streetSegmentLengthCache[street_segment_id] = streetSegmentLength;
     return streetSegmentLength; //return result
 }
 
-double findStreetSegmentTravelTime(StreetSegmentIdx street_segment_id){
-    
-    
-    double travelSpeed = getStreetSegmentInfo(street_segment_id).speedLimit; //get maximum speed on road segment (m/s)
-    double travelDistance = findStreetSegmentLength(street_segment_id);  //get total length of segment
-    double travelTime = travelDistance/travelSpeed; //calculate travel time using time elapsed = distance/speed
 
-    return travelTime; //return result
+//helper function to cache travel time in order for fast retrieval in findStreetSegmentTravelTime
+
+
+double findStreetSegmentTravelTime(StreetSegmentIdx street_segment_id){
+    return travelTimeCache[street_segment_id]; //return result
 }
 
 double findStreetSegmentTurnAngle(StreetSegmentIdx src_street_segment_id,StreetSegmentIdx dst_street_segment_id){

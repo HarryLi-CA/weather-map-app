@@ -44,14 +44,14 @@ vector<vector<StreetSegmentIdx>*> intersectionToStreetSegments;
 vector<vector<IntersectionIdx>*> streetSegmentsToIntersections;
 //takes street index and returns vector of intersections that connect to the street
 vector<vector<IntersectionIdx>*> streetToIntersections;
-//takes two street indexs as a pair and returns vector of intersections that the two streets intersect at
-unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual> twoStreetsToIntersections;
-//contains all street names and can access with just a partial string of the name
-multimap<string,StreetIdx,stringComparator> streetNames;
 //takes street segment index and returns lat lon positions for all points in sequnce including intersections and curve points
 vector<vector<LatLon>*> streetSegmentPoints;
 // stores street segments of streets
 vector<vector<StreetSegmentIdx>*> streetToStreetSegments;
+//takes two street indexs as a pair and returns vector of intersections that the two streets intersect at
+unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual> twoStreetsToIntersections;
+//contains all street names and can access with just a partial string of the name
+multimap<string,StreetIdx,stringComparator> streetNames;
 //stores length of street segment
 vector<float> streetSegmentLengthCache;
 vector<float> streetSpeedLimitCache;
@@ -136,32 +136,9 @@ void closeMap() {
     //delete and clear all elements in vectors with dynamically allocated data
     delete2DVectorPointers<StreetSegmentIdx>(intersectionToStreetSegments);
     delete2DVectorPointers<IntersectionIdx>(streetSegmentsToIntersections);
+    delete2DVectorPointers<IntersectionIdx>(streetToIntersections);
     delete2DVectorPointers<LatLon>(streetSegmentPoints);
     delete2DVectorPointers<IntersectionIdx>(streetToStreetSegments);
-
-    clearIdHelper(); // marks OSMID hashtable for reset
-
-    //PATRICK's comment
-    // for(StreetIdx streetIndex = 0; streetIndex < numStreets; streetIndex++)
-    // {
-    //     delete streetSegmentsToIntersections[streetIndex];
-    // }
-
-    // for(IntersectionIdx intersectionIndex = 0; intersectionIndex < numIntersections; intersectionIndex++)
-    // {
-    //     delete intersectionToStreetSegments[intersectionIndex];
-    // }
-
-    // for(StreetSegmentIdx streetSegmentIndex = 0; streetSegmentIndex < numStreetSegments; streetSegmentIndex++)
-    // {
-    //     delete streetSegmentPoints[streetSegmentIndex];
-    //     delete streetSegmentsToIntersections[streetSegmentIndex];
-    // }
-
-    for(StreetIdx streetIndex = 0; streetIndex < numStreets; streetIndex++)
-    {
-        delete streetToIntersections[streetIndex];
-    }
 
     //Possibly could cause problems deleting vectors not allocated yet?
     unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual>::iterator twoStreetIntersectionIt = twoStreetsToIntersections.begin();
@@ -170,6 +147,7 @@ void closeMap() {
         twoStreetIntersectionIt++;
     }
 
+    clearIdHelper(); // marks OSMID hashtable for reset
     closeStreetDatabase();
     closeOSMDatabase();
 }

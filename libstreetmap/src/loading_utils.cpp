@@ -101,7 +101,7 @@ void loadStreetIntersections(vector<vector<IntersectionIdx>*> &streetToIntersect
 void loadTwoStreetsIntersections(unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual> &twoStreetsToIntersections,vector<StreetSegmentIdx> &streetSegmentsOfIntersection,IntersectionIdx currIntersectionIndex)
 {
     set<StreetIdx> tempPair;
-    for(StreetSegmentIdx streetSegmentIndex; streetSegmentIndex < streetSegmentsOfIntersection.size(); streetSegmentIndex++)
+    for(StreetSegmentIdx streetSegmentIndex = 0; streetSegmentIndex < streetSegmentsOfIntersection.size(); streetSegmentIndex++)
     {
         StreetSegmentInfo segInfo = getStreetSegmentInfo(streetSegmentIndex);
         tempPair.insert(segInfo.streetID);

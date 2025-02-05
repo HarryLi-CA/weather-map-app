@@ -146,6 +146,10 @@ void closeMap() {
         twoStreetIntersectionIt++;
     }
 
+    twoStreetsToIntersections.clear();
+
+    streetNames.clear();
+
     clearIdHelper(); // marks OSMID hashtable for reset
     closeStreetDatabase();
     closeOSMDatabase();
@@ -357,10 +361,13 @@ std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(std::pair<StreetIdx, 
     // }
 
     bool exists = twoStreetsToIntersections.find(street_ids) != twoStreetsToIntersections.end();
-    
-    if(exists){
+
+    if(exists)
+    {
         return *twoStreetsToIntersections[street_ids];
-    }else{
+    }
+    else
+    {
         return {};
     }
 }
@@ -373,12 +380,10 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
         return newVector;
     }
 
-    //while loop instead?
-    //find first
-    //while(next is equal to input)
     auto matchRange = streetNames.equal_range(street_prefix);
     for(auto low = matchRange.first; low != matchRange.second; low++){
         StreetIdx streetIdxInRange = low->second;
+        // cout << streetIdxInRange << " , ";
         newVector.push_back(streetIdxInRange);
     }
     

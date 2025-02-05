@@ -48,9 +48,12 @@ vector<vector<IntersectionIdx>*> streetToIntersections;
 vector<vector<LatLon>*> streetSegmentPoints;
 // stores street segments of streets
 vector<vector<StreetSegmentIdx>*> streetToStreetSegments;
-//takes two street indexs as a pair and returns vector of intersections that the two streets intersect at
+//takes two street indexs as a pair and returns vector of intersections that the two streets intersect at,
+//Uses a special hash function StreetPairHash that allows pairs of StreetIdxs to be used as keys
+//Uses a special comparator StreetPairEqual that allows pairs to be equated (ie <1,2> == <2,1>)
 unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual> twoStreetsToIntersections;
-//contains all street names and can access with just a partial string of the name
+//contains all street names, with their respective streetIds and can be accessed with just a partial string of the name
+//Uses a special comparator stringComparator to allow for street names to be identified by a partial string
 multimap<string,StreetIdx,stringComparator> streetNames;
 //stores length of street segment
 vector<float> streetSegmentLengthCache;
@@ -91,17 +94,17 @@ bool loadMap(std::string map_streets_database_filename) {
         cout << "load fail" << endl;
         return false;
     }
+
     numIntersections = getNumIntersections(); //load number of intersections once to avoid excessive calculations
     numStreetSegments = getNumStreetSegments(); //load number of street segments once to avoid excessive calculations
     numStreets = getNumStreets(); //load number of streets
+
     intersectionToStreetSegments.resize(numIntersections);
     streetSegmentsToIntersections.resize(numStreetSegments,nullptr);
     streetSegmentPoints.resize(numStreetSegments, nullptr);
     streetSegmentLengthCache.resize(numStreetSegments, -1);
     streetSpeedLimitCache.resize(numStreetSegments, -1);
     travelTimeCache.resize(numStreetSegments, -1);
-    //streetToStreetSegments.resize(numStreets, new vector<StreetSegmentIdx>());
-    numStreets = getNumStreets();
     streetToIntersections.resize(numStreets);
 
     //load all the segment indices for each intersection index
@@ -110,6 +113,7 @@ bool loadMap(std::string map_streets_database_filename) {
         loadIntersections(intersectionToStreetSegments,streetSegmentsToIntersections, intersectionIndex);
         //cout << intersection_index+1 << "/" << num_intersections << endl;
 
+        //load the container twoStreetsToIntersections with all street pairs that meet at intersectionIndex
         loadTwoStreetsIntersections(twoStreetsToIntersections,*intersectionToStreetSegments[intersectionIndex],intersectionIndex);
     }
     for(StreetSegmentIdx streetSegmentIndex = 0; streetSegmentIndex < numStreetSegments; streetSegmentIndex++)
@@ -346,19 +350,9 @@ std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
     return *streetToIntersections[street_id];
 }
 
-//PLEASE IGNORE COMMENT, JUST FOR TESTING PURPOSES
+//Searches the unordered_map twoStreetsToIntersections for a key with the same pair as street_ids
+//Pairs will work in any order ie <1,2> = <2,1>, if pair is not found an empty vector is returned
 std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(std::pair<StreetIdx, StreetIdx> street_ids){
-
-    // unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual>::iterator twoStreetIntersectionIt = twoStreetsToIntersections.begin();
-    // while(twoStreetIntersectionIt != twoStreetsToIntersections.end()){
-    //     cout << twoStreetIntersectionIt->first.first << ", " << twoStreetIntersectionIt->first.second << ": ";
-    //     vector <IntersectionIdx> v = *twoStreetIntersectionIt->second;
-    //     for(int i = 0; i < v.size();i++){
-    //         cout << v[i] << " , ";
-    //     }
-    //     twoStreetIntersectionIt++;
-    //     cout << endl;
-    // }
 
     bool exists = twoStreetsToIntersections.find(street_ids) != twoStreetsToIntersections.end();
 
@@ -372,18 +366,24 @@ std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(std::pair<StreetIdx, 
     }
 }
 
+//Obtains all elements in the multimap streetNames that start with the street_prefix
 std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_prefix){
     
     vector<StreetIdx> newVector = {};
+
+    //An empty string as input will return a vector with element -1
     if(street_prefix.length() == 0){
         newVector.push_back(-1);
         return newVector;
     }
 
+    //Grabs a pair of iterators, 
+    //The first pointing to the first key with the given street_prefix
+    //The second pointing to the key after the last key with the prefix
+    //the multimap is in sorted order, therefore all street names with the prefix will be back to back
     auto matchRange = streetNames.equal_range(street_prefix);
     for(auto low = matchRange.first; low != matchRange.second; low++){
         StreetIdx streetIdxInRange = low->second;
-        // cout << streetIdxInRange << " , ";
         newVector.push_back(streetIdxInRange);
     }
     

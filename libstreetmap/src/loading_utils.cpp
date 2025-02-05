@@ -10,24 +10,18 @@ using namespace std;
 
 void loadIntersections(vector<vector<StreetSegmentIdx>*>& connectedStreetSegments, vector<vector<IntersectionIdx>*>& connectedIntersections, IntersectionIdx& intersectionIndex)
 {
-
-    //DID NOT CHANGE ANY CODE, COMMENTED OUT CODE WAS FOR MY TESTING
-
     int numberOfSegments = getNumIntersectionStreetSegment(intersectionIndex); //get number of segments in intersection
     
     //allocate street segment vector to be filled
     vector<StreetSegmentIdx>* allocatedStreetVector = new vector<StreetSegmentIdx>();
     connectedStreetSegments[intersectionIndex] = allocatedStreetVector; 
-    // cout << "load Intersection " << intersectionIndex << ": " << endl;
-    // cout << "Steets: ";
+
     for(int intersectionSegmentIndex = 0; intersectionSegmentIndex < numberOfSegments; intersectionSegmentIndex++)
     {
         StreetSegmentIdx streetSegmentIndex = getIntersectionStreetSegment(intersectionIndex, intersectionSegmentIndex);
         (connectedStreetSegments)[intersectionIndex]->push_back(streetSegmentIndex);
-        // cout << streetSegmentIndex << "(" << getStreetSegmentInfo(streetSegmentIndex).streetID << ")" << ", ";
         cacheStreetSegmentToIntersection(connectedIntersections,intersectionIndex,streetSegmentIndex);
     }
-    // cout << endl;
 }
 
 void cacheStreetSegmentToIntersection(vector<vector<IntersectionIdx>*>& connectedIntersections, IntersectionIdx intersectionIndex, StreetSegmentIdx streetSegmentIndex)
@@ -111,20 +105,13 @@ void loadStreetIntersections(vector<vector<IntersectionIdx>*> &streetToIntersect
 //There will be no duplicate pairs or pairs that are made up of two of the same street (ie <1,1>).
 void loadTwoStreetsIntersections(unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual> &twoStreetsToIntersections,vector<StreetSegmentIdx> &streetSegmentsOfCurrIntersection,IntersectionIdx currIntersectionIndex)
 {
-    //IGNORE ALL COMMENTED OUT CODE, JUST FOR TESTING
-    // cout << "load TWO Intersection " << currIntersectionIndex << ": " << endl;
-    // cout << "Steets array: ";
+
     int numOfStreetSegs = streetSegmentsOfCurrIntersection.size();
-
-    // for(int i = 0; i < numOfStreetSegs; i++){
-    //     cout << getStreetSegmentInfo(streetSegmentsOfCurrIntersection[i]).streetID << " , ";
-    // }
-
-    // cout << endl << "imnputting: ";
 
     set<pair<StreetIdx,StreetIdx>> pairSet;
 
     //loop through all the street segments at the current intersection, store unique pairs of street ids into a set
+    //a double for loop does look crazy, but the number of streetSegs at a given intersection is at worst about 4 elements
     for(int streetSegIt1 = 0; streetSegIt1 < numOfStreetSegs; ++streetSegIt1)
     {
         for(int streetSegIt2 = streetSegIt1 + 1; streetSegIt2 < numOfStreetSegs; ++streetSegIt2)
@@ -155,21 +142,16 @@ void loadTwoStreetsIntersections(unordered_map<pair<StreetIdx,StreetIdx>,vector<
     {
         //if there is a vector of intersections already associated with the particular pair, add it to that list, other wise need to assign that pair a vector
         bool pairExists = twoStreetsToIntersections.find(*i) != twoStreetsToIntersections.end();
-        // cout << i->first << " , " << i->second << endl;
         if(pairExists)
         {
-            // cout << "already exists" << endl;
             twoStreetsToIntersections[*i]->push_back(currIntersectionIndex);
         }
         else
         {
-            // cout << "creating new" << endl;
             vector<IntersectionIdx>* newVec = new vector<IntersectionIdx>();
             newVec->push_back(currIntersectionIndex);
             twoStreetsToIntersections.insert(make_pair(*i,newVec));
         }
         i++;
     }
-    
-    // cout << endl;
 }

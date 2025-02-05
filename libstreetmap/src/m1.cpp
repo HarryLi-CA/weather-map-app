@@ -140,8 +140,7 @@ void closeMap() {
     delete2DVectorPointers<LatLon>(streetSegmentPoints);
     delete2DVectorPointers<IntersectionIdx>(streetToStreetSegments);
 
-    //Possibly could cause problems deleting vectors not allocated yet?
-    unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual>::iterator twoStreetIntersectionIt = twoStreetsToIntersections.begin();
+    auto twoStreetIntersectionIt = twoStreetsToIntersections.begin();
     while(twoStreetIntersectionIt != twoStreetsToIntersections.end()){
         delete twoStreetIntersectionIt->second;
         twoStreetIntersectionIt++;
@@ -343,15 +342,26 @@ std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
     return *streetToIntersections[street_id];
 }
 
+//PLEASE IGNORE COMMENT, JUST FOR TESTING PURPOSES
 std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(std::pair<StreetIdx, StreetIdx> street_ids){
-    bool exists = twoStreetsToIntersections.find(street_ids) != twoStreetsToIntersections.end();
 
+    // unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual>::iterator twoStreetIntersectionIt = twoStreetsToIntersections.begin();
+    // while(twoStreetIntersectionIt != twoStreetsToIntersections.end()){
+    //     cout << twoStreetIntersectionIt->first.first << ", " << twoStreetIntersectionIt->first.second << ": ";
+    //     vector <IntersectionIdx> v = *twoStreetIntersectionIt->second;
+    //     for(int i = 0; i < v.size();i++){
+    //         cout << v[i] << " , ";
+    //     }
+    //     twoStreetIntersectionIt++;
+    //     cout << endl;
+    // }
+
+    bool exists = twoStreetsToIntersections.find(street_ids) != twoStreetsToIntersections.end();
+    
     if(exists){
         return *twoStreetsToIntersections[street_ids];
     }else{
-        vector<IntersectionIdx> zeroVector;
-        zeroVector.push_back(0);
-        return zeroVector;
+        return {};
     }
 }
 
@@ -363,8 +373,11 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
         return newVector;
     }
 
+    //while loop instead?
+    //find first
+    //while(next is equal to input)
     auto matchRange = streetNames.equal_range(street_prefix);
-    for(auto low = matchRange.first; low != matchRange.second; ++low){
+    for(auto low = matchRange.first; low != matchRange.second; low++){
         StreetIdx streetIdxInRange = low->second;
         newVector.push_back(streetIdxInRange);
     }

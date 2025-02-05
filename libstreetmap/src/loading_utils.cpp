@@ -3,24 +3,31 @@
 #include <set>
 #include <unordered_map>
 #include <utility>
+#include <iostream>
 #include "StreetsDatabaseAPI.h"
 
 using namespace std;
 
 void loadIntersections(vector<vector<StreetSegmentIdx>*>& connectedStreetSegments, vector<vector<IntersectionIdx>*>& connectedIntersections, IntersectionIdx& intersectionIndex)
 {
+
+    //DID NOT CHANGE ANY CODE, COMMENTED OUT CODE WAS FOR MY TESTING
+
     int numberOfSegments = getNumIntersectionStreetSegment(intersectionIndex); //get number of segments in intersection
     
     //allocate street segment vector to be filled
     vector<StreetSegmentIdx>* allocatedStreetVector = new vector<StreetSegmentIdx>();
     connectedStreetSegments[intersectionIndex] = allocatedStreetVector; 
-
+    // cout << "load Intersection " << intersectionIndex << ": " << endl;
+    // cout << "Steets: ";
     for(int intersectionSegmentIndex = 0; intersectionSegmentIndex < numberOfSegments; intersectionSegmentIndex++)
     {
         StreetSegmentIdx streetSegmentIndex = getIntersectionStreetSegment(intersectionIndex, intersectionSegmentIndex);
         (connectedStreetSegments)[intersectionIndex]->push_back(streetSegmentIndex);
+        // cout << streetSegmentIndex << "(" << getStreetSegmentInfo(streetSegmentIndex).streetID << ")" << ", ";
         cacheStreetSegmentToIntersection(connectedIntersections,intersectionIndex,streetSegmentIndex);
     }
+    // cout << endl;
 }
 
 void cacheStreetSegmentToIntersection(vector<vector<IntersectionIdx>*>& connectedIntersections, IntersectionIdx intersectionIndex, StreetSegmentIdx streetSegmentIndex)
@@ -98,32 +105,71 @@ void loadStreetIntersections(vector<vector<IntersectionIdx>*> &streetToIntersect
     }
 }
 
-void loadTwoStreetsIntersections(unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual> &twoStreetsToIntersections,vector<StreetSegmentIdx> &streetSegmentsOfIntersection,IntersectionIdx currIntersectionIndex)
+//This fucntion takes in a given intersectionIndex(currIntersectionIndex) and adds all streets that pass through that given intersection in pairs to the container twoStreetsToIntersections.
+//All streets that touch the given intersection are passed in from streetSegmentsOfCurrIntersection as street segments.
+//The container twoStreetsToIntersections maps a pair of streets (they key) to a vector of intersections (the value) that involve those streets.
+//There will be no duplicate pairs or pairs that are made up of two of the same street (ie <1,1>).
+void loadTwoStreetsIntersections(unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual> &twoStreetsToIntersections,vector<StreetSegmentIdx> &streetSegmentsOfCurrIntersection,IntersectionIdx currIntersectionIndex)
 {
-    set<StreetIdx> tempPair;
-    for(StreetSegmentIdx streetSegmentIndex = 0; streetSegmentIndex < streetSegmentsOfIntersection.size(); streetSegmentIndex++)
+    //IGNORE ALL COMMENTED OUT CODE, JUST FOR TESTING
+    // cout << "load TWO Intersection " << currIntersectionIndex << ": " << endl;
+    // cout << "Steets array: ";
+    int numOfStreetSegs = streetSegmentsOfCurrIntersection.size();
+
+    // for(int i = 0; i < numOfStreetSegs; i++){
+    //     cout << getStreetSegmentInfo(streetSegmentsOfCurrIntersection[i]).streetID << " , ";
+    // }
+
+    // cout << endl << "imnputting: ";
+
+    set<pair<StreetIdx,StreetIdx>> pairSet;
+
+    //loop through all the street segments at the current intersection, store unique pairs of street ids into a set
+    for(int streetSegIt1 = 0; streetSegIt1 < numOfStreetSegs; ++streetSegIt1)
     {
-        StreetSegmentInfo segInfo = getStreetSegmentInfo(streetSegmentIndex);
-        tempPair.insert(segInfo.streetID);
-
-        //if or once we find a pair of two unique streets for this given intersectionIdx, add this pair to the container
-        if(tempPair.size() == 2)
+        for(int streetSegIt2 = streetSegIt1 + 1; streetSegIt2 < numOfStreetSegs; ++streetSegIt2)
         {
-            //determines if this pair is already in the container and does not need to allocate it's vector
-            bool prevInserted = twoStreetsToIntersections.find({*tempPair.begin(),*--tempPair.end()}) != twoStreetsToIntersections.end();
+            StreetIdx streetAIdx = getStreetSegmentInfo(streetSegmentsOfCurrIntersection[streetSegIt1]).streetID;
+            StreetIdx streetBIdx = getStreetSegmentInfo(streetSegmentsOfCurrIntersection[streetSegIt2]).streetID;
 
-            if(prevInserted)
+            //ensure no pair is made up of the same street
+            if(streetAIdx != streetBIdx)
             {
-                twoStreetsToIntersections.at({*tempPair.begin(),*--tempPair.end()})->push_back(currIntersectionIndex);
-                return;
+                //insert pair by <lower number,higher number> to prevent duplicate sets
+                if(streetAIdx < streetBIdx)
+                {
+                    pairSet.insert({streetAIdx,streetBIdx});
+                }
+                else
+                {
+                    pairSet.insert({streetBIdx,streetAIdx});
+                }
             }
-            else
-            {
-                vector<IntersectionIdx>* newVector = new vector<IntersectionIdx>();
-                newVector->push_back(currIntersectionIndex);
-                twoStreetsToIntersections[{*tempPair.begin(),*--tempPair.end()}] = newVector;
-                return;
-            }
+            
         }
     }
+
+    //use an iterator to loop through all pairs in the set, place these pairs into the container twoStreetsToIntersections along with their respective intersection currIntersectionIndex
+    auto i = pairSet.begin();
+    while(i != pairSet.end())
+    {
+        //if there is a vector of intersections already associated with the particular pair, add it to that list, other wise need to assign that pair a vector
+        bool pairExists = twoStreetsToIntersections.find(*i) != twoStreetsToIntersections.end();
+        // cout << i->first << " , " << i->second << endl;
+        if(pairExists)
+        {
+            // cout << "already exists" << endl;
+            twoStreetsToIntersections[*i]->push_back(currIntersectionIndex);
+        }
+        else
+        {
+            // cout << "creating new" << endl;
+            vector<IntersectionIdx>* newVec = new vector<IntersectionIdx>();
+            newVec->push_back(currIntersectionIndex);
+            twoStreetsToIntersections.insert(make_pair(*i,newVec));
+        }
+        i++;
+    }
+    
+    // cout << endl;
 }

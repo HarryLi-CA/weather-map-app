@@ -29,7 +29,7 @@ constexpr int ERROR_EXIT_CODE = 1;          //An error occured
 constexpr int BAD_ARGUMENTS_EXIT_CODE = 2;  //Invalid command-line usage
 
 //The default map to load if none is specified
-std::string default_map_path = "/cad2/ece297s/public/maps/toronto_canada.streets.bin";
+std::string default_map_path = "/cad2/ece297s/public/maps/saint-helena.streets.bin";
 
 
 // The start routine of your program (main) when you are running your standalone
@@ -38,6 +38,7 @@ std::string default_map_path = "/cad2/ece297s/public/maps/toronto_canada.streets
 // and directly call your functions in /libstreetmap/src/ to test them.
 // Don't write any code in this file that you want run by ece297exerise -- it 
 // will not be called!
+using namespace std;
 int main(int argc, char** argv) {
 
     std::string map_path;
@@ -65,6 +66,10 @@ int main(int argc, char** argv) {
 
     //You can now do something with the map data
 
+    //TESTING
+    // if (findIntersectionsOfTwoStreets({1,2}).size() != 0){
+    //     cout << "work" << endl;
+    // }
 
     //Clean-up the map data and related data structures
     std::cout << "Closing map\n";

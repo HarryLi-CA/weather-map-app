@@ -461,7 +461,6 @@ POIIdx findClosestPOI(LatLon my_position, std::string poi_type){
     int numOfPOI = getNumPointsOfInterest();
     for(POIIdx i = 0; i < numOfPOI; i++){ // loop through POIs
         if(getPOIType(i) == poi_type){
-            //OSMNode* curNode = getNodeByIndex(i);
             LatLon curLatLon = getPOIPosition(i);
             double curDist = findDistanceBetweenTwoPoints(my_position, curLatLon); // find distance of current interection with point
             if(i==0 || closestDist > curDist){ // save minimum distance
@@ -537,6 +536,8 @@ double findFeatureArea(FeatureIdx feature_id)
 
 double findWayLength(OSMID way_id){
     const OSMWay* osmWay = getWayByID(way_id); // use helper function to speed up receiving the way
+    if(osmWay == nullptr)
+        return 0;
     vector<OSMID> wayNodes = getWayMembers(osmWay);
     const OSMNode* prevNode = getNodeByID(wayNodes[0]); // use helper function to speed up receiving each node
     double length = 0;
@@ -550,6 +551,8 @@ double findWayLength(OSMID way_id){
 
 std::string getOSMNodeTagValue(OSMID osm_id, std::string key){
     const OSMNode* node = getNodeByID(osm_id); //use helper function to speed up finding correct node
+    if(node == nullptr) // error check if node with ID doesn't exist
+        return "";
     int tagAmt = getTagCount(node);
     for(int i = 0; i < tagAmt; i++){ // loop until correct key found
         string osmKey, value;

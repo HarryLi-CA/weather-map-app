@@ -9,7 +9,6 @@ int curNodeIdx = 0;
 int totalNodes = -1;
 unordered_map<uint64_t, const OSMNode*> nodeIDReference;
 
-
 const OSMNode* getNodeByID(OSMID nodeID){
     if(totalNodes==-1){
         totalNodes = getNumberOfNodes();
@@ -27,8 +26,8 @@ const OSMNode* getNodeByID(OSMID nodeID){
         curID= node->id();
         nodeIDReference[uint64_t(curID)] = node;
     }
-    if(curNodeIdx == totalNodes)
-        cout<< "reached end of nodes" << endl;
+    if(curID != nodeID)
+        return nullptr;
     return nodeIDReference[uint64_t(nodeID)];
 }
 void loadNodeValueByID(){
@@ -61,10 +60,11 @@ const OSMWay* getWayByID(OSMID wayID){
         curID= way->id();
         wayIDReference[uint64_t(curID)] = way;
     }
-    if(curWayIdx == totalWays)
-        cout<< "reached end of ways" << endl;
+    if(curID != wayID)
+        return nullptr;
     return wayIDReference[uint64_t(wayID)];
 }
+
 void loadWayValueByID(){
     if(totalWays == -1)
         totalWays = getNumberOfWays();
@@ -75,9 +75,6 @@ void loadWayValueByID(){
         wayIDReference[uint64_t(wayID)] = way;
     }
 }
-
-
-
 
 void clearIdHelper(){
     curNodeIdx = 0;

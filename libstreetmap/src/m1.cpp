@@ -25,6 +25,7 @@
 #include "nodeIDHelper.h"
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
+#include "Helper.h"
 #include <thread>
 #include <vector>
 #include <cmath>
@@ -304,6 +305,8 @@ double findStreetSegmentTurnAngle(StreetSegmentIdx src_street_segment_id,StreetS
     return M_PI - angle;
 }
 
+
+//helper function to get intersection over a segment from the other intersection
 IntersectionIdx findOppositeIntersection(IntersectionIdx intersection_id, StreetSegmentIdx connect_street_segment_id)
 {
     
@@ -339,7 +342,7 @@ std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersect
             continue;
         }
         
-        IntersectionIdx otherIntersection = findOppositeIntersection(intersection_id,streetSegmentIndex); //other intersection on connected street segment
+        IntersectionIdx otherIntersection = findOppositeIntersection(intersection_id,streetSegmentIndex, streetSegmentsToIntersections); //other intersection on connected street segment
 
         
 
@@ -438,10 +441,10 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
 
 double findStreetLength(StreetIdx street_id){
     double out = 0;
-    vector<StreetSegmentIdx> streetSegs = *(streetToStreetSegments[street_id]);
-    int streetSegments = streetSegs.size();
+    vector<StreetSegmentIdx> streetSegs = *(streetToStreetSegments[street_id]); // get street segments
+    int streetSegments = streetSegs.size(); // get amount of segments to loop through
     for(int i = 0; i < streetSegments; i++){
-        out+= findStreetSegmentLength(streetSegs[i]);
+        out+= findStreetSegmentLength(streetSegs[i]); // add street segment lengths
     };
     return out;
 }

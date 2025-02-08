@@ -224,6 +224,11 @@ double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
 
 
 double findStreetSegmentTravelTime(StreetSegmentIdx street_segment_id){
+    //check if street segment id is valid (between 0 and the maximum index)
+    if(street_segment_id < 0 || street_segment_id >= numStreetSegments)
+    {
+        return -1; //return -1 to indicate street segment id is invalid
+    }
     //if travel time is not cached, calculate it
     if(travelTimeCache[street_segment_id] == -1)
     {

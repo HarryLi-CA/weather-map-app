@@ -191,6 +191,11 @@ double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
 }
 
 double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
+    //check if street segment id is valid (between 0 and the maximum index)
+    if(street_segment_id < 0 || street_segment_id >= numStreetSegments)
+    {
+        return -1; //return -1 to indicate street segment id is invalid
+    }
     //check if length is cached
     if(streetSegmentLengthCache[street_segment_id] != -1)
     {

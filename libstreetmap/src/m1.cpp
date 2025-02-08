@@ -25,6 +25,7 @@
 #include "nodeIDHelper.h"
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
+#include "Helper.h"
 #include <thread>
 #include <vector>
 #include <cmath>
@@ -304,22 +305,6 @@ double findStreetSegmentTurnAngle(StreetSegmentIdx src_street_segment_id,StreetS
     return M_PI - angle;
 }
 
-
-//helper function to get intersection over a segment from the other intersection
-IntersectionIdx findOppositeIntersection(IntersectionIdx intersection_id, StreetSegmentIdx connect_street_segment_id)
-{
-    
-    //check if the intersection is the first intersection in the connected intersection array for the street segment
-    if(intersection_id == (*streetSegmentsToIntersections[connect_street_segment_id])[0])
-    {
-        return (*streetSegmentsToIntersections[connect_street_segment_id])[1]; //if true, then return the other intersection
-    }
-    else
-    {
-        return (*streetSegmentsToIntersections[connect_street_segment_id])[0]; //if false, then return the intersection that was just checked
-    }
-}
-
 std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersection_id)
 {
     //check if intersection id is valid (between 0 and the maximum index)
@@ -341,7 +326,7 @@ std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersect
             continue;
         }
         
-        IntersectionIdx otherIntersection = findOppositeIntersection(intersection_id,streetSegmentIndex); //other intersection on connected street segment
+        IntersectionIdx otherIntersection = findOppositeIntersection(intersection_id,streetSegmentIndex, streetSegmentsToIntersections); //other intersection on connected street segment
 
         
 

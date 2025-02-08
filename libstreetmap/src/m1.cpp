@@ -244,12 +244,13 @@ double findStreetSegmentTravelTime(StreetSegmentIdx street_segment_id){
 
 double findStreetSegmentTurnAngle(StreetSegmentIdx src_street_segment_id,StreetSegmentIdx dst_street_segment_id){
     //check if src or dst street segment id is valid (between 0 and the maximum index)
-    bool srcSegmentInBounds = src_street_segment_id > 0 && src_street_segment_id < numStreetSegments; //boolean that checks if src street segment index is inside the bounds of street segment vector 
-    bool dstSegmentInBounds = dst_street_segment_id > 0 && dst_street_segment_id < numStreetSegments; //boolean that checks if dst street segment index is inside the bounds of street segment vector
+    bool srcSegmentInBounds = src_street_segment_id >= 0 && src_street_segment_id < numStreetSegments; //boolean that checks if src street segment index is inside the bounds of street segment vector 
+    bool dstSegmentInBounds = dst_street_segment_id >= 0 && dst_street_segment_id < numStreetSegments; //boolean that checks if dst street segment index is inside the bounds of street segment vector
     //check if either the src or dst index is invalid
     if(!srcSegmentInBounds || !dstSegmentInBounds)
     {
-        return -1; //return -1 to indicate one of the street segment ids is invalid
+
+        return NO_ANGLE; //return identifier for no results to indicate one of the street segment ids is invalid
     }
     //get street segment info
     StreetSegmentInfo srcInfo = getStreetSegmentInfo(src_street_segment_id); //src street info
@@ -270,7 +271,7 @@ double findStreetSegmentTurnAngle(StreetSegmentIdx src_street_segment_id,StreetS
     }
     else
     {
-        return NO_ANGLE;
+        return NO_ANGLE; //if segments do not share any common intersections, return an identifier for no results
     }
     intersectionPoint = getIntersectionPosition(intersectionID); //get position of intersection
     

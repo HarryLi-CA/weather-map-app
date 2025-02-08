@@ -354,11 +354,21 @@ IntersectionIdx findClosestIntersection(LatLon my_position){
 }
 
 std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection(IntersectionIdx intersection_id){
-    return *intersectionToStreetSegments[intersection_id];
+    if(intersection_id >= 0 && intersection_id < numIntersections){
+        return *intersectionToStreetSegments[intersection_id];
+
+    } else {
+        return {};
+    }
 }
 
 std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
-    return *streetToIntersections[street_id];
+    if(street_id >= 0 && street_id < numStreets){
+        return *streetToIntersections[street_id];
+
+    } else {
+        return {};
+    }
 }
 
 //Searches the unordered_map twoStreetsToIntersections for a key with the same pair as street_ids
@@ -367,12 +377,10 @@ std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(std::pair<StreetIdx, 
 
     bool exists = twoStreetsToIntersections.find(street_ids) != twoStreetsToIntersections.end();
 
-    if(exists)
-    {
+    if(exists){
         return *twoStreetsToIntersections[street_ids];
-    }
-    else
-    {
+
+    } else {
         return {};
     }
 }

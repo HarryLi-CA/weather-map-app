@@ -66,6 +66,9 @@ void loadStreetToStreetSegments(vector<vector<StreetSegmentIdx>*>& streetToStree
     }
 }
 
+//This function takes in a given streetSegmentIdx and inserts unique intersectionIdxs associated with that given segment into the streetToIntersections container.
+//The intersections will be inserted to the vector at index currStreetSeg in streetToIntersections.
+//A helper container streetToIntersectionsHelper that mirrors streetToIntersections is used to identify if an intersection is already contained inside the vector.
 void loadStreetIntersections(vector<vector<IntersectionIdx>*> &streetToIntersections, vector<set<IntersectionIdx>*> &streetToIntersectionsHelper, StreetSegmentIdx currStreetSeg){
     
     StreetSegmentInfo currSegInfo = getStreetSegmentInfo(currStreetSeg);
@@ -92,15 +95,14 @@ void loadStreetIntersections(vector<vector<IntersectionIdx>*> &streetToIntersect
 //All streets that touch the given intersection are passed in from streetSegmentsOfCurrIntersection as street segments.
 //The container twoStreetsToIntersections maps a pair of streets (they key) to a vector of intersections (the value) that involve those streets.
 //There will be no duplicate pairs or pairs that are made up of two of the same street (ie <1,1>).
-void loadTwoStreetsIntersections(unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual> &twoStreetsToIntersections,vector<StreetSegmentIdx> &streetSegmentsOfCurrIntersection,IntersectionIdx currIntersectionIndex)
-{
+void loadTwoStreetsIntersections(unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual> &twoStreetsToIntersections,vector<StreetSegmentIdx> &streetSegmentsOfCurrIntersection,IntersectionIdx currIntersectionIndex){
 
     int numOfStreetSegs = streetSegmentsOfCurrIntersection.size();
 
     set<pair<StreetIdx,StreetIdx>> pairSet;
 
     //loop through all the street segments at the current intersection, store unique pairs of street ids into a set
-    //a double for loop does look crazy, but the number of streetSegs at a given intersection is at worst about 4 elements
+    //Despite being a double for-loop, the number of streetSegs at a given intersection is at worst about 4 elements
     for(int streetSegIt1 = 0; streetSegIt1 < numOfStreetSegs; ++streetSegIt1)
     {
         for(int streetSegIt2 = streetSegIt1 + 1; streetSegIt2 < numOfStreetSegs; ++streetSegIt2)

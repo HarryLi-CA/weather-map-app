@@ -304,8 +304,6 @@ double findStreetSegmentTurnAngle(StreetSegmentIdx src_street_segment_id,StreetS
     return M_PI - angle;
 }
 
-
-//helper function to get intersection over a segment from the other intersection
 IntersectionIdx findOppositeIntersection(IntersectionIdx intersection_id, StreetSegmentIdx connect_street_segment_id)
 {
     
@@ -507,6 +505,11 @@ POIIdx findClosestPOI(LatLon my_position, std::string poi_type){
 
 double findFeatureArea(FeatureIdx feature_id)
 {
+    //check is the feature_id is valid by checking if it is between 0 and the number of features
+    if(feature_id < 0 || feature_id > getNumFeatures())
+    {
+        return -1; //return -1 to indicate feature_id is invalid 
+    }
     int numPoints = getNumFeaturePoints(feature_id); //number of vertices in feature
     //check if shape is polygon by checking if first point is equal to last point
     bool isPolygon = getFeaturePoint(feature_id, 0) == getFeaturePoint(feature_id, numPoints - 1); //whether the feature is a closed polygon or not

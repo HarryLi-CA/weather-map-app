@@ -21,7 +21,7 @@ const OSMNode* getNodeByID(OSMID nodeID){
     }
     
     OSMID curID;
-    for(;curNodeIdx <totalNodes || curID == nodeID; curNodeIdx++){ // load until node is found
+    for(;curNodeIdx <totalNodes && curID != nodeID; curNodeIdx++){ // load until node is found
         const OSMNode* node= getNodeByIndex(curNodeIdx);
         curID= node->id();
         nodeIDReference[uint64_t(curID)] = node;
@@ -55,7 +55,7 @@ const OSMWay* getWayByID(OSMID wayID){
         return wayIDReference[uint64_t(wayID)];
 
     OSMID curID;
-    for(;curWayIdx <totalWays || curID == wayID; curWayIdx++){ // load until way is found
+    for(;curWayIdx <totalWays && curID != wayID; curWayIdx++){ // load until way is found
         const OSMWay* way = getWayByIndex(curWayIdx);
         curID= way->id();
         wayIDReference[uint64_t(curID)] = way;

@@ -425,10 +425,10 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
 
 double findStreetLength(StreetIdx street_id){
     double out = 0;
-    vector<StreetSegmentIdx> streetSegs = *(streetToStreetSegments[street_id]);
-    int streetSegments = streetSegs.size();
+    vector<StreetSegmentIdx> streetSegs = *(streetToStreetSegments[street_id]); // get street segments
+    int streetSegments = streetSegs.size(); // get amount of segments to loop through
     for(int i = 0; i < streetSegments; i++){
-        out+= findStreetSegmentLength(streetSegs[i]);
+        out+= findStreetSegmentLength(streetSegs[i]); // add street segment lengths
     };
     return out;
 }

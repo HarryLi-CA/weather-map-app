@@ -322,6 +322,11 @@ IntersectionIdx findOppositeIntersection(IntersectionIdx intersection_id, Street
 
 std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersection_id)
 {
+    //check if intersection id is valid (between 0 and the maximum index)
+    if(intersection_id < 0 || intersection_id >= numIntersections)
+    {
+        return {}; //return -1 to indicate intersection id is invalid
+    }
     vector<IntersectionIdx> adjacentIntersections; //dynamically allocated vector of adjacent intersections
     vector<StreetSegmentIdx>* connectedStreetSegments = intersectionToStreetSegments[intersection_id]; //vector containing all connected streets to the intersection
     //iterate through all streets

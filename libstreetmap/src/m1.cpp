@@ -340,7 +340,7 @@ std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersect
 }
 
 IntersectionIdx findClosestIntersection(LatLon my_position){
-    int closestNode = 0;
+    int closestNode = -1; // return -1 if no intersections exist
     double closestDist = DBL_MAX; // initial value as maximum distance
     for(int i = 0; i < numIntersections; i++){ // loop through intersections
         LatLon curLatLon = getIntersectionPosition(i);
@@ -420,7 +420,7 @@ double findStreetLength(StreetIdx street_id){
 }
 
 LatLonBounds findStreetBoundingBox (StreetIdx street_id){
-    LatLonBounds out; // output of cuntion
+    LatLonBounds out; // output of function
     int streetSegments = getNumStreetSegments();
     vector<LatLon> locations = {};
     
@@ -435,6 +435,10 @@ LatLonBounds findStreetBoundingBox (StreetIdx street_id){
             }
         }
     };
+    
+    //error check if street has street segments
+    if(locations.size() == 0)
+        return out;
     double minLat, minLon, maxLat, maxLon;
     minLat = locations[0].latitude(); // go through each location and find the max and min values
     maxLat = locations[0].latitude();

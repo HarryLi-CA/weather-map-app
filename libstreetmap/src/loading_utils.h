@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <unordered_map>
+#include <set>
 #include "StreetsDatabaseAPI.h"
 #include "containerStructs.h"
 using namespace std;
@@ -31,7 +32,7 @@ void delete2DVectorPointers(vector<vector<P>*>& toDeleteFrom)
 void loadStreetSegmentPoint(vector<vector<LatLon>*>& streetSegmentPoints, StreetSegmentIdx streetSegmentIndex);
 
 //Finds intersections asscociated to a street and stores them in a vector
-void loadStreetIntersections(vector<vector<IntersectionIdx>*> &streetToIntersections, int numStreetSegments, StreetIdx currStreet);
+void loadStreetIntersections(vector<vector<IntersectionIdx>*> &streetToIntersections, vector<set<IntersectionIdx>*> &streetToIntersectionsHelper, StreetSegmentIdx currStreetSeg);
 
 //Finds pair ascociated with a given intersectionIndex and stores that pair along with its intersection into the data structure
 void loadTwoStreetsIntersections(unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual> &twoStreetsToIntersections,vector<StreetSegmentIdx> &streetSegmentsOfIntersection,IntersectionIdx currIntersectionIndex);

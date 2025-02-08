@@ -34,6 +34,7 @@
 #include <unordered_map>
 #include <map>
 #include <iomanip>
+#include <set>
 
 using namespace std;
 //cache vectors
@@ -42,8 +43,10 @@ using namespace std;
 vector<vector<StreetSegmentIdx>*> intersectionToStreetSegments;
 //takes street segment index and returns vector of intersections that connect to the street segment
 vector<vector<IntersectionIdx>*> streetSegmentsToIntersections;
-//takes street index and returns vector of intersections that connect to the street
+//takes street index and returns a vector of intersections that connect to the street
 vector<vector<IntersectionIdx>*> streetToIntersections;
+//takes street index and returns a set of intersections
+vector<set<IntersectionIdx>*> streetToIntersectionsHelper;
 //takes street segment index and returns lat lon positions for all points in sequnce including intersections and curve points
 vector<vector<LatLon>*> streetSegmentPoints;
 // stores street segments of streets
@@ -106,6 +109,7 @@ bool loadMap(std::string map_streets_database_filename) {
     streetSpeedLimitCache.resize(numStreetSegments, -1);
     travelTimeCache.resize(numStreetSegments, -1);
     streetToIntersections.resize(numStreets);
+    streetToIntersectionsHelper.resize(numStreets);
 
     //load all the segment indices for each intersection index
     for(IntersectionIdx intersectionIndex = 0; intersectionIndex < numIntersections; intersectionIndex++)
@@ -116,15 +120,17 @@ bool loadMap(std::string map_streets_database_filename) {
         //load the container twoStreetsToIntersections with all street pairs that meet at intersectionIndex
         loadTwoStreetsIntersections(twoStreetsToIntersections,*intersectionToStreetSegments[intersectionIndex],intersectionIndex);
     }
-    for(StreetSegmentIdx streetSegmentIndex = 0; streetSegmentIndex < numStreetSegments; streetSegmentIndex++)
-    {
-        loadStreetSegmentPoint(streetSegmentPoints,streetSpeedLimitCache,streetSegmentIndex);
-    }
     loadStreetToStreetSegments(streetToStreetSegments);
     for(StreetIdx streetIndex = 0; streetIndex < numStreets; streetIndex++)
     {
-        loadStreetIntersections(streetToIntersections,numStreetSegments,streetIndex);
         streetNames.insert({getStreetName(streetIndex),streetIndex});
+        streetToIntersections[streetIndex] = new vector<IntersectionIdx>();
+        streetToIntersectionsHelper[streetIndex] = new set<IntersectionIdx>();
+    }
+    for(StreetSegmentIdx streetSegmentIndex = 0; streetSegmentIndex < numStreetSegments; streetSegmentIndex++)
+    {
+        loadStreetSegmentPoint(streetSegmentPoints,streetSpeedLimitCache,streetSegmentIndex);
+        loadStreetIntersections(streetToIntersections,streetToIntersectionsHelper,streetSegmentIndex);
     }
     //wait for all intersection threads
     cout << "done!" << endl;
@@ -148,6 +154,11 @@ void closeMap() {
     while(twoStreetIntersectionIt != twoStreetsToIntersections.end()){
         delete twoStreetIntersectionIt->second;
         twoStreetIntersectionIt++;
+    }
+
+    for(StreetIdx streetIndex = 0; streetIndex < numStreets; streetIndex++)
+    {
+        delete streetToIntersectionsHelper[streetIndex];
     }
 
     twoStreetsToIntersections.clear();

@@ -174,9 +174,15 @@ double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
     double x1,x2,y1,y2; //cartesian points based on Earth's surface LatLon points
     double latavg = (point_1.latitude()+ point_2.latitude())/2; //average latitude
 
+    double lon1 = point_1.longitude();
+    double lon2 = point_2.longitude();
+    
+    if(abs(lon1-lon2) > 180) // check if the case is across -180 and 180 longitude
+        lon1 += (lon1<0)?360:-360;
+
     //Calculate equivalent cartesian points using equirectangular projection
-    x1 = kEarthRadiusInMeters * point_1.longitude()*kDegreeToRadian * cos(latavg*kDegreeToRadian);
-    x2 = kEarthRadiusInMeters * point_2.longitude()*kDegreeToRadian * cos(latavg*kDegreeToRadian);
+    x1 = kEarthRadiusInMeters * lon1*kDegreeToRadian * cos(latavg*kDegreeToRadian);
+    x2 = kEarthRadiusInMeters * lon2*kDegreeToRadian * cos(latavg*kDegreeToRadian);
     y1 = kEarthRadiusInMeters * point_1.latitude()*kDegreeToRadian;
     y2 = kEarthRadiusInMeters * point_2.latitude()*kDegreeToRadian;
     double xDif = x1-x2; //horizontal distance between point 1 and point 2 

@@ -116,7 +116,6 @@ bool loadMap(std::string map_streets_database_filename) {
     for(IntersectionIdx intersectionIndex = 0; intersectionIndex < numIntersections; intersectionIndex++)
     {
         loadIntersections(intersectionToStreetSegments,streetSegmentsToIntersections, intersectionIndex);
-        //cout << intersection_index+1 << "/" << num_intersections << endl;
 
         //load the container twoStreetsToIntersections with all street pairs that meet at intersectionIndex
         loadTwoStreetsIntersections(twoStreetsToIntersections,*intersectionToStreetSegments[intersectionIndex],intersectionIndex);

@@ -42,7 +42,7 @@ void draw_main_canvas(ezgl::renderer *g)
    g->draw_rectangle(rect);
    for(int i = 0; i < 0; i++)
    {
-      //getStr
+      
    }
 }
 

@@ -1,11 +1,13 @@
 #include "ezgl/canvas.hpp";
 
+using namespace std;
+
 //speicifes how renderer will draw features
 enum DrawType {
     POINT,
     LINE,
     POLYGON
-}
+};
 
 class MapFeature {
     public:

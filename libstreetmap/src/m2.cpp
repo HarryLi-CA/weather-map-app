@@ -20,6 +20,36 @@
  */
 
 #include "m2.h"
+#include "m1.h"
+#include "renderHelper.h"
+#include <vector>
+#include "StreetsDatabaseAPI.h"
+#include "OSMDatabaseAPI.h"
+#include "ezgl/application.hpp"
+#include "ezgl/graphics.hpp"
+#include "ezgl/camera.hpp"
+
+using namespace std;
+
+static ezgl::rectangle initial_world{{0, 0}, 1100, 1150}; //rendered canvas
+static vector<MapFeature> mapFeatures;
+ 
+
+
+void draw_main_canvas(ezgl::renderer *g)
+{
+   ezgl::rectangle rect(initial_world.center(),initial_world.top_right());
+   g->draw_rectangle(rect);
+   for(int i = 0; i < 0; i++)
+   {
+      //getStr
+   }
+}
+
+void loadFeatures()
+{
+
+}
 
 void drawMap() {
    // Set up the ezgl graphics window and hand control to it, as shown in the 
@@ -28,4 +58,16 @@ void drawMap() {
    // and your main() function in main/src/main.cpp.
    // The unit tests always call loadMap() before calling this function
    // and call closeMap() after this function returns.
+   ezgl::application::settings settings; //initialize settings
+   settings.main_ui_resource = "libstreetmap/resources/main.ui"; //load ui data
+   settings.window_identifier = "MainWindow"; //setup window
+   settings.canvas_identifier = "MainCanvas"; //setup canvas
+   ezgl::application application(settings); //create application
+
+   application.add_canvas("MainCanvas", draw_main_canvas, initial_world);
+
+   //create window
+   application.run(nullptr,nullptr,nullptr,nullptr);
+
+
 }

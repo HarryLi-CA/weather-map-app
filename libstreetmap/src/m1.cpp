@@ -422,7 +422,6 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
 
     //An empty string as input will return a vector with element -1
     if(street_prefix.length() == 0){
-        newVector.push_back(-1);
         return newVector;
     }
 

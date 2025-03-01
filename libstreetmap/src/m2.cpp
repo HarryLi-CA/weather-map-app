@@ -171,6 +171,7 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, doub
 void initial_setup(ezgl::application *application, bool /*new_window*/);
 
 void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application);
+void searchbarAuto1(GtkEntry* textEntryWidget, ezgl::application* application);
 
 void draw_main_canvas(ezgl::renderer *g)
 {
@@ -606,12 +607,14 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    GObject* searchBtn = application->get_object("searchBtn");
    g_signal_connect(searchBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
 
+   // GObject* searchbar1 = application->get_object("searchbar1");
+   // g_signal_connect(searchbar1,"key-press-event",G_CALLBACK(searchbarAuto1),application);
+
 }
 
 //Callback that is called when search button is pressed
 void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
-   //Unhighlight past intersections
-   //do this by remembering which intersections were highlighted in previous search
+
    //Make a clear highlighted intersections button
 
    //Maybe guard against two letter street inputs
@@ -675,3 +678,24 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
   return;
 
 }
+
+// void searchbarAuto1(GtkEntry* textEntryWidget, ezgl::application* application){
+
+//    GtkListStore* liststore1 = GTK_LIST_STORE(application->get_object("liststore1"));
+
+//    //clear prev list
+//    gtk_list_store_clear(liststore1);
+
+//    GtkEntry* seachbar1 = GTK_ENTRY(application->get_object("searchbar1"));
+//    string searchText1 = string(gtk_entry_get_text(seachbar1));
+
+//    vector<StreetIdx> street1Idxs = findStreetIdsFromPartialStreetName(searchText1);
+//    GtkTreeIter* iter = nullptr;
+   
+//    for(int i = 0; i < street1Idxs.size(); i++){
+//       getStreetName(street1Idxs[i]);
+      
+//       gtk_list_store_append(liststore1, iter);
+//       gtk_list_store_set(liststore1,iter,0,getStreetName(street1Idxs[i]));
+//    }
+// }

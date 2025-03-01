@@ -1,4 +1,4 @@
-#include "ezgl/canvas.hpp";
+#include "ezgl/canvas.hpp"
 
 using namespace std;
 

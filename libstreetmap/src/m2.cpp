@@ -30,6 +30,7 @@
 #include "ezgl/application.hpp"
 #include "ezgl/graphics.hpp"
 #include "ezgl/camera.hpp"
+#include <set>
 
 using namespace std;
 
@@ -168,6 +169,8 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, doub
 }
  
 void initial_setup(ezgl::application *application, bool /*new_window*/);
+
+void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application);
 
 void draw_main_canvas(ezgl::renderer *g)
 {
@@ -593,7 +596,11 @@ void drawMap() {
    application.mouse_press_callback;
    
    //create window
+<<<<<<< HEAD
    application.run(initial_setup,on_mouse_click,nullptr,nullptr);
+=======
+   application.run(initial_setup,nullptr,nullptr,nullptr);
+>>>>>>> b563009 (updated m2.cpp with search button)
 
 
 }
@@ -601,7 +608,79 @@ void drawMap() {
 void initial_setup(ezgl::application *application, bool /*new_window*/){
 
    GObject* searchBtn = application->get_object("searchBtn");
+<<<<<<< HEAD
    g_signal_connext(searchBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
 
+=======
+   g_signal_connect(searchBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
+>>>>>>> b563009 (updated m2.cpp with search button)
+
+}
+
+//Callback that is called when search button is pressed
+void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
+   //Unhighlight past intersections
+   //do this by remembering which intersections were highlighted in previous search
+   //Make a clear highlighted intersections button
+
+   //Maybe guard against two letter street inputs
+   //will this be safe with empty string inputss?
+   
+   //Extracting text from search bars
+   GtkEntry* seachbar1 = GTK_ENTRY(application->get_object("seachbar1"));
+   const gchar* searchText1 = gtk_entry_get_text(seachbar1);
+   GtkEntry* seachbar2 = GTK_ENTRY(application->get_object("seachbar2"));
+   const gchar* searchText2 = gtk_entry_get_text(seachbar2);
+
+   //Obtain the streetIdx(s) of the inputted street names
+   vector<StreetIdx> street1Idxs = findStreetIdsFromPartialStreetName(searchText1);
+   vector<StreetIdx> street2Idxs = findStreetIdsFromPartialStreetName(searchText2);
+
+   //Create unique pairs of streetIdxs of the inputted streets
+   set<pair<StreetIdx,StreetIdx>> streetIdPairs;
+
+   for(int i = 0; i < street1Idxs.size(); ++i){
+      for(int j = 0; street2Idxs.size(); ++j){
+
+         //ensure no pair is made up of the same street
+         StreetIdx currStreet1 = street1Idxs[i];
+         StreetIdx currStreet2 = street2Idxs[i];
+
+         if(currStreet1 != currStreet2){
+
+            //insert pair by <lower number,higher number> to prevent duplicate sets
+            if(currStreet1 < currStreet2){
+               streetIdPairs.insert({currStreet1,currStreet2});
+
+            } else{
+               streetIdPairs.insert({currStreet2,currStreet1});
+            }
+         }
+      }
+   }
+
+   //Store the all intersections of each pair of streets
+   vector<vector<IntersectionIdx>> intersectionList;
+
+   auto it = streetIdPairs.begin();
+   while(it != streetIdPairs.end()){
+      intersectionList.push_back(findIntersectionsOfTwoStreets(*it));
+   }
+
+   if(intersectionList.size() == 0){
+      application->update_message("No intersections found");
+      return;
+   }
+
+   //Mark each intersection for highlighting
+   // for(int i = 0; i < intersectionList.size(); i++){
+   //    for(int j = 0; j < intersectionList[i].size(); j++){
+   //       global[intersectionList[i][j]].highlight = on;
+   //    }
+   // }
+
+   application->refresh_drawing();
+
+  return;
 
 }

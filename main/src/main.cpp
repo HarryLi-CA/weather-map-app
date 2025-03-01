@@ -86,9 +86,11 @@ int main(int argc, char** argv) {
     std::cout << "Successfully loaded map '" << map_path << "'\n";
 
     //Clean-up the map data and related data structures
+    
+    loadFeatures();
+    drawMap();
     std::cout << "Closing map\n";
     //draw graphical interface
-    drawMap();
     closeMap(); 
 
     return SUCCESS_EXIT_CODE;

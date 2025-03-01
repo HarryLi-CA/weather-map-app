@@ -596,11 +596,7 @@ void drawMap() {
    application.mouse_press_callback;
    
    //create window
-<<<<<<< HEAD
    application.run(initial_setup,on_mouse_click,nullptr,nullptr);
-=======
-   application.run(initial_setup,nullptr,nullptr,nullptr);
->>>>>>> b563009 (updated m2.cpp with search button)
 
 
 }
@@ -608,12 +604,7 @@ void drawMap() {
 void initial_setup(ezgl::application *application, bool /*new_window*/){
 
    GObject* searchBtn = application->get_object("searchBtn");
-<<<<<<< HEAD
-   g_signal_connext(searchBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
-
-=======
    g_signal_connect(searchBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
->>>>>>> b563009 (updated m2.cpp with search button)
 
 }
 

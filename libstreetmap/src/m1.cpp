@@ -22,6 +22,7 @@
 #include <iostream>
 #include "m1.h"
 #include "loading_utils.h"
+#include "loading_caches.h"
 #include "nodeIDHelper.h"
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
@@ -40,29 +41,7 @@
 using namespace std;
 //cache vectors
 
-//takes intersection index and returns vector of indices of all connected street segments
-vector<vector<StreetSegmentIdx>*> intersectionToStreetSegments;
-//takes street segment index and returns vector of intersections that connect to the street segment
-vector<vector<IntersectionIdx>*> streetSegmentsToIntersections;
-//takes street index and returns a vector of intersections that connect to the street
-vector<vector<IntersectionIdx>*> streetToIntersections;
-//takes street index and returns a set of intersections
-vector<set<IntersectionIdx>*> streetToIntersectionsHelper;
-//takes street segment index and returns lat lon positions for all points in sequnce including intersections and curve points
-vector<vector<LatLon>*> streetSegmentPoints;
-// stores street segments of streets
-vector<vector<StreetSegmentIdx>*> streetToStreetSegments;
-//takes two street indexs as a pair and returns vector of intersections that the two streets intersect at,
-//Uses a special hash function StreetPairHash that allows pairs of StreetIdxs to be used as keys
-//Uses a special comparator StreetPairEqual that allows pairs to be equated (ie <1,2> == <2,1>)
-unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual> twoStreetsToIntersections;
-//contains all street names, with their respective streetIds and can be accessed with just a partial string of the name
-//Uses a special comparator stringComparator to allow for street names to be identified by a partial string
-multimap<string,StreetIdx,stringComparator> streetNames;
-//stores length of street segment
-vector<float> streetSegmentLengthCache;
-vector<float> streetSpeedLimitCache;
-vector<float> travelTimeCache;
+
 int numIntersections = 0;
 int numStreetSegments = 0;
 int numStreets = 0;

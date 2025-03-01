@@ -36,3 +36,4 @@ void loadStreetIntersections(vector<vector<IntersectionIdx>*> &streetToIntersect
 
 //Finds pair ascociated with a given intersectionIndex and stores that pair along with its intersection into the data structure
 void loadTwoStreetsIntersections(unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPairHash,StreetPairEqual> &twoStreetsToIntersections,vector<StreetSegmentIdx> &streetSegmentsOfIntersection,IntersectionIdx currIntersectionIndex);
+

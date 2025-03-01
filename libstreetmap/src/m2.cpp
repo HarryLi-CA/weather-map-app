@@ -166,6 +166,8 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, doub
          }
       }
 }
+ 
+void initial_setup(ezgl::application *application, bool /*new_window*/);
 
 void draw_main_canvas(ezgl::renderer *g)
 {
@@ -591,7 +593,15 @@ void drawMap() {
    application.mouse_press_callback;
    
    //create window
-   application.run(nullptr,on_mouse_click,nullptr,nullptr);
+   application.run(initial_setup,on_mouse_click,nullptr,nullptr);
+
+
+}
+
+void initial_setup(ezgl::application *application, bool /*new_window*/){
+
+   GObject* searchBtn = application->get_object("searchBtn");
+   g_signal_connext(searchBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
 
 
 }

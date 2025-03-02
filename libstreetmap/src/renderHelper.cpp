@@ -6,11 +6,23 @@
 
 using namespace std;
 
-MapFeature::MapFeature(int _layer, vector<ezgl::point2d> *_points, DrawType _drawType)
+static double averageLongitude = 0;
+static double averageLatitude = 0;
+
+void setLatLonBounds(LatLon latlonMin, LatLon latlonMax)
+{
+    averageLatitude = (latlonMin.latitude() + latlonMax.latitude())/2.0;
+    averageLongitude = (latlonMin.longitude() + latlonMax.longitude())/2.0;
+}
+
+
+MapFeature::MapFeature(int _layer, vector<ezgl::point2d> *_points, DrawType _drawType, double _maximumScreenLength, ezgl::color _color)
 {
     layer = _layer;
     points = _points;
     drawType = _drawType;
+    maximumScreenLength = _maximumScreenLength;
+    color = _color;
 }
 
 FeatureList::FeatureList(){}
@@ -27,18 +39,55 @@ void FeatureList::addFeature(MapFeature* feature)
     layerMap[feature->layer]->push_back(feature); //add feature to corrosponding layer
 }
 
-ezgl::point2d LatLonToPoint2D(LatLon maxPoints, LatLon minPoints, LatLon latlonPoint, double scale)
+
+double LatToY(double lat)
 {
-    LatLon commonHorizontalLine = LatLon(latlonPoint.latitude(), minPoints.longitude()); //latlon point that shares a latitude with the target point and longitude with the minimum point
-    LatLon commonVerticalLine = LatLon(minPoints.latitude(), latlonPoint.longitude()); //latlon point that shares a longitude with the target point and latitude with the minimum point 
-    
-    LatLon totalHorizontalLineMax = LatLon(minPoints.latitude(), maxPoints.longitude());
-    LatLon totalVerticalLineMax = LatLon(maxPoints.latitude(), maxPoints.longitude());
-    
-    double totalWidth = findDistanceBetweenTwoPoints(minPoints, totalHorizontalLineMax);
-    double totalHeight = findDistanceBetweenTwoPoints(minPoints, totalVerticalLineMax);
-    //cout << latlonPoint.longitude() << ", " << maxPoints.longitude() << endl;
-    double xDifference = scale*findDistanceBetweenTwoPoints(commonHorizontalLine, latlonPoint)/totalWidth; //horizontal distance from vertical line aligned with minimum longitude
-    double yDifference = scale*findDistanceBetweenTwoPoints(commonVerticalLine, latlonPoint)/totalHeight; //horizontal distance from vertical line aligned with minimum longitude
-    return ezgl::point2d(xDifference, yDifference); //return point with distances as coordinate points
+    return kEarthRadiusInMeters * lat *kDegreeToRadian;
+}
+
+
+double LonToX(double lon)
+{
+    return (lon * kDegreeToRadian * kEarthRadiusInMeters * cos(averageLatitude * kDegreeToRadian));
+}
+
+ezgl::point2d LatLonToPoint2D(LatLon latlonPoint)
+{
+    double cartX = LonToX(latlonPoint.longitude()); //get cartesian x value from longitude
+    double cartY = LatToY(latlonPoint.latitude()); //get cartesian y value from latitude
+    return {cartX, cartY}; //create and return ezgl point2d object containing cartesian coordinates
+}
+
+void updateMaximumLatLon(double& minimumLatitude, double& minimumLongitude, double& maximumLatitude,double& maximumLongitude, LatLon point)
+{
+   //check if latitude is higher than recorded maximum latitude
+   if(point.latitude() > maximumLatitude)
+   {
+      maximumLatitude = point.latitude(); //replace recorded maximum with new value
+   }
+   //check if longitude is higher than recorded maximum latitude
+   if(point.longitude() > maximumLongitude)
+   {
+      maximumLongitude = point.longitude(); //replace recorded maximum with new value
+   }
+   //check if latitude is higher than recorded maximum latitude
+   if(point.latitude() < minimumLatitude)
+   {
+      minimumLatitude = point.latitude(); //replace recorded minimum with new value
+   }
+   //check if longitude is higher than recorded maximum latitude
+   if(point.longitude() < minimumLongitude)
+   {
+      minimumLongitude = point.longitude(); //replace recorded minimum with new value
+   }
+}
+
+int lengthToLayer(double length)
+{
+   return (int)lengthToLayerInterpolate(length);
+}
+
+double lengthToLayerInterpolate(double length)
+{
+   return length/100.0;
 }

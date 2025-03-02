@@ -25,6 +25,7 @@
 #include <vector>
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
+#include "nodeIDHelper.h"
 #include "ezgl/application.hpp"
 #include "ezgl/graphics.hpp"
 #include "ezgl/camera.hpp"
@@ -33,7 +34,23 @@ using namespace std;
 
 static ezgl::rectangle initial_world{{0, 0}, 1150, 1150}; //rendered canvas
 static FeatureList mapFeatures;
- 
+static ezgl::canvas* mainCanvas;
+LatLon minPoints;
+LatLon maxPoints;
+map<const OSMID, const OSMRelation *> osmRelations;
+map<const OSMID, string> wayRoute;
+map<const OSMID, string> wayNetwork;
+map<const OSMID, string> wayHighway;
+map<const OSMID, string> nodeHighway;
+
+//default colour constants for features
+const ezgl::color kColorScrub = {212, 247, 178, 255};
+const ezgl::color kColorWood = {138, 191, 134, 255};
+const ezgl::color kColorBuilding = {166, 166, 166, 255};
+const ezgl::color kColorWater = {147, 194, 230, 255};
+const ezgl::color kColorRoad = {70, 70, 70, 255};
+const ezgl::color kColorBeach = {242,242,184, 255};
+const ezgl::color kColorIsland = {238, 242, 213, 255};
 
 
 void draw_main_canvas(ezgl::renderer *g)
@@ -41,11 +58,26 @@ void draw_main_canvas(ezgl::renderer *g)
    ezgl::rectangle rect(initial_world.bottom_left(),initial_world.top_right());
    g->draw_rectangle(rect);
    auto layer = mapFeatures.layerMap.begin();
-   while(layer != mapFeatures.layerMap.end()){
+   
+   double zoom = getScaleFactor();
+   double absoluteLength = findDistanceBetweenTwoPoints(minPoints, maxPoints);
 
+   double pixelLength = mainCanvas->get_camera().get_screen().width();
+   double pixelHeight = mainCanvas->get_camera().get_screen().height();
+   double screenLength = mainCanvas->get_camera().get_world().width();
+   double screenHeight = mainCanvas->get_camera().get_world().height();
+   double scaling = pixelLength/screenLength;
+   double screenArea = screenLength*screenHeight;
+   double invisibilityFactor = 0.5/absoluteLength;
+   int lineWidth = max(1.0, 5.0*scaling);
+   
+   cout << 25.0/screenArea << ", " << absoluteLength << endl;
+   g->set_line_width(lineWidth);
+   while(layer != mapFeatures.layerMap.end()){
       for(int i = 0; i < layer->second->size(); i++)
       {
          MapFeature* feature = (*(layer->second))[i];
+         g->set_color({0, 0, 0, 255});
          switch(feature->drawType)
          {
             case POINT: {
@@ -56,11 +88,26 @@ void draw_main_canvas(ezgl::renderer *g)
                break;
             }
             case LINE: {
+               //calculate the transparency of a street based on its length
+               double streetAlpha = 255;
+               double screenSpace = lineWidth*feature->maximumScreenLength/screenArea; 
+               //dont render small streets
+               if(screenSpace < 1.0/100000.0){break;} 
+
+               if(streetAlpha <= 0) {break;} //if the street is invisible, skip rendering to save processing time
+               g->set_color(feature->color);
                for(int i = 0; i < feature->points->size() - 1; i++)
                {
                   g->draw_line((*feature->points)[i],(*feature->points)[i+1]);
                }
                break;
+            }
+            case POLYGON: {
+               double screenSpace = feature->maximumScreenLength/screenArea; 
+               //dont render small features
+               if(screenSpace < 1.0/10000.0){break;} 
+               g->set_color(feature->color);
+               g->fill_poly(*(feature->points));
             }
             //cout << "Printing at " << origin.x << ", " << origin.y << endl;
          }
@@ -69,31 +116,12 @@ void draw_main_canvas(ezgl::renderer *g)
    }
 }
 
-void updateMaximumLatLon(double& minimumLatitude, double& minimumLongitude, double& maximumLatitude,double& maximumLongitude, LatLon point)
+double getScaleFactor()
 {
-   //check if latitude is higher than recorded maximum latitude
-   if(point.latitude() > maximumLatitude)
-   {
-      maximumLatitude = point.latitude(); //replace recorded maximum with new value
-   }
-   //check if longitude is higher than recorded maximum latitude
-   cout << point.longitude() << " <> " << maximumLongitude << endl;
-   if(point.longitude() > maximumLongitude)
-   {
-      maximumLongitude = point.longitude(); //replace recorded maximum with new value
-      cout << "new max: " << maximumLongitude << endl;
-   }
-   //check if latitude is higher than recorded maximum latitude
-   if(point.latitude() < minimumLatitude)
-   {
-      minimumLatitude = point.latitude(); //replace recorded minimum with new value
-   }
-   //check if longitude is higher than recorded maximum latitude
-   if(point.longitude() < minimumLongitude)
-   {
-      minimumLongitude = point.longitude(); //replace recorded minimum with new value
-   }
+   return mainCanvas->get_camera().get_world_scale_factor().x;
 }
+
+
 
 void loadFeatures()
 {
@@ -108,19 +136,19 @@ void loadFeatures()
       updateMaximumLatLon(minimumLatitude,minimumLongitude,maximumLatitude,maximumLongitude,point); //compare/replace max and min to current values
    }
 
-   LatLon minPoints = LatLon(minimumLatitude, minimumLongitude); //consolidate minimum latitude and longitude in latlon object
-   LatLon maxPoints = LatLon(maximumLatitude, maximumLongitude); //consolodate maximum latitude and longitude in latlon object
-   double scale = 1150;
+   minPoints = LatLon(minimumLatitude, minimumLongitude); //consolidate minimum latitude and longitude in latlon object
+   maxPoints = LatLon(maximumLatitude, maximumLongitude); //consolodate maximum latitude and longitude in latlon object
+   setLatLonBounds(minPoints, maxPoints); //set constant for calculations in renderHelper
 
+   //Add intersection features
    for(IntersectionIdx i = 0; i < getNumIntersections(); i++)
    {
-      vector<ezgl::point2d>* points = new vector<ezgl::point2d>;
-      ezgl::point2d translatedPoint = LatLonToPoint2D(maxPoints, minPoints, getIntersectionPosition(i),scale);
+      vector<ezgl::point2d>* points = new vector<ezgl::point2d>; //create vector to add points
+      ezgl::point2d translatedPoint = LatLonToPoint2D(getIntersectionPosition(i)); //get intersection coor
       points->push_back(translatedPoint);
-      MapFeature* mapFeature = new MapFeature(0,points,POINT);
+      MapFeature* mapFeature = new MapFeature(0,points,POINT,0,kColorRoad);
       mapFeatures.addFeature(mapFeature);
    }
-
 
    //cout << "loading segments: " << streetSegmentPoints.size() << endl;
    for(StreetSegmentIdx i = 0; i < getNumStreetSegments(); i++)
@@ -129,15 +157,97 @@ void loadFeatures()
       vector<ezgl::point2d>* points = new vector<ezgl::point2d>;
       for(int pointIndex = 0; pointIndex < curvePoints.size(); pointIndex++)
       {
-         cout << "starting: " << curvePoints.size() << endl;
          LatLon curvePoint = curvePoints[pointIndex];
-         ezgl::point2d translatedPoint = LatLonToPoint2D(maxPoints, minPoints,curvePoint,scale);
+         ezgl::point2d translatedPoint = LatLonToPoint2D(curvePoint);
          points->push_back(translatedPoint);
-         cout << "done!" << endl;
       }
-      MapFeature* mapFeature = new MapFeature(0,points,LINE);
+      double streetLength = findStreetLength(getStreetSegmentInfo(i).streetID);
+      
+      MapFeature* mapFeature = new MapFeature(1,points,LINE,streetLength,kColorRoad);
       mapFeatures.addFeature(mapFeature);
    }
+
+   for(FeatureIdx i = 0; i < getNumFeatures(); i++)
+   {
+      vector<ezgl::point2d>* points = new vector<ezgl::point2d>; //create array to store cartesian points
+      //loop through all latlon points in feature
+      bool closed = (getFeaturePoint(i, 0) == getFeaturePoint(i, getNumFeaturePoints(i) - 1));
+
+      for(int pointIndex = 0; pointIndex < getNumFeaturePoints(i); pointIndex++)
+      {
+         LatLon featurePoint = getFeaturePoint(i, pointIndex); //get latlon point
+         points->push_back(LatLonToPoint2D(featurePoint)); //convert latlon point to cartesion point and add to vector
+      }
+
+      int layer = -2;
+      double area = findFeatureArea(i); //area of feature to use to decide whether to render the feature at a specific zoom
+      TypedOSMID osmid = getFeatureOSMID(i);
+      ezgl::color featureColor = kColorBuilding;
+      const OSMWay* way = getWayByID(osmid);
+      FeatureType featureType = getFeatureType(i);
+      switch(featureType)
+      {
+         case UNKNOWN:{
+            featureColor = {217, 217, 217, 255};
+            layer = -10;
+            break;
+         }
+         case PARK:{
+            featureColor = kColorScrub;
+            layer = -7;
+            break;
+         }
+         case BEACH:{
+            featureColor = kColorBeach;
+            layer = -6;
+            break;
+         }
+         case LAKE:{
+            featureColor = kColorWater;
+            layer = -9;
+            break;
+         }
+         case RIVER:{
+            featureColor = kColorWater;
+            layer = -3;
+            break;
+         }
+         case ISLAND:{
+            featureColor = kColorIsland;
+            layer = -8;
+            break;
+         }
+         case BUILDING:{
+            featureColor = kColorBuilding;
+            layer = 2;
+            break;
+         }
+         case GREENSPACE:{
+            featureColor = kColorWood;
+            layer = -5;
+            break;
+         }
+         case GOLFCOURSE:{
+            featureColor = kColorBeach;
+            layer = -4;
+            break;
+         }
+         case STREAM:{
+            featureColor = kColorWater;
+            layer = -2;
+            break;
+         }
+      }
+      
+      //default draw type is a polygon
+      DrawType drawType = POLYGON;
+      //if feature is not closed, then it is a line
+      if(!closed){drawType = LINE;}
+
+      MapFeature* mapFeature = new MapFeature(layer,points,POLYGON,area, featureColor); //create map feature object
+      mapFeatures.addFeature(mapFeature); //add map featue object to array
+   }
+   cout << endl;
 }
 
 void drawMap() {
@@ -152,9 +262,9 @@ void drawMap() {
    settings.window_identifier = "MainWindow"; //setup window
    settings.canvas_identifier = "MainCanvas"; //setup canvas
    ezgl::application application(settings); //create application
-
-   application.add_canvas("MainCanvas", draw_main_canvas, initial_world);
-
+   initial_world = ezgl::rectangle(LatLonToPoint2D(minPoints),LatLonToPoint2D(maxPoints));
+   mainCanvas = application.add_canvas("MainCanvas", draw_main_canvas, initial_world);
+   
    //create window
    application.run(nullptr,nullptr,nullptr,nullptr);
 

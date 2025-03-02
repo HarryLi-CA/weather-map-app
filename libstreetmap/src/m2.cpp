@@ -334,7 +334,7 @@ void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, dou
 
    if(clicked != nullptr)
    {
-      
+      clickedOnFeature(clicked); //run click events on the clicked feature  
    }
 }
 

@@ -245,7 +245,7 @@ void loadFeatures()
       if(!closed){drawType = LINE;}
 
       MapFeature* mapFeature = new MapFeature(layer,points,POLYGON,area, featureColor); //create map feature object
-      mapFeatures.addFeature(mapFeature); //add map featue object to array
+      mapFeatures.addFeature(mapFeature); //add map feature object to array
    }
    cout << endl;
 }

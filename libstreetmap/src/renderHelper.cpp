@@ -30,9 +30,28 @@ MapFeature::MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _
     dataIndex = _index;
 
     color = _color;
+
+    //set default values
+    wasRendered = false;
+    highlight = false;
 }
 
-FeatureList::FeatureList(){}
+FeatureList::FeatureList(){
+    highlightedFeature = nullptr;
+}
+
+void FeatureList::highlightFeature(MapFeature* feature)
+{
+    //if a feature is currently highlighted, remove the highlight (only one feature should be highlighted at a time)
+    if(highlightedFeature != nullptr)
+    {
+        highlightedFeature->highlight = false;
+    }
+    //highlight new feature
+    feature->highlight = true;
+    //store feature so it can be unhighlighted if needed
+    highlightedFeature = feature;
+}
 
 void FeatureList::addFeature(MapFeature* feature)
 {

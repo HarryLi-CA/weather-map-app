@@ -33,13 +33,14 @@
 using namespace std;
 
 static ezgl::rectangle initial_world{{0, 0}, 1150, 1150}; //rendered canvas
-static FeatureList mapFeatures;
-static ezgl::canvas* mainCanvas;
-LatLon minPoints;
-LatLon maxPoints;
-map<const OSMID, const OSMRelation *> osmRelations;
+static FeatureList mapFeatures; //list of map features to draw
+static ezgl::canvas* mainCanvas; //application canvas
+LatLon minPoints; //bottom left LatLon position
+LatLon maxPoints; //top right LatLon position
+vector<StaticName> staticLabels; //list of static text objects to draw
 //default colour constants for general objects
-const ezgl::color kColourDefaultGround = {235, 235, 235, 255}; 
+const ezgl::color kColorDefaultGround = {235, 235, 235, 255}; 
+const ezgl::color kColorHighlight = {255, 87, 87, 200};
 //default colour constants for features
 const ezgl::color kColorScrub = {212, 247, 178, 255};
 const ezgl::color kColorWood = {138, 191, 134, 255};
@@ -50,12 +51,14 @@ const ezgl::color kColorIsland = {238, 242, 213, 255};
 //default colour constants for roads
 const ezgl::color kColorBasicRoad = {70, 70, 70, 255};
 const ezgl::color kColorOnewayRoad = {219, 118, 118, 255};
+//define rendering constants
+const int minimumPixelsToDraw = 10; //minimum pixels a feature should take up on the screen to be drawn that cycle
 
 
 void draw_main_canvas(ezgl::renderer *g)
 {
    ezgl::rectangle rect(initial_world.bottom_left(),initial_world.top_right());
-   g->set_color(kColourDefaultGround);
+   g->set_color(kColorDefaultGround);
    g->fill_rectangle(rect);
    auto layer = mapFeatures.layerMap.begin();
    
@@ -74,15 +77,21 @@ void draw_main_canvas(ezgl::renderer *g)
    auto& camera = mainCanvas->get_camera();
 
    //cout << 100.0/screenArea << ", " << absoluteLength << endl;
-   g->set_line_width(lineWidth);
+   
 
    map<const OSMID, string> wayRoute;
 
+   //set line settings
+   g->set_line_width(lineWidth);
+   g->set_line_cap(ezgl::line_cap::round);
+   //drawing streets
    while(layer != mapFeatures.layerMap.end()){
       for(int i = 0; i < layer->second->size(); i++)
       {
+         
          MapFeature* feature = (*(layer->second))[i];
          g->set_color({0, 0, 0, 255});
+         g->set_line_width(lineWidth);
          switch(feature->drawType)
          {
             case POINT: {
@@ -90,6 +99,8 @@ void draw_main_canvas(ezgl::renderer *g)
                origin = {origin.x + initial_world.bottom_left().x, origin.y + initial_world.bottom_left().y};
                ezgl::rectangle featureRect({origin.x - 1, origin.y - 1},{origin.x + 1, origin.y + 1});
                g->fill_rectangle(featureRect);
+               
+               feature->wasRendered = true; //feature was fully rendered this cycle
                break;
             }
             case LINE: {
@@ -102,11 +113,7 @@ void draw_main_canvas(ezgl::renderer *g)
                //calculate the transparency of a street based on its length
                ezgl::rectangle& bounds = feature->bounds;
                ezgl::rectangle screen_rect(camera.world_to_screen(bounds.bottom_left()),camera.world_to_screen(bounds.top_right()));
-               if(screen_rect.area() < 10){break;} 
-
-               double streetAlpha = 255;
-
-               if(streetAlpha <= 0) {break;} //if the street is invisible, skip rendering to save processing time
+               if(screen_rect.area() < minimumPixelsToDraw){break;} 
                
                g->set_color(feature->color);
                for(int i = 0; i < feature->points->size() - 1; i++)
@@ -115,10 +122,11 @@ void draw_main_canvas(ezgl::renderer *g)
                }
                if(screen_rect.area() < 100){break;}
                
+               feature->wasRendered = true; //feature was fully rendered this cycle
                break;
             }
             case POLYGON: {
-
+               feature->wasRendered = false;
                //dont process objects that are not in the camrea
                if(!intersecting(mainCanvas->get_camera().get_world(),feature->bounds))
                {
@@ -129,16 +137,38 @@ void draw_main_canvas(ezgl::renderer *g)
                
                const ezgl::rectangle screen_rect(camera.world_to_screen(bounds.bottom_left()),camera.world_to_screen(bounds.top_right()));
                if(screen_rect.area() < 10){break;} 
-               
-               //cout << feature->maximumScreenLength << "/"<< screenArea <<" = "<< screenSpace << endl;
+            
                g->set_color(feature->color);
                g->fill_poly(*(feature->points));
-               //g->draw_rectangle(feature->bounds);
+
+               if(feature->highlight)
+               {
+                  g->set_color(kColorHighlight);
+                  g->set_line_width(1);
+                  for(int i = 0; i < feature->points->size() - 1; i++)
+                  {
+                     g->draw_line((*feature->points)[i],(*feature->points)[i+1]);
+                  }
+               }
+
+               feature->wasRendered = true; //feature was fully rendered this cycle
+               break;
             }
-            //cout << "Printing at " << origin.x << ", " << origin.y << endl;
          }
+
       }
-      layer++;
+      layer++; //get next layer
+   }
+   //set text display settings
+   g->set_font_size(10);
+   g->set_horiz_justification(ezgl::justification::center); //horizontally align text position with center of text
+   g->set_vert_justification(ezgl::justification::center); //vertically align text position with center of text
+   //g->format_font("sans-serif",ezgl::font_slant::normal,ezgl::font_weight::bold);
+   g->set_color({0, 0, 0, 200}); //print transluscent black text
+   //iterate through all labels
+   for(auto label = staticLabels.begin(); label != staticLabels.end(); label++)
+   {
+      g->draw_text(label->position, label->text, label->feature->bounds.width()/1.5, label->feature->bounds.height()/1.5);
    }
 }
 
@@ -284,14 +314,23 @@ void loadFeatures()
       //if feature is not closed, then it is a line
       if(!closed){drawType = LINE;}
 
+      
+
       MapFeature* mapFeature = new MapFeature(layer,points,featureColor,drawType,MapFeatureType::FEATURE,(int)i); //create map feature object
       mapFeatures.addFeature(mapFeature); //add map feature object to array
+      //add text label for feature name
+      string featureName = getFeatureName(i);
+      if(featureName[0] != '<') //dont print text that is not meant to be displayed (denoted by being wrapped in '<>')
+      {
+         staticLabels.push_back({featureName,mapFeature->bounds.center(),mapFeature}); //create static text structure and add to array for rendering
+      }
    }
    cout << endl;
 }
 
-void clickedOnFeature(MapFeature* clicked, ezgl::application* app)
+void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to manage clicks on a specific MapFeature
 {
+   mapFeatures.highlightFeature(clicked);
    auto g = app->get_renderer();
    if(clicked->featureType == FEATURE) //clicked on feature
    {
@@ -304,6 +343,7 @@ void clickedOnFeature(MapFeature* clicked, ezgl::application* app)
       cout << "clicked: " << getStreetName(getStreetSegmentInfo(clicked->dataIndex).streetID) << endl;
       
    }
+   mainCanvas->redraw();
 }
 
 void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y)

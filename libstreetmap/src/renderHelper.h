@@ -26,7 +26,9 @@ class MapFeature {
     DrawType drawType; //method renderer will use to draw feature.
     MapFeatureType featureType; //type of feature
     int dataIndex; //index to recover information (either street segment or feature)
-    ezgl::color color;
+    bool wasRendered; //cached value to store whether the feature was rendered this frame
+    ezgl::color color; //color to draw the feature in
+    bool highlight; //if true, the feature will be outlined (polygon) or highlighted (line)
     MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _color, DrawType _drawType, MapFeatureType _featureType, int _index);
 };
 
@@ -34,9 +36,19 @@ class MapFeature {
 class FeatureList {
     public:
     map<int, vector<MapFeature*>*> layerMap; //map to store layers
+    MapFeature* highlightedFeature; //currently highlighted feature
     FeatureList();
     void addFeature(MapFeature* feature);
+    void highlightFeature(MapFeature* feature);
 };
+
+//structure used to define text to draw
+typedef struct staticname_t {
+    string text; //test to draw
+    ezgl::point2d position; //world position to draw text at
+    MapFeature* feature; //map feature this text object is connected to
+
+}StaticName;
 
 void setLatLonBounds(LatLon latlonMin, LatLon latlonMax); //setup constants for latlon to cartesian conversions using minimum and maximum latlon bounds
 double LatToY(double lat); //converts latitude angle to cartesian y coordinate

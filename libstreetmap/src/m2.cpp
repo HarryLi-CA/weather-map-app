@@ -54,15 +54,29 @@ const ezgl::color kColorIsland = {238, 242, 213, 255};
 //default colour constants for roads
 const ezgl::color kColorBasicRoad = {140, 140, 140, 255};
 const ezgl::color kColorOnewayRoad = {219, 118, 118, 255};
+const double kColorOnewayIndicatorBrightness = 255;
 const ezgl::color kColorMajorRoad = {0, 0, 200, 255};
 const ezgl::color kColorOnewayMajorRoad = {148,0,211, 255};
 //define rendering constants
+const double kOnewayIndicatorSize = 6.0; //size from center to vertex of indicator triangle
 const int kMinimumPixelsToDraw = 20; //minimum pixels a feature should take up on the screen to be drawn that cycle
 const double kMinimumMajorRoadLength = 5000; //minimum length for a road to be considered a major road
 const double kRenderCellSize = 300; //size of each render cell
 const int kMaximumRenderCells = 100; //maximum number of render cells before switching to direct rendering
 const double kMaximumBuildingScaling = 2; //maximum number of meters per pixel to start drawing buildings
+const bool enableCellRendering = false;
 
+void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
+{
+   double angle = atan2(direction.y, direction.x);
+   //draw triangle based on initial angle
+   g->set_color(color);
+   g->fill_poly({
+      {center.x + distanceFromCenter*cos(angle), center.y + distanceFromCenter*sin(angle)},
+      {center.x + distanceFromCenter*cos(angle+2*M_PI/3.0), center.y + distanceFromCenter*sin(angle+2*M_PI/3.0)},
+      {center.x + distanceFromCenter*cos(angle+4*M_PI/3.0), center.y + distanceFromCenter*sin(angle+4*M_PI/3.0)},
+   });
+}
 
 void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, double lineWidth, double scaling, double realWorldScaling, ezgl::camera camera)
 {
@@ -70,8 +84,10 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, doub
       {
          case POINT: {
             //only print points if they are highlighted
-            feature->wasRendered = false;
+            feature->wasRendered = true; 
             if(!feature->highlight){break;}
+            feature->wasRendered = false;
+            
             ezgl::point2d origin = (*(feature->points))[0];
             g->set_color(feature->color);
             g->draw_arc(origin,10.0,0.0,360.0);
@@ -80,6 +96,7 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, doub
             break;
          }
          case LINE: {
+            double lineWidthScale = 1; //scale of line width used to render line
             feature->wasRendered = false;
             bool highlightedStreet = mapFeatures.highlightedStreetID == feature->streetID; //check if segment is on highlighted street
             //calculate the transparency of a street based on its length
@@ -95,13 +112,28 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, doub
             //if major road, make road wider as indication 
             if(feature->major)
             {
-               g->set_line_width(lineWidth*2);
+               lineWidthScale = 2;
+               g->set_line_width(lineWidth*lineWidthScale);
             }
             for(int i = 0; i < feature->points->size() - 1; i++)
             {
                g->draw_line((*feature->points)[i],(*feature->points)[i+1]);
             }
-            
+            //draw arrow if street is directional
+            if(feature->directional && lineWidth*lineWidthScale > kOnewayIndicatorSize)
+            {
+               ezgl::point2d from = (*feature->points)[0]; //first position in the street
+               ezgl::point2d to = (*feature->points)[feature->points->size() - 1]; //last position in the street
+               ezgl::point2d dir = {to.x - from.x, to.y - from.y}; //direction vector for street
+               double magnitude = sqrt(dir.x*dir.x + dir.y*dir.y); //magnitude of dir
+               if(magnitude > 0){
+                  ezgl::color roadColour = feature->color;
+                  ezgl::color indicatorColour = {kColorOnewayIndicatorBrightness,kColorOnewayIndicatorBrightness,kColorOnewayIndicatorBrightness,200};
+                  ezgl::point2d midpoint = (*feature->points)[feature->points->size()/2]; //approximate mid point to be the point halfway along the list of points
+                  //draw triangle on road
+                  drawTriangle(g,midpoint,dir,indicatorColour,kOnewayIndicatorSize/scaling);
+               }
+            }
             
             feature->wasRendered = true; //feature was fully rendered this cycle
             break;
@@ -167,12 +199,16 @@ void draw_main_canvas(ezgl::renderer *g)
    //set line settings
    g->set_line_width(lineWidth);
    g->set_line_cap(ezgl::line_cap::round);
-
-   vector<pair<int, int>> cells = getCurrentRenderCells(&camera,kRenderCellSize,minPoints);
-   //if number of cells is low, use cell rendering method
-   cout << "cells: " << cells.size() << endl;
-   bool useCellRendering = cells.size() <= kMaximumRenderCells; //use render cells to cull features
-   cout << "cell rendering: " << useCellRendering << endl;
+   bool useCellRendering = false;
+   vector<pair<int, int>> cells;
+   if(enableCellRendering){
+      //get cells currently on screen
+      vector<pair<int, int>> cells = getCurrentRenderCells(&camera,kRenderCellSize,minPoints);
+      //if number of cells is low, use cell rendering method
+      cout << "cells: " << cells.size() << endl;
+      bool useCellRendering = cells.size() <= kMaximumRenderCells; //use render cells to cull features
+      cout << "cell rendering: " << useCellRendering << endl;
+   }
    if(useCellRendering){
       vector<MapFeature*> cellFeatures = getFeaturesFromCells(cells, cellMap);
       for(int i = 0; i < cellFeatures.size(); i++)
@@ -281,6 +317,12 @@ void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to
    {
       StreetSegmentInfo segmentInfo = getStreetSegmentInfo(clicked->dataIndex);
       cout << "clicked: sID = " << getStreetSegmentInfo(clicked->dataIndex).streetID << endl;
+      
+   }
+   if(clicked->featureType == POINT && clicked->dataIndex < getNumIntersections()) //clicked on street segment
+   {
+      string intersection = getIntersectionName(clicked->dataIndex);
+      cout << "intersection = " << intersection << endl;
       
    }
    mainCanvas->redraw();
@@ -402,6 +444,10 @@ void loadFeatures()
       //set street id
       StreetIdx streetID = segmentInfo.streetID; //get street ID
       mapFeature->streetID = streetID; //set street id of feature to calculated street id
+
+      //post initialization settings for one way streets
+      mapFeature->directional = segmentInfo.oneWay;
+
       //check if street is a major street
       if(streetID > 0) //street ID 0 can never be a major road as it is the default ID for minor roads
       {  
@@ -517,9 +563,11 @@ void loadFeatures()
       }
    }
 
-   cout << "starting to map render cells" << endl;
-   mapRenderCells();
-   cout << endl;
+   if(enableCellRendering){
+      cout << "starting to map render cells" << endl;
+      mapRenderCells();
+      cout << endl;
+   }
 }
 
 

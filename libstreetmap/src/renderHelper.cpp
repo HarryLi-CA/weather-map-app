@@ -38,6 +38,7 @@ MapFeature::MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _
     streetID = -1;
     major = false;
     inCellList = false;
+    directional = false;
     maximumScaling = DBL_MAX;
 }
 

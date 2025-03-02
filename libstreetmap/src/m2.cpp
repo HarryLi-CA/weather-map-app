@@ -113,6 +113,8 @@ void draw_main_canvas(ezgl::renderer *g)
                {
                   g->draw_line((*feature->points)[i],(*feature->points)[i+1]);
                }
+               if(screen_rect.area() < 100){break;}
+               
                break;
             }
             case POLYGON: {
@@ -288,17 +290,19 @@ void loadFeatures()
    cout << endl;
 }
 
-void clickedOnFeature(MapFeature* clicked)
+void clickedOnFeature(MapFeature* clicked, ezgl::application* app)
 {
+   auto g = app->get_renderer();
    if(clicked->featureType == FEATURE) //clicked on feature
    {
       OSMID osmid = getFeatureOSMID(clicked->dataIndex);
       cout << "clicked: " << getFeatureName(clicked->dataIndex) << endl;
    }
-   if(clicked->featureType == ROAD) //clicked on street segment
+   if(clicked->featureType == ROAD && clicked->dataIndex < getNumStreetSegments()) //clicked on street segment
    {
       StreetSegmentInfo segmentInfo = getStreetSegmentInfo(clicked->dataIndex);
       cout << "clicked: " << getStreetName(getStreetSegmentInfo(clicked->dataIndex).streetID) << endl;
+      
    }
 }
 
@@ -335,7 +339,7 @@ void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, dou
 
    if(clicked != nullptr)
    {
-      clickedOnFeature(clicked); //run click events on the clicked feature  
+      clickedOnFeature(clicked, app); //run click events on the clicked feature  
    }
 }
 

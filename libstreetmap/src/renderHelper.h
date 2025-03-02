@@ -77,8 +77,11 @@ vector<pair<int,int>> getCurrentRenderCells(ezgl::camera* camera, double cellSiz
 pair<int,int> getRenderCell(double originX, double originY, double cellSize, ezgl::point2d position); //returns render cell at a position
 vector<pair<int,int>> getBoundedRenderCells(ezgl::rectangle rect, double cellSize, LatLon bottomLeft); //returns all render cells inside of a given rectangle
 vector<pair<int,int>> getSafeBoundedRenderCells(ezgl::rectangle rect, double cellSize, LatLon bottomLeft); //returns all render cells inside of a given rectangle, adding a 1 cell buffer around the rectangle
+
 void addToRenderCellMap(pair<int, int> cell, MapFeature* feature, map<pair<int, int>, vector<MapFeature*>*>* cellMap); //inserts cells into cell map and assigns new vectors when needed
 vector<MapFeature*> getFeaturesFromCells(vector<pair<int,int>> cells, map<pair<int, int>, vector<MapFeature*>*>& cellMap); //returns all features corrosponding to a set of render cells
+void mapRenderCells(double renderCellSize, LatLon bottomLeft, FeatureList& mapFeatures, map<pair<int, int>, vector<MapFeature*>*>& cellMap); //maps all features ina feature list based on their render cells to a render cell map
+
 void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter); //draws triangle around a center point
 
 template <typename T> bool vectorContains(vector<T>& vec, T& toFind) //returns true if toFind is an element of vec

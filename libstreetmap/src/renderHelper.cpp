@@ -216,6 +216,49 @@ void addToRenderCellMap(pair<int, int> cell, MapFeature* feature, map<pair<int, 
     (*cellMap)[cell]->push_back(feature);
 }
 
+void mapRenderCells(double renderCellSize, LatLon bottomLeft, FeatureList& mapFeatures, map<pair<int, int>, vector<MapFeature*>*>& cellMap)
+{
+   auto layer = mapFeatures.layerMap.begin();
+   double originY = LatToY(bottomLeft.latitude());
+   double originX = LonToX(bottomLeft.longitude());
+
+   while(layer != mapFeatures.layerMap.end())
+   {
+      for(int i = 0; i < layer->second->size(); i++)
+      {
+         
+         MapFeature* feature = (*(layer->second))[i];
+         vector<pair<int, int>> cells;
+         switch(feature->drawType)
+         {
+            case POINT: {
+               //only print points if they are highlighted
+               cells.push_back(getRenderCell(originX,originY,renderCellSize,(*feature->points)[0]));
+               break;
+            }
+            case LINE: {
+               //calculate the transparency of a street based on its length
+               ezgl::rectangle& bounds = feature->bounds;
+               cells = getBoundedRenderCells(bounds,renderCellSize,bottomLeft);
+               break;
+            }
+            case POLYGON: {
+               ezgl::rectangle& bounds = feature->bounds;
+               cells = getBoundedRenderCells(bounds,renderCellSize,bottomLeft);
+               break;
+            }
+         }
+
+         for(auto cell = cells.begin(); cell != cells.end(); cell++)
+         {
+            addToRenderCellMap(*cell,feature,&cellMap);
+         }
+         
+      }
+      layer++;
+   }
+}
+
 vector<MapFeature*> getFeaturesFromCells(vector<pair<int,int>> cells, map<pair<int, int>, vector<MapFeature*>*>&cellMap)
 {
     vector<MapFeature*> features; //vector of features to display

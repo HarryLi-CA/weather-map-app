@@ -307,51 +307,7 @@ double getScaleFactor()
    return mainCanvas->get_camera().get_world_scale_factor().x;
 }
 
-void mapRenderCells()
-{
-   cout << "mapping render cells" << endl;
-   cout << "..." << endl;
-   auto layer = mapFeatures.layerMap.begin();
-   cout << "got layer" << endl;
-   double originY = LatToY(minPoints.latitude());
-   double originX = LonToX(minPoints.longitude());
 
-   while(layer != mapFeatures.layerMap.end())
-   {
-      for(int i = 0; i < layer->second->size(); i++)
-      {
-         
-         MapFeature* feature = (*(layer->second))[i];
-         vector<pair<int, int>> cells;
-         switch(feature->drawType)
-         {
-            case POINT: {
-               //only print points if they are highlighted
-               cells.push_back(getRenderCell(originX,originY,kRenderCellSize,(*feature->points)[0]));
-               break;
-            }
-            case LINE: {
-               //calculate the transparency of a street based on its length
-               ezgl::rectangle& bounds = feature->bounds;
-               cells = getBoundedRenderCells(bounds,kRenderCellSize,minPoints);
-               break;
-            }
-            case POLYGON: {
-               ezgl::rectangle& bounds = feature->bounds;
-               cells = getBoundedRenderCells(bounds,kRenderCellSize,minPoints);
-               break;
-            }
-         }
-
-         for(auto cell = cells.begin(); cell != cells.end(); cell++)
-         {
-            addToRenderCellMap(*cell,feature,&cellMap);
-         }
-         
-      }
-      layer++;
-   }
-}
 
 void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to manage clicks on a specific MapFeature
 {
@@ -629,7 +585,7 @@ void loadFeatures()
 
    if(enableCellRendering){
       cout << "starting to map render cells" << endl;
-      mapRenderCells();
+      mapRenderCells(kRenderCellSize, minPoints, mapFeatures, cellMap);
       cout << endl;
    }
 }

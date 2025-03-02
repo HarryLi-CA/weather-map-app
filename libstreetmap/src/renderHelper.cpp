@@ -16,12 +16,19 @@ void setLatLonBounds(LatLon latlonMin, LatLon latlonMax)
 }
 
 
-MapFeature::MapFeature(int _layer, vector<ezgl::point2d> *_points, DrawType _drawType, double _maximumScreenLength, ezgl::color _color)
+MapFeature::MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _color, DrawType _drawType, MapFeatureType _featureType, int _index)
 {
+    //apply arguments to corrosponding variables
     layer = _layer;
+
     points = _points;
+    bounds = boundingRectangle(points);
+    
     drawType = _drawType;
-    maximumScreenLength = _maximumScreenLength;
+    featureType = _featureType;
+
+    dataIndex = _index;
+
     color = _color;
 }
 
@@ -90,4 +97,30 @@ int lengthToLayer(double length)
 double lengthToLayerInterpolate(double length)
 {
    return length/100.0;
+}
+
+ezgl::rectangle boundingRectangle(const vector<ezgl::point2d>* points)
+{
+    double minY = DBL_MAX; //minimum y value in point list
+    double minX = DBL_MAX; //minimum x value in point list
+    double maxY = -DBL_MAX; //maximum y value in point list
+    double maxX = -DBL_MAX; //maximum x value in point list
+
+    for(int pointIndex = 0; pointIndex < points->size(); pointIndex++)
+    {
+        ezgl::point2d point = (*points)[pointIndex];
+        if(point.x > maxX){maxX = point.x;} //check for maximum X
+        if(point.y > maxY){maxY = point.y;} //check for maximum Y
+        if(point.x < minX){minX = point.x;} //check for minimum X
+        if(point.y < minY){minY = point.y;} //check for minimum Y
+    }
+
+    ezgl::rectangle boundingRect({minX, minY},{maxX,maxY}); //create bounding rectangle
+    return boundingRect; //return created rectangle as bounding rectangle
+}
+
+bool intersecting(ezgl::rectangle rectA, ezgl::rectangle rectB)
+{
+    bool outside = rectA.left() > rectB.right() || rectA.right() < rectB.left() || rectA.top() < rectB.bottom() || rectA.bottom() > rectB.top();
+    return !outside;
 }

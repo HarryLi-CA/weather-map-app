@@ -27,6 +27,7 @@ class MapFeature {
     DrawType drawType; //method renderer will use to draw feature.
     MapFeatureType featureType; //type of feature
     int dataIndex; //index to recover information (either street segment or feature)
+    double maximumScaling; //maximum meters per pixel for the feature to start drawing
     StreetIdx streetID; //corrosponding streetID of a map feature (only applicable for street segments, -1 by default)
     bool wasRendered; //cached value to store whether the feature was rendered this frame
     ezgl::color color; //color to draw the feature in

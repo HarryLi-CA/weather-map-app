@@ -57,13 +57,14 @@ const ezgl::color kColorOnewayRoad = {219, 118, 118, 255};
 const ezgl::color kColorMajorRoad = {0, 0, 200, 255};
 const ezgl::color kColorOnewayMajorRoad = {148,0,211, 255};
 //define rendering constants
-const int kMinimumPixelsToDraw = 10; //minimum pixels a feature should take up on the screen to be drawn that cycle
+const int kMinimumPixelsToDraw = 20; //minimum pixels a feature should take up on the screen to be drawn that cycle
 const double kMinimumMajorRoadLength = 5000; //minimum length for a road to be considered a major road
 const double kRenderCellSize = 300; //size of each render cell
 const int kMaximumRenderCells = 100; //maximum number of render cells before switching to direct rendering
+const double kMaximumBuildingScaling = 2; //maximum number of meters per pixel to start drawing buildings
 
 
-void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, double lineWidth, double scaling, ezgl::camera camera)
+void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, double lineWidth, double scaling, double realWorldScaling, ezgl::camera camera)
 {
    switch(feature->drawType)
       {
@@ -107,6 +108,8 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, doub
          }
          case POLYGON: {
             feature->wasRendered = false;
+            //check scaling requirements
+            if(realWorldScaling > feature->maximumScaling){break;} //if current scaling is more than max scaling, skip feature
             //dont render small features
             const ezgl::rectangle& bounds = feature->bounds;
             
@@ -148,6 +151,7 @@ void draw_main_canvas(ezgl::renderer *g)
    double screenLength = mainCanvas->get_camera().get_world().width();
    double screenHeight = mainCanvas->get_camera().get_world().height();
    double scaling = pixelLength/screenLength;
+   double worldToScreenScale = screenLength/pixelLength;
    double screenArea = screenLength*screenHeight;
    double invisibilityFactor = 0.5/absoluteLength;
    int lineWidth = max(1.0, 5.0*scaling);
@@ -173,11 +177,10 @@ void draw_main_canvas(ezgl::renderer *g)
       vector<MapFeature*> cellFeatures = getFeaturesFromCells(cells, cellMap);
       for(int i = 0; i < cellFeatures.size(); i++)
       {
-         
          MapFeature* feature = cellFeatures[i];
          g->set_color({0, 0, 0, 255});
          g->set_line_width(lineWidth);
-         drawFeature(feature,g,screenArea,lineWidth,scaling,camera);
+         drawFeature(feature,g,screenArea,lineWidth,scaling,worldToScreenScale,camera);
       }
    }
    else //if number of cells is too high, directly render each element
@@ -194,7 +197,7 @@ void draw_main_canvas(ezgl::renderer *g)
             if(feature->drawType != POINT && !intersecting(camera.get_world(),feature->bounds)){continue;} //check if bounds for camera and feaure are intersecting
             g->set_color({0, 0, 0, 255});
             g->set_line_width(lineWidth);
-            drawFeature(feature,g,screenArea,lineWidth,scaling,camera);
+            drawFeature(feature,g,screenArea,lineWidth,scaling,worldToScreenScale,camera);
          }
          layer++;
       }
@@ -238,7 +241,6 @@ void mapRenderCells()
          switch(feature->drawType)
          {
             case POINT: {
-               cout << "adding point" << endl;
                //only print points if they are highlighted
                cells.push_back(getRenderCell(originX,originY,kRenderCellSize,(*feature->points)[0]));
                break;
@@ -437,6 +439,7 @@ void loadFeatures()
 
       int layer = -2; //layer of feature (default is -2)
       double drawArea = findFeatureArea(featureIndex); //area of feature to use to decide whether to render the feature at a specific zoom
+      double maximumScaling = DBL_MAX;
       ezgl::color featureColor = kColorBuilding; //colour of feature (default is building) 
       FeatureType featureType = getFeatureType(featureIndex); //get feature type
       //change colour and layer based on feature type
@@ -475,7 +478,7 @@ void loadFeatures()
          case BUILDING:{
             featureColor = kColorBuilding;
             layer = 2;
-            drawArea = 50; //set area so all buildings have the same render distance
+            maximumScaling = kMaximumBuildingScaling; //set maximum distance for buildings to start drawing
             break;
          }
          case GREENSPACE:{
@@ -504,6 +507,8 @@ void loadFeatures()
 
       MapFeature* mapFeature = new MapFeature(layer,points,featureColor,drawType,MapFeatureType::FEATURE,(int)featureIndex); //create map feature object
       mapFeatures.addFeature(mapFeature); //add map feature object to array
+      //set default values
+      mapFeature->maximumScaling = maximumScaling;
       //add text label for feature name
       string featureName = getFeatureName(featureIndex);
       if(featureName[0] != '<') //dont print text that is not meant to be displayed (denoted by being wrapped in '<>')

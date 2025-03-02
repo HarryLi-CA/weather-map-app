@@ -308,7 +308,12 @@ void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to
    if(clicked->featureType == FEATURE) //clicked on feature
    {
       OSMID osmid = getFeatureOSMID(clicked->dataIndex);
-      cout << "clicked: " << getFeatureName(clicked->dataIndex) << endl;
+
+      LatLon currentFeaturePoint = getFeaturePoint(clicked->dataIndex, 0);
+      IntersectionIdx closestInter = findClosestIntersection(currentFeaturePoint);
+
+      app->update_message("clicked: " + getFeatureName(clicked->dataIndex) + " near: " + getIntersectionName(closestInter));
+
    }
    if(clicked->featureType == ROAD && clicked->dataIndex < getNumStreetSegments()) //clicked on street segment
    {
@@ -610,7 +615,6 @@ void drawMap() {
    //create window
    application.run(initial_setup,on_mouse_click,nullptr,nullptr);
 
-
 }
 
 void initial_setup(ezgl::application *application, bool /*new_window*/){
@@ -684,8 +688,8 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
       intersectionList.push_back(findIntersectionsOfTwoStreets(*it));
       it++;
    }
-
-   if(intersectionList.size() == 0){
+   int numOfIntersectionLists = intersectionList.size();
+   if(numOfIntersectionLists == 0){
       application->update_message("No intersections found");
       return;
    }
@@ -694,12 +698,17 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    string intersectionInfo = "Intersections: ";
 
    // Mark each intersection for highlighting
-   for(int i = 0; i < intersectionList.size(); i++){
+   for(int i = 0; i < numOfIntersectionLists; i++){
       for(int j = 0; j < intersectionList[i].size(); j++){
          intersectionFeatures[intersectionList[i][j]]->highlight = true;
 
          //or cout too as it cant all fit into the status bar
-         intersectionInfo.append(getIntersectionName(intersectionList[i][j]) + ", ");
+
+         intersectionInfo.append(getIntersectionName(intersectionList[i][j]));
+
+         if(i != numOfIntersectionLists-1 && j != intersectionList[numOfIntersectionLists-1].size() -1){
+            intersectionInfo.append(", ");
+         }
 
          prevSearchedIntersectionIdxs.push_back(intersectionList[i][j]);
          intersectionFeatures[intersectionList[i][j]]->highlight = true;

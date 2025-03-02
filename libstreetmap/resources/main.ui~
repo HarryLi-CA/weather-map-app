@@ -213,6 +213,18 @@
             <child>
               <placeholder/>
             </child>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
           </object>
           <packing>
             <property name="left-attach">0</property>
@@ -239,8 +251,8 @@
               <object class="GtkGrid" id="MainCanvasGrid">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
-                <property name="margin-left">7</property>
-                <property name="margin-top">7</property>
+                <property name="margin-left">5</property>
+                <property name="margin-top">5</property>
                 <property name="orientation">vertical</property>
                 <property name="column-spacing">2</property>
                 <child>

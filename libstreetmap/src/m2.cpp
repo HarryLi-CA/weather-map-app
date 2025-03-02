@@ -57,6 +57,9 @@ const ezgl::color kColorOnewayRoad = {219, 118, 118, 255};
 const double kColorOnewayIndicatorBrightness = 255;
 const ezgl::color kColorMajorRoad = {0, 0, 200, 255};
 const ezgl::color kColorOnewayMajorRoad = {148,0,211, 255};
+//scaling values for window resizing
+double initialWidth = -1;
+double initialHeight = -1;
 //define rendering constants
 const double kOnewayIndicatorSize = 6.0; //size from center to vertex of indicator triangle
 const int kMinimumPixelsToDraw = 20; //minimum pixels a feature should take up on the screen to be drawn that cycle
@@ -169,10 +172,23 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, doub
 
 void draw_main_canvas(ezgl::renderer *g)
 {
+   //rect value to draw to screen
    ezgl::rectangle rect(initial_world.bottom_left(),initial_world.top_right());
-   
    g->set_color(kColorDefaultGround);
    g->fill_rectangle(rect);
+
+   //initialize initial resolution values if they are at their default values (-1)
+   if(initialWidth == -1)
+   {
+      initialWidth = mainCanvas->width();
+   }
+   if(initialHeight == -1)
+   {
+      initialHeight = mainCanvas->height();
+   }
+   
+   cout << initialWidth << ", " << initialHeight << endl;
+   
    auto layer = mapFeatures.layerMap.begin();
    
    double zoom = getScaleFactor();
@@ -189,6 +205,16 @@ void draw_main_canvas(ezgl::renderer *g)
    int lineWidth = max(1.0, 5.0*scaling);
    
    auto& camera = mainCanvas->get_camera();
+   ezgl::rectangle cameraRect = camera.get_world();
+   double xScale = (double)mainCanvas->width()/(double)initialWidth;
+   double yScale = (double)mainCanvas->height()/(double)initialHeight;
+   cout << "scale: " << xScale << ", " << yScale << endl;
+   double rectWidth = cameraRect.width()*xScale;
+   double rectHeight = cameraRect.height()*yScale;
+   cameraRect = ezgl::rectangle(
+      {cameraRect.center_x() - rectWidth/2.0, cameraRect.center_y() - rectHeight/2.0},
+      {cameraRect.center_x() + rectWidth/2.0, cameraRect.center_y() + rectHeight/2.0}
+   );
    //check if camera dimensions are correct
    
    //cout << 100.0/screenArea << ", " << absoluteLength << endl;
@@ -229,8 +255,8 @@ void draw_main_canvas(ezgl::renderer *g)
          {
             MapFeature* feature = cellFeatures[i];
             //run bounding box checks
-            if(feature->drawType == POINT && !camera.get_world().contains((*feature->points)[0])){continue;} //check if point is inside world rect
-            if(feature->drawType != POINT && !intersecting(camera.get_world(),feature->bounds)){continue;} //check if bounds for camera and feaure are intersecting
+            if(feature->drawType == POINT && !cameraRect.contains((*feature->points)[0])){continue;} //check if point is inside world rect
+            if(feature->drawType != POINT && !intersecting(cameraRect,feature->bounds)){continue;} //check if bounds for camera and feaure are intersecting
             g->set_color({0, 0, 0, 255});
             g->set_line_width(lineWidth);
             drawFeature(feature,g,screenArea,lineWidth,scaling,worldToScreenScale,camera);
@@ -560,6 +586,7 @@ void loadFeatures()
       if(featureName[0] != '<') //dont print text that is not meant to be displayed (denoted by being wrapped in '<>')
       {
          staticLabels.push_back({featureName,mapFeature->bounds.center(),mapFeature}); //create static text structure and add to array for rendering
+         mapFeature->major = true; //if the feature has a name, it is a point of interest
       }
    }
 
@@ -589,7 +616,6 @@ void drawMap() {
    initial_world = ezgl::rectangle(LatLonToPoint2D(minPoints),LatLonToPoint2D(maxPoints));
    mainCanvas = application.add_canvas("MainCanvas", draw_main_canvas, initial_world);
    application.mouse_press_callback;
-   
    //create window
    application.run(nullptr,on_mouse_click,nullptr,nullptr);
 

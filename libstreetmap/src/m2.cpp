@@ -38,25 +38,25 @@ static ezgl::canvas* mainCanvas;
 LatLon minPoints;
 LatLon maxPoints;
 map<const OSMID, const OSMRelation *> osmRelations;
-map<const OSMID, string> wayRoute;
-map<const OSMID, string> wayNetwork;
-map<const OSMID, string> wayHighway;
-map<const OSMID, string> nodeHighway;
-
+//default colour constants for general objects
+const ezgl::color kColourDefaultGround = {235, 235, 235, 255}; 
 //default colour constants for features
 const ezgl::color kColorScrub = {212, 247, 178, 255};
 const ezgl::color kColorWood = {138, 191, 134, 255};
 const ezgl::color kColorBuilding = {166, 166, 166, 255};
 const ezgl::color kColorWater = {147, 194, 230, 255};
-const ezgl::color kColorRoad = {70, 70, 70, 255};
 const ezgl::color kColorBeach = {242,242,184, 255};
 const ezgl::color kColorIsland = {238, 242, 213, 255};
+//default colour constants for roads
+const ezgl::color kColorBasicRoad = {70, 70, 70, 255};
+const ezgl::color kColorOnewayRoad = {219, 118, 118, 255};
 
 
 void draw_main_canvas(ezgl::renderer *g)
 {
    ezgl::rectangle rect(initial_world.bottom_left(),initial_world.top_right());
-   g->draw_rectangle(rect);
+   g->set_color(kColourDefaultGround);
+   g->fill_rectangle(rect);
    auto layer = mapFeatures.layerMap.begin();
    
    double zoom = getScaleFactor();
@@ -71,10 +71,13 @@ void draw_main_canvas(ezgl::renderer *g)
    double invisibilityFactor = 0.5/absoluteLength;
    int lineWidth = max(1.0, 5.0*scaling);
    
-   auto camera = mainCanvas->get_camera();
+   auto& camera = mainCanvas->get_camera();
 
    //cout << 100.0/screenArea << ", " << absoluteLength << endl;
    g->set_line_width(lineWidth);
+
+   map<const OSMID, string> wayRoute;
+
    while(layer != mapFeatures.layerMap.end()){
       for(int i = 0; i < layer->second->size(); i++)
       {
@@ -119,7 +122,6 @@ void draw_main_canvas(ezgl::renderer *g)
                {
                   break;
                }
-               double screenSpace = feature->maximumScreenLength/screenArea; 
                //dont render small features
                const ezgl::rectangle& bounds = feature->bounds;
                
@@ -183,9 +185,17 @@ void loadFeatures()
          ezgl::point2d translatedPoint = LatLonToPoint2D(curvePoint);
          points->push_back(translatedPoint);
       }
-      double streetLength = findStreetLength(getStreetSegmentInfo(i).streetID);
+      auto segmentInfo = getStreetSegmentInfo(i); //street segment info
+   
+      ezgl::color roadColor = kColorBasicRoad; //colour of feature (default is building) 
+
+      //if road is oneway, indicate it using segment info
+      if(segmentInfo.oneWay)
+      {
+         roadColor = kColorOnewayRoad;
+      }
       
-      MapFeature* mapFeature = new MapFeature(1,points,LINE,streetLength,kColorRoad);
+      MapFeature* mapFeature = new MapFeature(1,points,roadColor,LINE,MapFeatureType::ROAD,(int)i);  //create map featur object
       mapFeatures.addFeature(mapFeature);
    }
 
@@ -207,12 +217,11 @@ void loadFeatures()
          continue;
       }
 
-      int layer = -2;
+      int layer = -2; //layer of feature (default is -2)
       double drawArea = findFeatureArea(i); //area of feature to use to decide whether to render the feature at a specific zoom
-      TypedOSMID osmid = getFeatureOSMID(i);
-      ezgl::color featureColor = kColorBuilding;
-      const OSMWay* way = getWayByID(osmid);
-      FeatureType featureType = getFeatureType(i);
+      ezgl::color featureColor = kColorBuilding; //colour of feature (default is building) 
+      FeatureType featureType = getFeatureType(i); //get feature type
+      //change colour and layer based on feature type
       switch(featureType)
       {
          case UNKNOWN:{
@@ -272,10 +281,61 @@ void loadFeatures()
       DrawType drawType = POLYGON;
       //if feature is not closed, then it is a line
       if(!closed){drawType = LINE;}
-      MapFeature* mapFeature = new MapFeature(layer,points,drawType,drawArea, featureColor); //create map feature object
+      MapFeature* mapFeature = new MapFeature(layer,points,featureColor,drawType,MapFeatureType::FEATURE,(int)i); //create map feature object
       mapFeatures.addFeature(mapFeature); //add map featue object to array
    }
    cout << endl;
+}
+
+void clickedOnFeature(MapFeature* clicked)
+{
+   if(clicked->featureType == FEATURE) //clicked on feature
+   {
+      OSMID osmid = getFeatureOSMID(clicked->dataIndex);
+      cout << "clicked: " << getFeatureName(clicked->dataIndex) << endl;
+   }
+   if(clicked->featureType == ROAD) //clicked on street segment
+   {
+      StreetSegmentInfo segmentInfo = getStreetSegmentInfo(clicked->dataIndex);
+      cout << "clicked: " << getStreetName(getStreetSegmentInfo(clicked->dataIndex).streetID) << endl;
+   }
+}
+
+void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y)
+{
+   
+   if(mapFeatures.layerMap.size() == 0){return;} //if there are no features, skip click detection
+   cout << "click at " << x << ", " << y << endl;
+   
+   auto& camera = mainCanvas->get_camera();
+
+   map<const OSMID, string> wayRoute;
+
+   //to prioritize higher layers in click detection, run through features backwards
+   auto layer = mapFeatures.layerMap.end();
+   layer--;
+   MapFeature* clicked = nullptr;
+   do{
+      for(int i = 0; i < layer->second->size(); i++)
+      {
+         MapFeature* feature = (*(layer->second))[i];
+         ezgl::rectangle bounds = feature->bounds;
+         if(feature->drawType == LINE || feature->drawType == POLYGON)
+         {
+            //if mouse is in map feature bounding box, reister that map feature as clicked (and exit loop)
+            if(bounds.contains(x, y)){
+               clicked = feature;
+               break;
+            }
+         }
+      }
+      layer--;
+   }while(layer != mapFeatures.layerMap.begin());
+
+   if(clicked != nullptr)
+   {
+      
+   }
 }
 
 void drawMap() {
@@ -292,9 +352,10 @@ void drawMap() {
    ezgl::application application(settings); //create application
    initial_world = ezgl::rectangle(LatLonToPoint2D(minPoints),LatLonToPoint2D(maxPoints));
    mainCanvas = application.add_canvas("MainCanvas", draw_main_canvas, initial_world);
+   application.mouse_press_callback;
    
    //create window
-   application.run(nullptr,nullptr,nullptr,nullptr);
+   application.run(nullptr,on_mouse_click,nullptr,nullptr);
 
 
 }

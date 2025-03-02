@@ -16,15 +16,19 @@ void setLatLonBounds(LatLon latlonMin, LatLon latlonMax)
 }
 
 
-MapFeature::MapFeature(int _layer, vector<ezgl::point2d> *_points, DrawType _drawType, double _maximumScreenLength, ezgl::color _color)
+MapFeature::MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _color, DrawType _drawType, MapFeatureType _featureType, int _index)
 {
+    //apply arguments to corrosponding variables
     layer = _layer;
 
     points = _points;
     bounds = boundingRectangle(points);
     
     drawType = _drawType;
-    maximumScreenLength = _maximumScreenLength;
+    featureType = _featureType;
+
+    dataIndex = _index;
+
     color = _color;
 }
 

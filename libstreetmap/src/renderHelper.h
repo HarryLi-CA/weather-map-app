@@ -12,6 +12,11 @@ enum DrawType {
     POLYGON
 };
 
+enum MapFeatureType {
+    ROAD,
+    FEATURE
+};
+
 //container for an object on a map that specifies how it will be drawn relative to other features
 class MapFeature {
     public:
@@ -19,9 +24,10 @@ class MapFeature {
     vector<ezgl::point2d>* points; //position of vertices of feature relative to absolute origin.
     ezgl::rectangle bounds; //bounding rectangle for points
     DrawType drawType; //method renderer will use to draw feature.
-    double maximumScreenLength; //maximum screen length until this feature starts to become invisible
+    MapFeatureType featureType; //type of feature
+    int dataIndex; //index to recover information (either street segment or feature)
     ezgl::color color;
-    MapFeature(int _layer, vector<ezgl::point2d> *_points, DrawType _drawType, double _maximumScreenLength, ezgl::color _color);
+    MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _color, DrawType _drawType, MapFeatureType _featureType, int _index);
 };
 
 //customized container for storing and sorting map features

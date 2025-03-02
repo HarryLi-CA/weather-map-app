@@ -40,7 +40,7 @@ LatLon maxPoints; //top right LatLon position
 vector<StaticName> staticLabels; //list of static text objects to draw
 //default colour constants for general objects
 const ezgl::color kColorDefaultGround = {235, 235, 235, 255}; 
-const ezgl::color kColorHighlight = {255, 87, 87, 200};
+const ezgl::color kColorHighlight = {255, 87, 87, 255};
 //default colour constants for features
 const ezgl::color kColorScrub = {212, 247, 178, 255};
 const ezgl::color kColorWood = {138, 191, 134, 255};
@@ -95,9 +95,12 @@ void draw_main_canvas(ezgl::renderer *g)
          switch(feature->drawType)
          {
             case POINT: {
+               //only print points if they are highlighted
+               feature->wasRendered = false;
+               if(!feature->highlight){break;}
                ezgl::point2d origin = (*(feature->points))[0];
-               origin = {origin.x + initial_world.bottom_left().x, origin.y + initial_world.bottom_left().y};
-               ezgl::rectangle featureRect({origin.x - 1, origin.y - 1},{origin.x + 1, origin.y + 1});
+               ezgl::rectangle featureRect({origin.x - 10, origin.y - 10},{origin.x + 10, origin.y + 10});
+               g->set_color(feature->color);
                g->fill_rectangle(featureRect);
                
                feature->wasRendered = true; //feature was fully rendered this cycle
@@ -201,19 +204,19 @@ void loadFeatures()
    setLatLonBounds(minPoints, maxPoints); //set constant for calculations in renderHelper
 
    //Add intersection features
-   for(IntersectionIdx i = 0; i < getNumIntersections(); i++)
+   for(IntersectionIdx intersectionIndex = 0; intersectionIndex < getNumIntersections(); intersectionIndex++)
    {
-      //vector<ezgl::point2d>* points = new vector<ezgl::point2d>; //create vector to add points
-      //ezgl::point2d translatedPoint = LatLonToPoint2D(getIntersectionPosition(i)); //get intersection coor
-      //points->push_back(translatedPoint);
-      //MapFeature* mapFeature = new MapFeature(0,points,POINT,0,kColorRoad);
-      //mapFeatures.addFeature(mapFeature);
+      vector<ezgl::point2d>* points = new vector<ezgl::point2d>; //create vector to add points
+      ezgl::point2d translatedPoint = LatLonToPoint2D(getIntersectionPosition(intersectionIndex)); //get intersection coor
+      points->push_back(translatedPoint); //add singular point to point list
+      MapFeature* mapFeature = new MapFeature(10,points,kColorHighlight,POINT,MapFeatureType::INTERSECTION,(int)intersectionIndex); //add intersection as map feature
+      mapFeatures.addFeature(mapFeature);
    }
 
    //cout << "loading segments: " << streetSegmentPoints.size() << endl;
-   for(StreetSegmentIdx i = 0; i < getNumStreetSegments(); i++)
+   for(StreetSegmentIdx streetSegmentIndex = 0; streetSegmentIndex < getNumStreetSegments(); streetSegmentIndex++)
    {
-      vector<LatLon> curvePoints = *getStreetSegmentPoints(i); //get cached curve points for street segment
+      vector<LatLon> curvePoints = *getStreetSegmentPoints(streetSegmentIndex); //get cached curve points for street segment
       vector<ezgl::point2d>* points = new vector<ezgl::point2d>;
       for(int pointIndex = 0; pointIndex < curvePoints.size(); pointIndex++)
       {
@@ -221,7 +224,7 @@ void loadFeatures()
          ezgl::point2d translatedPoint = LatLonToPoint2D(curvePoint);
          points->push_back(translatedPoint);
       }
-      auto segmentInfo = getStreetSegmentInfo(i); //street segment info
+      auto segmentInfo = getStreetSegmentInfo(streetSegmentIndex); //street segment info
    
       ezgl::color roadColor = kColorBasicRoad; //colour of feature (default is building) 
 
@@ -231,7 +234,7 @@ void loadFeatures()
          roadColor = kColorOnewayRoad;
       }
       
-      MapFeature* mapFeature = new MapFeature(1,points,roadColor,LINE,MapFeatureType::ROAD,(int)i);  //create map featur object
+      MapFeature* mapFeature = new MapFeature(1,points,roadColor,LINE,MapFeatureType::ROAD,(int)streetSegmentIndex);  //create map featur object
       mapFeatures.addFeature(mapFeature);
 
       //set street id
@@ -239,15 +242,15 @@ void loadFeatures()
       mapFeature->streetID = streetID; //set street id of feature to calculated street id
    }
 
-   for(FeatureIdx i = 0; i < getNumFeatures(); i++)
+   for(FeatureIdx featureIndex = 0; featureIndex < getNumFeatures(); featureIndex++)
    {
       vector<ezgl::point2d>* points = new vector<ezgl::point2d>; //create array to store cartesian points
       //loop through all latlon points in feature
-      bool closed = (getFeaturePoint(i, 0) == getFeaturePoint(i, getNumFeaturePoints(i) - 1));
+      bool closed = (getFeaturePoint(featureIndex, 0) == getFeaturePoint(featureIndex, getNumFeaturePoints(featureIndex) - 1));
 
-      for(int pointIndex = 0; pointIndex < getNumFeaturePoints(i); pointIndex++)
+      for(int pointIndex = 0; pointIndex < getNumFeaturePoints(featureIndex); pointIndex++)
       {
-         LatLon featurePoint = getFeaturePoint(i, pointIndex); //get latlon point
+         LatLon featurePoint = getFeaturePoint(featureIndex, pointIndex); //get latlon point
          points->push_back(LatLonToPoint2D(featurePoint)); //convert latlon point to cartesion point and add to vector
       }
       //if feature is invalid, deallocate space and skip
@@ -258,9 +261,9 @@ void loadFeatures()
       }
 
       int layer = -2; //layer of feature (default is -2)
-      double drawArea = findFeatureArea(i); //area of feature to use to decide whether to render the feature at a specific zoom
+      double drawArea = findFeatureArea(featureIndex); //area of feature to use to decide whether to render the feature at a specific zoom
       ezgl::color featureColor = kColorBuilding; //colour of feature (default is building) 
-      FeatureType featureType = getFeatureType(i); //get feature type
+      FeatureType featureType = getFeatureType(featureIndex); //get feature type
       //change colour and layer based on feature type
       switch(featureType)
       {
@@ -324,10 +327,10 @@ void loadFeatures()
 
       
 
-      MapFeature* mapFeature = new MapFeature(layer,points,featureColor,drawType,MapFeatureType::FEATURE,(int)i); //create map feature object
+      MapFeature* mapFeature = new MapFeature(layer,points,featureColor,drawType,MapFeatureType::FEATURE,(int)featureIndex); //create map feature object
       mapFeatures.addFeature(mapFeature); //add map feature object to array
       //add text label for feature name
-      string featureName = getFeatureName(i);
+      string featureName = getFeatureName(featureIndex);
       if(featureName[0] != '<') //dont print text that is not meant to be displayed (denoted by being wrapped in '<>')
       {
          staticLabels.push_back({featureName,mapFeature->bounds.center(),mapFeature}); //create static text structure and add to array for rendering
@@ -376,18 +379,15 @@ void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, dou
       {
          MapFeature* feature = (*(layer->second))[i];
          ezgl::rectangle bounds = feature->bounds;
-         //for all 1D/2D shapes, compare distance from points
-         if(feature->drawType == LINE || feature->drawType == POLYGON)
-         {
-            for(auto point = feature->points->begin(); point != feature->points->end(); point++){
-               double xDist = point->x - x;
-               double yDist = point->y - y;
-               double distanceToMouse = sqrt(xDist*xDist + yDist*yDist);
-               if(distanceToMouse < minDistance)
-               {
-                  clicked = feature;
-                  minDistance = distanceToMouse;
-               }
+         //for all features, compare distance from points
+         for(auto point = feature->points->begin(); point != feature->points->end(); point++){
+            double xDist = point->x - x;
+            double yDist = point->y - y;
+            double distanceToMouse = sqrt(xDist*xDist + yDist*yDist);
+            if(distanceToMouse < minDistance)
+            {
+               clicked = feature;
+               minDistance = distanceToMouse;
             }
          }
          //for polygons, also compare distance from center of bounding box

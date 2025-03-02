@@ -13,6 +13,7 @@ enum DrawType {
 };
 
 enum MapFeatureType {
+    INTERSECTION,
     ROAD,
     FEATURE
 };

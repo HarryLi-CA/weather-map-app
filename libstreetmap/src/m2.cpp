@@ -104,23 +104,27 @@ void draw_main_canvas(ezgl::renderer *g)
                break;
             }
             case LINE: {
-               
                //dont process objects that are not in the camrea
                if(!intersecting(mainCanvas->get_camera().get_world(),feature->bounds))
                {
                   break;
                }
+               bool highlightedStreet = mapFeatures.highlightedStreetID == feature->streetID; //check if segment is on highlighted street
                //calculate the transparency of a street based on its length
                ezgl::rectangle& bounds = feature->bounds;
                ezgl::rectangle screen_rect(camera.world_to_screen(bounds.bottom_left()),camera.world_to_screen(bounds.top_right()));
-               if(screen_rect.area() < minimumPixelsToDraw){break;} 
+               if(!highlightedStreet && screen_rect.area() < minimumPixelsToDraw){break;} 
                
                g->set_color(feature->color);
+               if(highlightedStreet)
+               {
+                  g->set_color(kColorHighlight);
+               }
                for(int i = 0; i < feature->points->size() - 1; i++)
                {
                   g->draw_line((*feature->points)[i],(*feature->points)[i+1]);
                }
-               if(screen_rect.area() < 100){break;}
+               
                
                feature->wasRendered = true; //feature was fully rendered this cycle
                break;
@@ -136,7 +140,7 @@ void draw_main_canvas(ezgl::renderer *g)
                const ezgl::rectangle& bounds = feature->bounds;
                
                const ezgl::rectangle screen_rect(camera.world_to_screen(bounds.bottom_left()),camera.world_to_screen(bounds.top_right()));
-               if(screen_rect.area() < 10){break;} 
+               if(!feature->highlight && screen_rect.area() < 10){break;} 
             
                g->set_color(feature->color);
                g->fill_poly(*(feature->points));
@@ -229,6 +233,10 @@ void loadFeatures()
       
       MapFeature* mapFeature = new MapFeature(1,points,roadColor,LINE,MapFeatureType::ROAD,(int)i);  //create map featur object
       mapFeatures.addFeature(mapFeature);
+
+      //set street id
+      StreetIdx streetID = segmentInfo.streetID; //get street ID
+      mapFeature->streetID = streetID; //set street id of feature to calculated street id
    }
 
    for(FeatureIdx i = 0; i < getNumFeatures(); i++)
@@ -359,18 +367,39 @@ void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, dou
    //to prioritize higher layers in click detection, run through features backwards
    auto layer = mapFeatures.layerMap.end();
    layer--;
+
+   double minDistance = DBL_MAX;
    MapFeature* clicked = nullptr;
    do{
+      //get closest feature
       for(int i = 0; i < layer->second->size(); i++)
       {
          MapFeature* feature = (*(layer->second))[i];
          ezgl::rectangle bounds = feature->bounds;
+         //for all 1D/2D shapes, compare distance from points
          if(feature->drawType == LINE || feature->drawType == POLYGON)
          {
-            //if mouse is in map feature bounding box, reister that map feature as clicked (and exit loop)
-            if(bounds.contains(x, y)){
+            for(auto point = feature->points->begin(); point != feature->points->end(); point++){
+               double xDist = point->x - x;
+               double yDist = point->y - y;
+               double distanceToMouse = sqrt(xDist*xDist + yDist*yDist);
+               if(distanceToMouse < minDistance)
+               {
+                  clicked = feature;
+                  minDistance = distanceToMouse;
+               }
+            }
+         }
+         //for polygons, also compare distance from center of bounding box
+         if(feature->drawType == POLYGON)
+         {
+            double xDist = feature->bounds.center_x() - x;
+            double yDist = feature->bounds.center_y() - y;
+            double distanceToMouse = sqrt(xDist*xDist + yDist*yDist);
+            if(distanceToMouse < minDistance)
+            {
                clicked = feature;
-               break;
+               minDistance = distanceToMouse;
             }
          }
       }

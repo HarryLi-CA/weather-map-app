@@ -26,6 +26,7 @@ class MapFeature {
     DrawType drawType; //method renderer will use to draw feature.
     MapFeatureType featureType; //type of feature
     int dataIndex; //index to recover information (either street segment or feature)
+    StreetIdx streetID; //corrosponding streetID of a map feature (only applicable for street segments, -1 by default)
     bool wasRendered; //cached value to store whether the feature was rendered this frame
     ezgl::color color; //color to draw the feature in
     bool highlight; //if true, the feature will be outlined (polygon) or highlighted (line)
@@ -37,6 +38,7 @@ class FeatureList {
     public:
     map<int, vector<MapFeature*>*> layerMap; //map to store layers
     MapFeature* highlightedFeature; //currently highlighted feature
+    StreetIdx highlightedStreetID; //currently highlighted street (-2 by default)
     FeatureList();
     void addFeature(MapFeature* feature);
     void highlightFeature(MapFeature* feature);

@@ -23,23 +23,29 @@
 #include "m1.h"
 #include "renderHelper.h"
 #include <vector>
+#include <map>
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
 #include "nodeIDHelper.h"
 #include "ezgl/application.hpp"
 #include "ezgl/graphics.hpp"
 #include "ezgl/camera.hpp"
+#include <set>
 
 using namespace std;
 
-static ezgl::rectangle initial_world{{0, 0}, 1150, 1150}; //rendered canvas
-static FeatureList mapFeatures;
-static ezgl::canvas* mainCanvas;
-LatLon minPoints;
-LatLon maxPoints;
-map<const OSMID, const OSMRelation *> osmRelations;
+static ezgl::rectangle initial_world{{0, 0}, 1920, 1080}; //rendered canvas
+static FeatureList mapFeatures; //list of map features to draw
+static ezgl::canvas* mainCanvas; //application canvas
+LatLon minPoints; //bottom left LatLon position
+LatLon maxPoints; //top right LatLon position
+vector<StaticName> staticLabels; //list of static text objects to draw
+vector<MapFeature*> intersectionFeatures; //vector that takes in intersection index and return corropsonding map feature
+vector<StreetIdx> streetLengthCache; //stored value of all loaded street lengths;
+map<pair<int, int>, vector<MapFeature*>*> cellMap; //map of all render cells to list of features
 //default colour constants for general objects
-const ezgl::color kColourDefaultGround = {235, 235, 235, 255}; 
+const ezgl::color kColorDefaultGround = {235, 235, 235, 255}; 
+const ezgl::color kColorHighlight = {255, 87, 87, 255};
 //default colour constants for features
 const ezgl::color kColorScrub = {212, 247, 178, 255};
 const ezgl::color kColorWood = {138, 191, 134, 255};
@@ -48,15 +54,174 @@ const ezgl::color kColorWater = {147, 194, 230, 255};
 const ezgl::color kColorBeach = {242,242,184, 255};
 const ezgl::color kColorIsland = {238, 242, 213, 255};
 //default colour constants for roads
-const ezgl::color kColorBasicRoad = {70, 70, 70, 255};
+const ezgl::color kColorBasicRoad = {140, 140, 140, 255};
 const ezgl::color kColorOnewayRoad = {219, 118, 118, 255};
+const double kColorOnewayIndicatorBrightness = 255;
+const ezgl::color kColorMajorRoad = {0, 0, 200, 255};
+const ezgl::color kColorOnewayMajorRoad = {148,0,211, 255};
+//scaling values for window resizing
+double initialWidth = -1;
+double initialHeight = -1;
+//define rendering constants
+const double kOnewayIndicatorSize = 6.0; //size from center to vertex of indicator triangle
+const int kMinimumPixelsToDraw = 20; //minimum pixels a feature should take up on the screen to be drawn that cycle
+const double kMinimumMajorRoadLength = 5000; //minimum length for a road to be considered a major road
+const double kRenderCellSize = 300; //size of each render cell
+const int kMaximumRenderCells = 100; //maximum number of render cells before switching to direct rendering
+const double kMaximumBuildingScaling = 2; //maximum number of meters per pixel to start drawing buildings
+const bool enableCellRendering = false;
 
+void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
+{
+   double angle = atan2(direction.y, direction.x);
+   //draw triangle based on initial angle
+   g->set_color(color);
+   g->fill_poly({
+      {center.x + distanceFromCenter*cos(angle), center.y + distanceFromCenter*sin(angle)},
+      {center.x + distanceFromCenter*cos(angle+2*M_PI/3.0), center.y + distanceFromCenter*sin(angle+2*M_PI/3.0)},
+      {center.x + distanceFromCenter*cos(angle+4*M_PI/3.0), center.y + distanceFromCenter*sin(angle+4*M_PI/3.0)},
+   });
+}
+
+void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, double lineWidth, double scaling, double realWorldScaling, ezgl::camera camera)
+{
+   switch(feature->drawType)
+      {
+         case POINT: {
+            //only print points if they are highlighted
+            feature->wasRendered = true; 
+            if(!feature->highlight){break;}
+            feature->wasRendered = false;
+            
+            ezgl::point2d origin = (*(feature->points))[0];
+            g->set_color(feature->color);
+            g->draw_arc(origin,10.0,0.0,360.0);
+            
+            feature->wasRendered = true; //feature was fully rendered this cycle
+            break;
+         }
+         case LINE: {
+            double lineWidthScale = 1; //scale of line width used to render line
+            feature->wasRendered = false;
+            bool highlightedStreet = mapFeatures.highlightedStreetID == feature->streetID; //check if segment is on highlighted street
+            //calculate the transparency of a street based on its length
+            ezgl::rectangle& bounds = feature->bounds;
+            ezgl::rectangle screen_rect(camera.world_to_screen(bounds.bottom_left()),camera.world_to_screen(bounds.top_right()));
+            if(!feature->major && !highlightedStreet && screen_rect.area() < kMinimumPixelsToDraw){break;} 
+            
+            g->set_color(feature->color);
+            if(highlightedStreet)
+            {
+               g->set_color(kColorHighlight);
+            }
+            //if major road, make road wider as indication 
+            if(feature->major)
+            {
+               lineWidthScale = 2;
+               g->set_line_width(lineWidth*lineWidthScale);
+            }
+            for(int i = 0; i < feature->points->size() - 1; i++)
+            {
+               g->draw_line((*feature->points)[i],(*feature->points)[i+1]);
+            }
+            //draw arrow if street is directional
+            if(feature->directional && lineWidth*lineWidthScale > kOnewayIndicatorSize)
+            {
+               ezgl::point2d from = (*feature->points)[0]; //first position in the street
+               ezgl::point2d to = (*feature->points)[feature->points->size() - 1]; //last position in the street
+               ezgl::point2d dir = {to.x - from.x, to.y - from.y}; //direction vector for street
+               double magnitude = sqrt(dir.x*dir.x + dir.y*dir.y); //magnitude of dir
+               if(magnitude > 0){
+                  ezgl::color roadColour = feature->color;
+                  ezgl::color indicatorColour = {kColorOnewayIndicatorBrightness,kColorOnewayIndicatorBrightness,kColorOnewayIndicatorBrightness,200};
+                  ezgl::point2d midpoint = (*feature->points)[feature->points->size()/2]; //approximate mid point to be the point halfway along the list of points
+                  //draw triangle on road
+                  drawTriangle(g,midpoint,dir,indicatorColour,kOnewayIndicatorSize/scaling);
+               }
+            }
+            
+            feature->wasRendered = true; //feature was fully rendered this cycle
+            break;
+         }
+         case POLYGON: {
+            feature->wasRendered = false;
+            //check scaling requirements
+            if(realWorldScaling > feature->maximumScaling){break;} //if current scaling is more than max scaling, skip feature
+            //dont render small features
+            const ezgl::rectangle& bounds = feature->bounds;
+            
+            const ezgl::rectangle screen_rect(camera.world_to_screen(bounds.bottom_left()),camera.world_to_screen(bounds.top_right()));
+            if(!feature->highlight && screen_rect.area() < 10){break;} 
+         
+            g->set_color(feature->color);
+            g->fill_poly(*(feature->points));
+
+            if(feature->highlight)
+            {
+               g->set_color(kColorHighlight);
+               g->set_line_width(1);
+               for(int i = 0; i < feature->points->size() - 1; i++)
+               {
+                  g->draw_line((*feature->points)[i],(*feature->points)[i+1]);
+               }
+            }
+
+            feature->wasRendered = true; //feature was fully rendered this cycle
+            break;
+         }
+      }
+}
+
+//Stores the intersectionIdxs of the previously searched intersections
+vector<IntersectionIdx> prevSearchedIntersectionIdxs = {};
+//Stores the map names along with its path and a application pointer to send into the map changing callback
+pair<string,pair<string,ezgl::application*>> mapNames[19] = { {"BeijingBtn",{"/cad2/ece297s/public/maps/beijing_china.streets.bin",nullptr}},
+                                       {"BeirutBtn",{"/cad2/ece297s/public/maps/beirut_lebanon.streets.bin",nullptr}},
+                                       {"BerlinBtn",{"/cad2/ece297s/public/maps/berlin_germany.streets.bin",nullptr}},
+                                       {"BostonBtn",{"/cad2/ece297s/public/maps/boston_usa.streets.bin",nullptr}},
+                                       {"CapeTownBtn",{"/cad2/ece297s/public/maps/cape-town_south-africa.streets.bin",nullptr}},
+                                       {"GoldenHorseshoeBtn",{"/cad2/ece297s/public/maps/golden-horseshoe_canada.streets.bin",nullptr}},
+                                       {"HamiltonBtn",{"/cad2/ece297s/public/maps/hamilton_canada.streets.bin",nullptr}},
+                                       {"HongKongBtn",{"/cad2/ece297s/public/maps/hong-kong_china.streets.bin",nullptr}},
+                                       {"IcelandBtn",{"/cad2/ece297s/public/maps/iceland.streets.bin",nullptr}},
+                                       {"InterlakenBtn",{"/cad2/ece297s/public/maps/interlaken_switzerland.streets.bin",nullptr}},
+                                       {"LondonBtn",{"/cad2/ece297s/public/maps/london_england.streets.bin",nullptr}},
+                                       {"NewDehliBtn",{"/cad2/ece297s/public/maps/new-delhi_india.streets.bin",nullptr}},
+                                       {"NewYorkBtn",{"/cad2/ece297s/public/maps/new-york_usa.streets.bin",nullptr}},
+                                       {"RioDeJaneiroBtn",{"/cad2/ece297s/public/maps/rio-de-janeiro_brazil.streets.bin",nullptr}},
+                                       {"SaintHelenaBtn",{"/cad2/ece297s/public/maps/saint-helena.streets.bin",nullptr}},
+                                       {"SingaporeBtn",{"/cad2/ece297s/public/maps/singapore.streets.bin",nullptr}},
+                                       {"TehranBtn",{"/cad2/ece297s/public/maps/tehran_iran.streets.bin",nullptr}},
+                                       {"TokyoBtn",{"/cad2/ece297s/public/maps/tokyo_japan.streets.bin",nullptr}},
+                                       {"TorontoBtn",{"/cad2/ece297s/public/maps/toronto_canada.streets.bin",nullptr}}};
+ 
+void initial_setup(ezgl::application *application, bool /*new_window*/);
+
+void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application);
+void searchbarAuto1(GtkEntry* searchbar1, ezgl::application *application);
+void selectMap_cbk(GtkWidget */*widget*/, ezgl::application *application);
+void mapBackBtn_cbk(GtkWidget */*widget*/, ezgl::application *application);
+void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInfo);
 
 void draw_main_canvas(ezgl::renderer *g)
 {
+   //rect value to draw to screen
    ezgl::rectangle rect(initial_world.bottom_left(),initial_world.top_right());
-   g->set_color(kColourDefaultGround);
+   g->set_color(kColorDefaultGround);
    g->fill_rectangle(rect);
+
+   //initialize initial resolution values if they are at their default values (-1)
+   if(initialWidth == -1)
+   {
+      initialWidth = mainCanvas->width();
+   }
+   if(initialHeight == -1)
+   {
+      initialHeight = mainCanvas->height();
+   }
+   
+   cout << initialWidth << ", " << initialHeight << endl;
+   
    auto layer = mapFeatures.layerMap.begin();
    
    double zoom = getScaleFactor();
@@ -67,78 +232,83 @@ void draw_main_canvas(ezgl::renderer *g)
    double screenLength = mainCanvas->get_camera().get_world().width();
    double screenHeight = mainCanvas->get_camera().get_world().height();
    double scaling = pixelLength/screenLength;
+   double worldToScreenScale = screenLength/pixelLength;
    double screenArea = screenLength*screenHeight;
    double invisibilityFactor = 0.5/absoluteLength;
    int lineWidth = max(1.0, 5.0*scaling);
    
    auto& camera = mainCanvas->get_camera();
-
+   ezgl::rectangle cameraRect = camera.get_world();
+   double xScale = (double)mainCanvas->width()/(double)initialWidth;
+   double yScale = (double)mainCanvas->height()/(double)initialHeight;
+   cout << "scale: " << xScale << ", " << yScale << endl;
+   double rectWidth = cameraRect.width()*xScale;
+   double rectHeight = cameraRect.height()*yScale;
+   cameraRect = ezgl::rectangle(
+      {cameraRect.center_x() - rectWidth/2.0, cameraRect.center_y() - rectHeight/2.0},
+      {cameraRect.center_x() + rectWidth/2.0, cameraRect.center_y() + rectHeight/2.0}
+   );
+   //check if camera dimensions are correct
+   
    //cout << 100.0/screenArea << ", " << absoluteLength << endl;
-   g->set_line_width(lineWidth);
+   
 
    map<const OSMID, string> wayRoute;
 
-   while(layer != mapFeatures.layerMap.end()){
-      for(int i = 0; i < layer->second->size(); i++)
+   //set line settings
+   g->set_line_width(lineWidth);
+   g->set_line_cap(ezgl::line_cap::round);
+   bool useCellRendering = false;
+   vector<pair<int, int>> cells;
+   if(enableCellRendering){
+      //get cells currently on screen
+      vector<pair<int, int>> cells = getCurrentRenderCells(&camera,kRenderCellSize,minPoints);
+      //if number of cells is low, use cell rendering method
+      cout << "cells: " << cells.size() << endl;
+      bool useCellRendering = cells.size() <= kMaximumRenderCells; //use render cells to cull features
+      cout << "cell rendering: " << useCellRendering << endl;
+   }
+   if(useCellRendering){
+      vector<MapFeature*> cellFeatures = getFeaturesFromCells(cells, cellMap);
+      for(int i = 0; i < cellFeatures.size(); i++)
       {
-         MapFeature* feature = (*(layer->second))[i];
+         MapFeature* feature = cellFeatures[i];
          g->set_color({0, 0, 0, 255});
-         switch(feature->drawType)
-         {
-            case POINT: {
-               ezgl::point2d origin = (*(feature->points))[0];
-               origin = {origin.x + initial_world.bottom_left().x, origin.y + initial_world.bottom_left().y};
-               ezgl::rectangle featureRect({origin.x - 1, origin.y - 1},{origin.x + 1, origin.y + 1});
-               g->fill_rectangle(featureRect);
-               break;
-            }
-            case LINE: {
-               
-               //dont process objects that are not in the camrea
-               if(!intersecting(mainCanvas->get_camera().get_world(),feature->bounds))
-               {
-                  break;
-               }
-               //calculate the transparency of a street based on its length
-               ezgl::rectangle& bounds = feature->bounds;
-               ezgl::rectangle screen_rect(camera.world_to_screen(bounds.bottom_left()),camera.world_to_screen(bounds.top_right()));
-               if(screen_rect.area() < 10){break;} 
-
-               double streetAlpha = 255;
-
-               if(streetAlpha <= 0) {break;} //if the street is invisible, skip rendering to save processing time
-               
-               g->set_color(feature->color);
-               for(int i = 0; i < feature->points->size() - 1; i++)
-               {
-                  g->draw_line((*feature->points)[i],(*feature->points)[i+1]);
-               }
-               if(screen_rect.area() < 100){break;}
-               
-               break;
-            }
-            case POLYGON: {
-
-               //dont process objects that are not in the camrea
-               if(!intersecting(mainCanvas->get_camera().get_world(),feature->bounds))
-               {
-                  break;
-               }
-               //dont render small features
-               const ezgl::rectangle& bounds = feature->bounds;
-               
-               const ezgl::rectangle screen_rect(camera.world_to_screen(bounds.bottom_left()),camera.world_to_screen(bounds.top_right()));
-               if(screen_rect.area() < 10){break;} 
-               
-               //cout << feature->maximumScreenLength << "/"<< screenArea <<" = "<< screenSpace << endl;
-               g->set_color(feature->color);
-               g->fill_poly(*(feature->points));
-               //g->draw_rectangle(feature->bounds);
-            }
-            //cout << "Printing at " << origin.x << ", " << origin.y << endl;
-         }
+         g->set_line_width(lineWidth);
+         drawFeature(feature,g,screenArea,lineWidth,scaling,worldToScreenScale,camera);
       }
-      layer++;
+   }
+   else //if number of cells is too high, directly render each element
+   {
+      auto layer = mapFeatures.layerMap.begin();
+      while(layer != mapFeatures.layerMap.end())
+      {
+         vector<MapFeature*> cellFeatures = *(layer->second);
+         for(int i = 0; i < cellFeatures.size(); i++)
+         {
+            MapFeature* feature = cellFeatures[i];
+            //run bounding box checks
+            if(feature->drawType == POINT && !cameraRect.contains((*feature->points)[0])){continue;} //check if point is inside world rect
+            if(feature->drawType != POINT && !intersecting(cameraRect,feature->bounds)){continue;} //check if bounds for camera and feaure are intersecting
+            g->set_color({0, 0, 0, 255});
+            g->set_line_width(lineWidth);
+            drawFeature(feature,g,screenArea,lineWidth,scaling,worldToScreenScale,camera);
+         }
+         layer++;
+      }
+   }
+   
+   
+   //set text display settings
+   g->set_font_size(10);
+   g->set_horiz_justification(ezgl::justification::center); //horizontally align text position with center of text
+   g->set_vert_justification(ezgl::justification::center); //vertically align text position with center of text
+   //g->format_font("sans-serif",ezgl::font_slant::normal,ezgl::font_weight::bold);
+   g->set_color({0, 0, 0, 200}); //print transluscent black text
+   //iterate through all labels
+   for(auto label = staticLabels.begin(); label != staticLabels.end(); label++)
+   {
+      g->draw_text(label->position, label->text, label->feature->bounds.width()/1.5, label->feature->bounds.height()/1.5);
    }
 }
 
@@ -147,7 +317,130 @@ double getScaleFactor()
    return mainCanvas->get_camera().get_world_scale_factor().x;
 }
 
+void mapRenderCells()
+{
+   cout << "mapping render cells" << endl;
+   cout << "..." << endl;
+   auto layer = mapFeatures.layerMap.begin();
+   cout << "got layer" << endl;
+   double originY = LatToY(minPoints.latitude());
+   double originX = LonToX(minPoints.longitude());
 
+   while(layer != mapFeatures.layerMap.end())
+   {
+      for(int i = 0; i < layer->second->size(); i++)
+      {
+         
+         MapFeature* feature = (*(layer->second))[i];
+         vector<pair<int, int>> cells;
+         switch(feature->drawType)
+         {
+            case POINT: {
+               //only print points if they are highlighted
+               cells.push_back(getRenderCell(originX,originY,kRenderCellSize,(*feature->points)[0]));
+               break;
+            }
+            case LINE: {
+               //calculate the transparency of a street based on its length
+               ezgl::rectangle& bounds = feature->bounds;
+               cells = getBoundedRenderCells(bounds,kRenderCellSize,minPoints);
+               break;
+            }
+            case POLYGON: {
+               ezgl::rectangle& bounds = feature->bounds;
+               cells = getBoundedRenderCells(bounds,kRenderCellSize,minPoints);
+               break;
+            }
+         }
+
+         for(auto cell = cells.begin(); cell != cells.end(); cell++)
+         {
+            addToRenderCellMap(*cell,feature,&cellMap);
+         }
+         
+      }
+      layer++;
+   }
+}
+
+void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to manage clicks on a specific MapFeature
+{
+   mapFeatures.highlightFeature(clicked);
+   auto g = app->get_renderer();
+   if(clicked->featureType == FEATURE) //clicked on feature
+   {
+      OSMID osmid = getFeatureOSMID(clicked->dataIndex);
+      cout << "clicked: " << getFeatureName(clicked->dataIndex) << endl;
+   }
+   if(clicked->featureType == ROAD && clicked->dataIndex < getNumStreetSegments()) //clicked on street segment
+   {
+      StreetSegmentInfo segmentInfo = getStreetSegmentInfo(clicked->dataIndex);
+      cout << "clicked: sID = " << getStreetSegmentInfo(clicked->dataIndex).streetID << endl;
+      
+   }
+   if(clicked->featureType == POINT && clicked->dataIndex < getNumIntersections()) //clicked on street segment
+   {
+      string intersection = getIntersectionName(clicked->dataIndex);
+      cout << "intersection = " << intersection << endl;
+      
+   }
+   mainCanvas->redraw();
+}
+
+void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y)
+{
+   if(mapFeatures.layerMap.size() == 0){return;} //if there are no features, skip click detection
+   cout << "click at " << x << ", " << y << endl;
+   
+   auto& camera = mainCanvas->get_camera();
+
+   map<const OSMID, string> wayRoute;
+
+   //to prioritize higher layers in click detection, run through features backwards
+   auto layer = mapFeatures.layerMap.end();
+   layer--;
+
+   double minDistance = DBL_MAX;
+   MapFeature* clicked = nullptr;
+   do{
+      //get closest feature
+      for(int i = 0; i < layer->second->size(); i++)
+      {
+         MapFeature* feature = (*(layer->second))[i];
+         if(!feature->wasRendered){continue;} //dont register non-rendered/invisible objects as clickable
+         ezgl::rectangle bounds = feature->bounds;
+         //for all features, compare distance from points
+         for(auto point = feature->points->begin(); point != feature->points->end(); point++){
+            double xDist = point->x - x;
+            double yDist = point->y - y;
+            double distanceToMouse = sqrt(xDist*xDist + yDist*yDist);
+            if(distanceToMouse < minDistance)
+            {
+               clicked = feature;
+               minDistance = distanceToMouse;
+            }
+         }
+         //for polygons, also compare distance from center of bounding box
+         if(feature->drawType == POLYGON)
+         {
+            double xDist = feature->bounds.center_x() - x;
+            double yDist = feature->bounds.center_y() - y;
+            double distanceToMouse = sqrt(xDist*xDist + yDist*yDist);
+            if(distanceToMouse < minDistance)
+            {
+               clicked = feature;
+               minDistance = distanceToMouse;
+            }
+         }
+      }
+      layer--;
+   }while(layer != mapFeatures.layerMap.begin());
+
+   if(clicked != nullptr)
+   {
+      clickedOnFeature(clicked, app); //run click events on the clicked feature  
+   }
+}
 
 void loadFeatures()
 {
@@ -166,20 +459,27 @@ void loadFeatures()
    maxPoints = LatLon(maximumLatitude, maximumLongitude); //consolodate maximum latitude and longitude in latlon object
    setLatLonBounds(minPoints, maxPoints); //set constant for calculations in renderHelper
 
-   //Add intersection features
-   for(IntersectionIdx i = 0; i < getNumIntersections(); i++)
+   //Cache street lengths
+   for(StreetIdx streetIndex = 1; streetIndex < getNumStreets(); streetIndex++)
    {
-      //vector<ezgl::point2d>* points = new vector<ezgl::point2d>; //create vector to add points
-      //ezgl::point2d translatedPoint = LatLonToPoint2D(getIntersectionPosition(i)); //get intersection coor
-      //points->push_back(translatedPoint);
-      //MapFeature* mapFeature = new MapFeature(0,points,POINT,0,kColorRoad);
-      //mapFeatures.addFeature(mapFeature);
+      double streetLength = findStreetLength(streetIndex); //get length of street
+      streetLengthCache.push_back(streetLength); //cache street length
+   }
+   
+   //Add intersection features
+   for(IntersectionIdx intersectionIndex = 0; intersectionIndex < getNumIntersections(); intersectionIndex++)
+   {
+      vector<ezgl::point2d>* points = new vector<ezgl::point2d>; //create vector to add points
+      ezgl::point2d translatedPoint = LatLonToPoint2D(getIntersectionPosition(intersectionIndex)); //get intersection coor
+      points->push_back(translatedPoint); //add singular point to point list
+      MapFeature* mapFeature = new MapFeature(10,points,kColorHighlight,POINT,MapFeatureType::INTERSECTION,(int)intersectionIndex); //add intersection as map feature
+      mapFeatures.addFeature(mapFeature);
    }
 
    //cout << "loading segments: " << streetSegmentPoints.size() << endl;
-   for(StreetSegmentIdx i = 0; i < getNumStreetSegments(); i++)
+   for(StreetSegmentIdx streetSegmentIndex = 0; streetSegmentIndex < getNumStreetSegments(); streetSegmentIndex++)
    {
-      vector<LatLon> curvePoints = *getStreetSegmentPoints(i); //get cached curve points for street segment
+      vector<LatLon> curvePoints = *getStreetSegmentPoints(streetSegmentIndex); //get cached curve points for street segment
       vector<ezgl::point2d>* points = new vector<ezgl::point2d>;
       for(int pointIndex = 0; pointIndex < curvePoints.size(); pointIndex++)
       {
@@ -187,7 +487,7 @@ void loadFeatures()
          ezgl::point2d translatedPoint = LatLonToPoint2D(curvePoint);
          points->push_back(translatedPoint);
       }
-      auto segmentInfo = getStreetSegmentInfo(i); //street segment info
+      auto segmentInfo = getStreetSegmentInfo(streetSegmentIndex); //street segment info
    
       ezgl::color roadColor = kColorBasicRoad; //colour of feature (default is building) 
 
@@ -197,19 +497,43 @@ void loadFeatures()
          roadColor = kColorOnewayRoad;
       }
       
-      MapFeature* mapFeature = new MapFeature(1,points,roadColor,LINE,MapFeatureType::ROAD,(int)i);  //create map featur object
-      mapFeatures.addFeature(mapFeature);
+      MapFeature* mapFeature = new MapFeature(1,points,roadColor,LINE,MapFeatureType::ROAD,(int)streetSegmentIndex);  //create map featur object
+      mapFeatures.addFeature(mapFeature); //add feature to feature list
+      intersectionFeatures.push_back(mapFeature); //relate feature to corrosponding intersection index
+
+      //set street id
+      StreetIdx streetID = segmentInfo.streetID; //get street ID
+      mapFeature->streetID = streetID; //set street id of feature to calculated street id
+
+      //post initialization settings for one way streets
+      mapFeature->directional = segmentInfo.oneWay;
+
+      //check if street is a major street
+      if(streetID > 0) //street ID 0 can never be a major road as it is the default ID for minor roads
+      {  
+         double streetLength = streetLengthCache[streetID]; //get street length
+         bool majorRoad = segmentInfo.speedLimit > 18; //if road is long, it is a major road
+         if(majorRoad)
+         {
+            mapFeature->major = majorRoad;
+            mapFeature->color = kColorMajorRoad;
+            if(segmentInfo.oneWay)
+            {
+               mapFeature->color = kColorOnewayMajorRoad;
+            }
+         }
+      }
    }
 
-   for(FeatureIdx i = 0; i < getNumFeatures(); i++)
+   for(FeatureIdx featureIndex = 0; featureIndex < getNumFeatures(); featureIndex++)
    {
       vector<ezgl::point2d>* points = new vector<ezgl::point2d>; //create array to store cartesian points
       //loop through all latlon points in feature
-      bool closed = (getFeaturePoint(i, 0) == getFeaturePoint(i, getNumFeaturePoints(i) - 1));
+      bool closed = (getFeaturePoint(featureIndex, 0) == getFeaturePoint(featureIndex, getNumFeaturePoints(featureIndex) - 1));
 
-      for(int pointIndex = 0; pointIndex < getNumFeaturePoints(i); pointIndex++)
+      for(int pointIndex = 0; pointIndex < getNumFeaturePoints(featureIndex); pointIndex++)
       {
-         LatLon featurePoint = getFeaturePoint(i, pointIndex); //get latlon point
+         LatLon featurePoint = getFeaturePoint(featureIndex, pointIndex); //get latlon point
          points->push_back(LatLonToPoint2D(featurePoint)); //convert latlon point to cartesion point and add to vector
       }
       //if feature is invalid, deallocate space and skip
@@ -220,9 +544,10 @@ void loadFeatures()
       }
 
       int layer = -2; //layer of feature (default is -2)
-      double drawArea = findFeatureArea(i); //area of feature to use to decide whether to render the feature at a specific zoom
+      double drawArea = findFeatureArea(featureIndex); //area of feature to use to decide whether to render the feature at a specific zoom
+      double maximumScaling = DBL_MAX;
       ezgl::color featureColor = kColorBuilding; //colour of feature (default is building) 
-      FeatureType featureType = getFeatureType(i); //get feature type
+      FeatureType featureType = getFeatureType(featureIndex); //get feature type
       //change colour and layer based on feature type
       switch(featureType)
       {
@@ -259,7 +584,7 @@ void loadFeatures()
          case BUILDING:{
             featureColor = kColorBuilding;
             layer = 2;
-            drawArea = 50; //set area so all buildings have the same render distance
+            maximumScaling = kMaximumBuildingScaling; //set maximum distance for buildings to start drawing
             break;
          }
          case GREENSPACE:{
@@ -284,64 +609,31 @@ void loadFeatures()
       //if feature is not closed, then it is a line
       if(!closed){drawType = LINE;}
 
-      MapFeature* mapFeature = new MapFeature(layer,points,featureColor,drawType,MapFeatureType::FEATURE,(int)i); //create map feature object
-      mapFeatures.addFeature(mapFeature); //add map feature object to array
-   }
-   cout << endl;
-}
-
-void clickedOnFeature(MapFeature* clicked, ezgl::application* app)
-{
-   auto g = app->get_renderer();
-   if(clicked->featureType == FEATURE) //clicked on feature
-   {
-      OSMID osmid = getFeatureOSMID(clicked->dataIndex);
-      cout << "clicked: " << getFeatureName(clicked->dataIndex) << endl;
-   }
-   if(clicked->featureType == ROAD && clicked->dataIndex < getNumStreetSegments()) //clicked on street segment
-   {
-      StreetSegmentInfo segmentInfo = getStreetSegmentInfo(clicked->dataIndex);
-      cout << "clicked: " << getStreetName(getStreetSegmentInfo(clicked->dataIndex).streetID) << endl;
       
-   }
-}
 
-void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y)
-{
-   
-   if(mapFeatures.layerMap.size() == 0){return;} //if there are no features, skip click detection
-   cout << "click at " << x << ", " << y << endl;
-   
-   auto& camera = mainCanvas->get_camera();
-
-   map<const OSMID, string> wayRoute;
-
-   //to prioritize higher layers in click detection, run through features backwards
-   auto layer = mapFeatures.layerMap.end();
-   layer--;
-   MapFeature* clicked = nullptr;
-   do{
-      for(int i = 0; i < layer->second->size(); i++)
+      MapFeature* mapFeature = new MapFeature(layer,points,featureColor,drawType,MapFeatureType::FEATURE,(int)featureIndex); //create map feature object
+      mapFeatures.addFeature(mapFeature); //add map feature object to array
+      //set default values
+      mapFeature->maximumScaling = maximumScaling;
+      //add text label for feature name
+      string featureName = getFeatureName(featureIndex);
+      if(featureName[0] != '<') //dont print text that is not meant to be displayed (denoted by being wrapped in '<>')
       {
-         MapFeature* feature = (*(layer->second))[i];
-         ezgl::rectangle bounds = feature->bounds;
-         if(feature->drawType == LINE || feature->drawType == POLYGON)
-         {
-            //if mouse is in map feature bounding box, reister that map feature as clicked (and exit loop)
-            if(bounds.contains(x, y)){
-               clicked = feature;
-               break;
-            }
-         }
+         staticLabels.push_back({featureName,mapFeature->bounds.center(),mapFeature}); //create static text structure and add to array for rendering
+         mapFeature->major = true; //if the feature has a name, it is a point of interest
       }
-      layer--;
-   }while(layer != mapFeatures.layerMap.begin());
+   }
 
-   if(clicked != nullptr)
-   {
-      clickedOnFeature(clicked, app); //run click events on the clicked feature  
+   if(enableCellRendering){
+      cout << "starting to map render cells" << endl;
+      mapRenderCells();
+      cout << endl;
    }
 }
+
+
+
+
 
 void drawMap() {
    // Set up the ezgl graphics window and hand control to it, as shown in the 
@@ -358,9 +650,171 @@ void drawMap() {
    initial_world = ezgl::rectangle(LatLonToPoint2D(minPoints),LatLonToPoint2D(maxPoints));
    mainCanvas = application.add_canvas("MainCanvas", draw_main_canvas, initial_world);
    application.mouse_press_callback;
-   
    //create window
-   application.run(nullptr,on_mouse_click,nullptr,nullptr);
+   application.run(initial_setup,on_mouse_click,nullptr,nullptr);
 
 
+}
+
+void initial_setup(ezgl::application *application, bool /*new_window*/){
+
+   GObject* searchBtn = application->get_object("searchBtn");
+   g_signal_connect(searchBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
+
+   // GObject* searchbar1 = application->get_object("searchbar1");
+   // g_signal_connect(searchbar1,"key-press-event",G_CALLBACK(searchbarAuto1),application);
+
+   GObject* SelectMapBtn = application->get_object("SelectMapBtn");
+   g_signal_connect(SelectMapBtn,"clicked",G_CALLBACK(selectMap_cbk),application);
+
+   GObject* mapBackBtn = application->get_object("mapBackBtn");
+   g_signal_connect(mapBackBtn,"clicked",G_CALLBACK(mapBackBtn_cbk),application);
+
+   for(int i = 0; i < 19; i++){
+      mapNames[i].second.second = application;
+      GObject* mapSelectionBtn = application->get_object(mapNames[i].first.c_str());
+      g_signal_connect(mapSelectionBtn,"clicked",G_CALLBACK(openMap_cbk),&mapNames[i].second);
+   }
+}
+
+//Callback that is called when search button is pressed
+void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
+
+   //Make a clear highlighted intersections button
+   for(int i = 0; i < prevSearchedIntersectionIdxs.size(); i++){
+      //unhighlight
+      cout << getIntersectionName(prevSearchedIntersectionIdxs[i]) << endl;
+   }
+   prevSearchedIntersectionIdxs.clear();
+   
+   //Extracting text from search bars
+   GtkEntry* searchbar1 = GTK_ENTRY(application->get_object("searchbar1"));
+   string searchText1 = string(gtk_entry_get_text(searchbar1));
+   GtkEntry* searchbar2 = GTK_ENTRY(application->get_object("searchbar2"));
+   string searchText2 = string(gtk_entry_get_text(searchbar2));
+
+   //Obtain the streetIdx(s) of the inputted street names
+   vector<StreetIdx> street1Idxs = findStreetIdsFromPartialStreetName(searchText1);
+   vector<StreetIdx> street2Idxs = findStreetIdsFromPartialStreetName(searchText2);
+
+   //Create unique pairs of streetIdxs of the inputted streets
+   set<pair<StreetIdx,StreetIdx>> streetIdPairs;
+   for(int i = 0; i < street1Idxs.size(); ++i){
+      for(int j = 0; street2Idxs.size(); ++j){
+
+         //ensure no pair is made up of the same street
+         StreetIdx currStreet1 = street1Idxs[i];
+         StreetIdx currStreet2 = street2Idxs[i];
+
+         if(currStreet1 != currStreet2){
+
+            //insert pair by <lower number,higher number> to prevent duplicate sets
+            if(currStreet1 < currStreet2){
+               streetIdPairs.insert({currStreet1,currStreet2});
+
+            } else{
+               streetIdPairs.insert({currStreet2,currStreet1});
+            }
+         }
+      }
+   }
+
+   //Store the all intersections of each pair of streets
+   vector<vector<IntersectionIdx>> intersectionList;
+   auto it = streetIdPairs.begin();
+   while(it != streetIdPairs.end()){
+      intersectionList.push_back(findIntersectionsOfTwoStreets(*it));
+   }
+
+   if(intersectionList.size() == 0){
+      application->update_message("No intersections found");
+      return;
+   }
+
+   //Dislay names of intersections in list
+   string intersectionInfo = "Intersections: ";
+
+   // Mark each intersection for highlighting
+   for(int i = 0; i < intersectionList.size(); i++){
+      for(int j = 0; j < intersectionList[i].size(); j++){
+         // global[intersectionList[i][j]].highlight = on;
+
+         //or cout too as it cant all fit into the status bar
+         intersectionInfo.append(getIntersectionName(intersectionList[i][j]) + ", ");
+
+         prevSearchedIntersectionIdxs.push_back(intersectionList[i][j]);
+      }
+   }
+
+   application->update_message(intersectionInfo);
+   application->refresh_drawing();
+
+  return;
+}
+
+void searchbarAuto1(GtkEntry* searchbar1, ezgl::application *application){
+
+//    GtkListStore* liststore1 = GTK_LIST_STORE(application->get_object("LSAuto1"));
+   
+//    //Reset past autcomplete list
+//    gtk_list_store_clear(liststore1);
+
+//    const char* searchText1 = gtk_entry_get_text(searchbar1);
+
+//    vector<StreetIdx> street1Idxs = findStreetIdsFromPartialStreetName(searchText1);
+//    GtkTreeIter iter;
+
+//    if(street1Idxs.size() != 0){
+//       cout << getStreetName(street1Idxs[0]) << endl;
+//    }
+   
+//    for(int i = 0; i < street1Idxs.size(); i++){      
+//       gtk_list_store_append(liststore1, &iter);
+//       //maybe do .c_style()
+//       gtk_list_store_set(liststore1,&iter,0,getStreetName(street1Idxs[i]));
+//    }
+}
+
+//Callback that is called when select new map button is pressed
+void selectMap_cbk(GtkWidget */*widget*/, ezgl::application *application){
+   GtkDialog * mapSelectorDialog = GTK_DIALOG(application->get_object("mapSelectorDialog"));
+   gtk_dialog_run(mapSelectorDialog);
+}
+
+//Callback that is called when pressing the back button in the pop up map selector dialog, closes dialog
+void mapBackBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
+   GtkWidget * mapSelectorDialog = GTK_WIDGET(application->get_object("mapSelectorDialog"));
+   gtk_widget_hide(mapSelectorDialog);
+}
+
+//Callback function that changes the map, called when map is selected from the pop up dialog
+void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInfo){
+   
+   string nextMapPath = mapInfo->first;
+   ezgl::application* application = mapInfo->second;
+
+   //Close Map Selection menu
+   GtkWidget * mapSelectorDialog = GTK_WIDGET(application->get_object("mapSelectorDialog"));
+   gtk_widget_hide(mapSelectorDialog);
+
+   //DEALLOCATE THINGS
+   prevSearchedIntersectionIdxs.clear();
+   
+   closeMap();
+
+   bool load_success = loadMap(nextMapPath);
+   if(!load_success) {
+      std::cerr << "Failed to load map '" << nextMapPath << "'\n";
+      return;
+   }
+   std::cout << "Successfully loaded map '" << nextMapPath << "'\n";
+
+   //Load new map info
+   loadFeatures();
+
+   //Make EZGL rectangle with map borders
+   ezgl::rectangle rect(initial_world.center(),initial_world.top_right());
+   application->change_canvas_world_coordinates("MainCanvas",rect);
+
+   application->refresh_drawing();
 }

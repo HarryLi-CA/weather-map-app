@@ -30,7 +30,7 @@ constexpr int ERROR_EXIT_CODE = 1;          //An error occured
 constexpr int BAD_ARGUMENTS_EXIT_CODE = 2;  //Invalid command-line usage
 
 //The default map to load if none is specified
-std::string default_map_path = "/cad2/ece297s/public/maps/saint-helena.streets.bin";
+std::string default_map_path = "/cad2/ece297s/public/maps/toronto_canada.streets.bin";
 
 
 // The start routine of your program (main) when you are running your standalone
@@ -67,23 +67,25 @@ int main(int argc, char** argv) {
 
     //You can now do something with the map data
 
-    //TESTING
-    // if (findIntersectionsOfTwoStreets({1,2}).size() != 0){
-    //     cout << "work" << endl;
+    // //TESTING
+    // // if (findIntersectionsOfTwoStreets({1,2}).size() != 0){
+    // //     cout << "work" << endl;
+    // // }
+
+    // findStreetIdsFromPartialStreetName("Air");
+
+    // std::cout << "Closing map\n";
+    // closeMap(); 
+
+    // load_success = loadMap(map_path);
+    // if(!load_success) {
+    //     std::cerr << "Failed to load map '" << map_path << "'\n";
+    //     return ERROR_EXIT_CODE;
     // }
 
-    findStreetIdsFromPartialStreetName("Air");
+    // std::cout << "Successfully loaded map '" << map_path << "'\n";
 
-    std::cout << "Closing map\n";
-    closeMap(); 
-
-    load_success = loadMap(map_path);
-    if(!load_success) {
-        std::cerr << "Failed to load map '" << map_path << "'\n";
-        return ERROR_EXIT_CODE;
-    }
-
-    std::cout << "Successfully loaded map '" << map_path << "'\n";
+    // //Clean-up the map data and related data structures
 
     //Clean-up the map data and related data structures
     

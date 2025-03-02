@@ -116,7 +116,6 @@ bool loadMap(std::string map_streets_database_filename) {
     for(IntersectionIdx intersectionIndex = 0; intersectionIndex < numIntersections; intersectionIndex++)
     {
         loadIntersections(intersectionToStreetSegments,streetSegmentsToIntersections, intersectionIndex);
-        //cout << intersection_index+1 << "/" << num_intersections << endl;
 
         //load the container twoStreetsToIntersections with all street pairs that meet at intersectionIndex
         loadTwoStreetsIntersections(twoStreetsToIntersections,*intersectionToStreetSegments[intersectionIndex],intersectionIndex);
@@ -423,7 +422,6 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
 
     //An empty string as input will return a vector with element -1
     if(street_prefix.length() == 0){
-        newVector.push_back(-1);
         return newVector;
     }
 

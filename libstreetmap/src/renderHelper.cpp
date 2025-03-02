@@ -3,6 +3,7 @@
 #include "StreetsDatabaseAPI.h"
 #include "m1.h"
 #include <stdio.h>
+#include <map>
 
 using namespace std;
 
@@ -36,6 +37,7 @@ MapFeature::MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _
     highlight = false;
     streetID = -1;
     major = false;
+    inCellList = false;
 }
 
 FeatureList::FeatureList(){
@@ -152,4 +154,83 @@ bool intersecting(ezgl::rectangle rectA, ezgl::rectangle rectB)
 {
     bool outside = rectA.left() > rectB.right() || rectA.right() < rectB.left() || rectA.top() < rectB.bottom() || rectA.bottom() > rectB.top();
     return !outside;
+}
+
+pair<int,int> getRenderCell(double originX, double originY, double cellSize, ezgl::point2d position)
+{
+    return {(position.x - originX)/cellSize, (position.y - originY)/cellSize};
+} 
+
+vector<pair<int,int>> getCurrentRenderCells(ezgl::camera* camera, double cellSize, LatLon bottomLeft)
+{
+    return getSafeBoundedRenderCells(camera->get_world(), cellSize, bottomLeft);
+}
+
+vector<pair<int,int>> getSafeBoundedRenderCells(ezgl::rectangle rect, double cellSize, LatLon bottomLeft)
+{
+    vector<pair<int,int>> cells;
+    //get relative origin x and y
+    double originY = LatToY(bottomLeft.latitude());
+    double originX = LonToX(bottomLeft.longitude());
+
+    for(double y = rect.bottom() - cellSize; y < rect.top() + cellSize; y += cellSize)
+    {
+        for(double x = rect.left() - cellSize; x < rect.right() + cellSize; x += cellSize)
+        {
+            pair<int, int> cell = getRenderCell(originX, originY, cellSize, {x, y}); //calculate cell
+            cells.push_back(cell); //add cell to cells list
+        }
+    }
+    return cells;
+}
+
+vector<pair<int,int>> getBoundedRenderCells(ezgl::rectangle rect, double cellSize, LatLon bottomLeft)
+{
+    vector<pair<int,int>> cells;
+    //get relative origin x and y
+    double originY = LatToY(bottomLeft.latitude());
+    double originX = LonToX(bottomLeft.longitude());
+
+    for(double y = rect.bottom(); y < rect.top(); y += cellSize)
+    {
+        for(double x = rect.left(); x < rect.right(); x += cellSize)
+        {
+            pair<int, int> cell = getRenderCell(originX, originY, cellSize, {x, y}); //calculate cell
+            cells.push_back(cell); //add cell to cells list
+        }
+    }
+    return cells;
+}
+
+void addToRenderCellMap(pair<int, int> cell, MapFeature* feature, map<pair<int, int>, vector<MapFeature*>*>* cellMap)
+{
+    //check if cell already in cell map
+    if(cellMap->find(cell) == cellMap->end())
+    {
+        //if not, create vector at that key
+        vector<MapFeature*>* mapFeatureList = new vector<MapFeature*>; //list of map features to draw
+        cellMap->insert({cell, mapFeatureList});
+    }
+    (*cellMap)[cell]->push_back(feature);
+}
+
+vector<MapFeature*> getFeaturesFromCells(vector<pair<int,int>> cells, map<pair<int, int>, vector<MapFeature*>*>&cellMap)
+{
+    vector<MapFeature*> features;
+    for(auto cell = cells.begin(); cell < cells.end(); cell++)
+    {
+        vector<MapFeature*>* featureList = (cellMap[*cell]);
+        if(featureList == nullptr){continue;}
+        for(auto feature = featureList->begin(); feature != featureList->end(); feature++)
+        {
+            if((*feature)->inCellList){continue;}
+            (*feature)->inCellList = true;
+            features.push_back(*feature);
+        }
+    }
+    for(auto feature = features.begin(); feature != features.end(); feature++)
+    {
+        (*feature)->inCellList = false;
+    }
+    return features;
 }

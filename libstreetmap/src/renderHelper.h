@@ -32,6 +32,7 @@ class MapFeature {
     ezgl::color color; //color to draw the feature in
     bool highlight; //if true, the feature will be outlined (polygon) or highlighted (line)
     bool major; //significant feature that should be displayed at larger distances (i.e major road)
+    bool inCellList; //was added to cell list for rendering this frame
     MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _color, DrawType _drawType, MapFeatureType _featureType, int _index);
 };
 
@@ -63,4 +64,10 @@ int lengthToLayer(double length); //helper function to determine the layer of a 
 double lengthToLayerInterpolate(double length); //helper function to determine the ratio between layers of a length of road based on its length
 bool insideRectangle(ezgl::rectangle rect, vector<ezgl::point2d>* points); //helper function to determine if a shape formed by a list of points are all outside rect
 ezgl::rectangle boundingRectangle(const vector<ezgl::point2d>* points); //helper function to create rectangle that perfectly contains set of points
-bool intersecting(ezgl::rectangle rectA, ezgl::rectangle rectB); //helper functoin to check if 2 rectangles are intersecting
+bool intersecting(ezgl::rectangle rectA, ezgl::rectangle rectB); //helper function to check if 2 rectangles are intersecting
+vector<pair<int,int>> getCurrentRenderCells(ezgl::camera* camera, double cellSize, LatLon bottomLeft); //helper function to get current render cell based on cellSize and camera position
+pair<int,int> getRenderCell(double originX, double originY, double cellSize, ezgl::point2d position); //returns render cell at a position
+vector<pair<int,int>> getBoundedRenderCells(ezgl::rectangle rect, double cellSize, LatLon bottomLeft); //returns all render cells inside of a given rectangle
+vector<pair<int,int>> getSafeBoundedRenderCells(ezgl::rectangle rect, double cellSize, LatLon bottomLeft); //returns all render cells inside of a given rectangle, adding a 1 cell buffer around the rectangle
+void addToRenderCellMap(pair<int, int> cell, MapFeature* feature, map<pair<int, int>, vector<MapFeature*>*>* cellMap); //inserts cells into cell map and assigns new vectors when needed
+vector<MapFeature*> getFeaturesFromCells(vector<pair<int,int>> cells, map<pair<int, int>, vector<MapFeature*>*>& cellMap); //returns all features corrosponding to a set of render cells

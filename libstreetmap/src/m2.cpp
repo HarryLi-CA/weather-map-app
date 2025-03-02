@@ -71,7 +71,9 @@ void draw_main_canvas(ezgl::renderer *g)
    double invisibilityFactor = 0.5/absoluteLength;
    int lineWidth = max(1.0, 5.0*scaling);
    
-   cout << 25.0/screenArea << ", " << absoluteLength << endl;
+   auto camera = mainCanvas->get_camera();
+
+   //cout << 100.0/screenArea << ", " << absoluteLength << endl;
    g->set_line_width(lineWidth);
    while(layer != mapFeatures.layerMap.end()){
       for(int i = 0; i < layer->second->size(); i++)
@@ -88,13 +90,21 @@ void draw_main_canvas(ezgl::renderer *g)
                break;
             }
             case LINE: {
+               
+               //dont process objects that are not in the camrea
+               if(!intersecting(mainCanvas->get_camera().get_world(),feature->bounds))
+               {
+                  break;
+               }
                //calculate the transparency of a street based on its length
+               ezgl::rectangle& bounds = feature->bounds;
+               ezgl::rectangle screen_rect(camera.world_to_screen(bounds.bottom_left()),camera.world_to_screen(bounds.top_right()));
+               if(screen_rect.area() < 10){break;} 
+
                double streetAlpha = 255;
-               double screenSpace = lineWidth*feature->maximumScreenLength/screenArea; 
-               //dont render small streets
-               if(screenSpace < 1.0/100000.0){break;} 
 
                if(streetAlpha <= 0) {break;} //if the street is invisible, skip rendering to save processing time
+               
                g->set_color(feature->color);
                for(int i = 0; i < feature->points->size() - 1; i++)
                {
@@ -103,11 +113,23 @@ void draw_main_canvas(ezgl::renderer *g)
                break;
             }
             case POLYGON: {
+
+               //dont process objects that are not in the camrea
+               if(!intersecting(mainCanvas->get_camera().get_world(),feature->bounds))
+               {
+                  break;
+               }
                double screenSpace = feature->maximumScreenLength/screenArea; 
                //dont render small features
-               if(screenSpace < 1.0/10000.0){break;} 
+               const ezgl::rectangle& bounds = feature->bounds;
+               
+               const ezgl::rectangle screen_rect(camera.world_to_screen(bounds.bottom_left()),camera.world_to_screen(bounds.top_right()));
+               if(screen_rect.area() < 10){break;} 
+               
+               //cout << feature->maximumScreenLength << "/"<< screenArea <<" = "<< screenSpace << endl;
                g->set_color(feature->color);
                g->fill_poly(*(feature->points));
+               //g->draw_rectangle(feature->bounds);
             }
             //cout << "Printing at " << origin.x << ", " << origin.y << endl;
          }
@@ -143,11 +165,11 @@ void loadFeatures()
    //Add intersection features
    for(IntersectionIdx i = 0; i < getNumIntersections(); i++)
    {
-      vector<ezgl::point2d>* points = new vector<ezgl::point2d>; //create vector to add points
-      ezgl::point2d translatedPoint = LatLonToPoint2D(getIntersectionPosition(i)); //get intersection coor
-      points->push_back(translatedPoint);
-      MapFeature* mapFeature = new MapFeature(0,points,POINT,0,kColorRoad);
-      mapFeatures.addFeature(mapFeature);
+      //vector<ezgl::point2d>* points = new vector<ezgl::point2d>; //create vector to add points
+      //ezgl::point2d translatedPoint = LatLonToPoint2D(getIntersectionPosition(i)); //get intersection coor
+      //points->push_back(translatedPoint);
+      //MapFeature* mapFeature = new MapFeature(0,points,POINT,0,kColorRoad);
+      //mapFeatures.addFeature(mapFeature);
    }
 
    //cout << "loading segments: " << streetSegmentPoints.size() << endl;
@@ -178,9 +200,15 @@ void loadFeatures()
          LatLon featurePoint = getFeaturePoint(i, pointIndex); //get latlon point
          points->push_back(LatLonToPoint2D(featurePoint)); //convert latlon point to cartesion point and add to vector
       }
+      //if feature is invalid, deallocate space and skip
+      if(points->size() <= 1)
+      {
+         delete points;
+         continue;
+      }
 
       int layer = -2;
-      double area = findFeatureArea(i); //area of feature to use to decide whether to render the feature at a specific zoom
+      double drawArea = findFeatureArea(i); //area of feature to use to decide whether to render the feature at a specific zoom
       TypedOSMID osmid = getFeatureOSMID(i);
       ezgl::color featureColor = kColorBuilding;
       const OSMWay* way = getWayByID(osmid);
@@ -220,6 +248,7 @@ void loadFeatures()
          case BUILDING:{
             featureColor = kColorBuilding;
             layer = 2;
+            drawArea = 50; //set area so all buildings have the same render distance
             break;
          }
          case GREENSPACE:{
@@ -243,8 +272,7 @@ void loadFeatures()
       DrawType drawType = POLYGON;
       //if feature is not closed, then it is a line
       if(!closed){drawType = LINE;}
-
-      MapFeature* mapFeature = new MapFeature(layer,points,POLYGON,area, featureColor); //create map feature object
+      MapFeature* mapFeature = new MapFeature(layer,points,drawType,drawArea, featureColor); //create map feature object
       mapFeatures.addFeature(mapFeature); //add map featue object to array
    }
    cout << endl;

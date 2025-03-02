@@ -474,6 +474,7 @@ void loadFeatures()
       points->push_back(translatedPoint); //add singular point to point list
       MapFeature* mapFeature = new MapFeature(10,points,kColorHighlight,POINT,MapFeatureType::INTERSECTION,(int)intersectionIndex); //add intersection as map feature
       mapFeatures.addFeature(mapFeature);
+      intersectionFeatures.push_back(mapFeature); //relate feature to corrosponding intersection index
    }
 
    //cout << "loading segments: " << streetSegmentPoints.size() << endl;
@@ -683,6 +684,7 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    //Make a clear highlighted intersections button
    for(int i = 0; i < prevSearchedIntersectionIdxs.size(); i++){
       //unhighlight
+      intersectionFeatures[prevSearchedIntersectionIdxs[i]]->highlight = false;
       cout << getIntersectionName(prevSearchedIntersectionIdxs[i]) << endl;
    }
    prevSearchedIntersectionIdxs.clear();
@@ -700,11 +702,11 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    //Create unique pairs of streetIdxs of the inputted streets
    set<pair<StreetIdx,StreetIdx>> streetIdPairs;
    for(int i = 0; i < street1Idxs.size(); ++i){
-      for(int j = 0; street2Idxs.size(); ++j){
+      for(int j = 0; j < street2Idxs.size(); ++j){
 
          //ensure no pair is made up of the same street
          StreetIdx currStreet1 = street1Idxs[i];
-         StreetIdx currStreet2 = street2Idxs[i];
+         StreetIdx currStreet2 = street2Idxs[j];
 
          if(currStreet1 != currStreet2){
 
@@ -724,6 +726,7 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    auto it = streetIdPairs.begin();
    while(it != streetIdPairs.end()){
       intersectionList.push_back(findIntersectionsOfTwoStreets(*it));
+      it++;
    }
 
    if(intersectionList.size() == 0){
@@ -737,7 +740,7 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    // Mark each intersection for highlighting
    for(int i = 0; i < intersectionList.size(); i++){
       for(int j = 0; j < intersectionList[i].size(); j++){
-         // global[intersectionList[i][j]].highlight = on;
+         intersectionFeatures[intersectionList[i][j]]->highlight = true;
 
          //or cout too as it cant all fit into the status bar
          intersectionInfo.append(getIntersectionName(intersectionList[i][j]) + ", ");

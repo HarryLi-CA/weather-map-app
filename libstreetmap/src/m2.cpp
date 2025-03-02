@@ -756,7 +756,7 @@ void selectMap_cbk(GtkWidget */*widget*/, ezgl::application *application){
 //Callback that is called when pressing the back button in the pop up map selector dialog, closes dialog
 void mapBackBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    GtkWidget * mapSelectorDialog = GTK_WIDGET(application->get_object("mapSelectorDialog"));
-   gtk_widget_destroy(mapSelectorDialog);
+   gtk_widget_hide(mapSelectorDialog);
 }
 
 //Callback function that changes the map, called when map is selected from the pop up dialog
@@ -767,7 +767,7 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
 
    //Close Map Selection menu
    GtkWidget * mapSelectorDialog = GTK_WIDGET(application->get_object("mapSelectorDialog"));
-   gtk_widget_destroy(mapSelectorDialog);
+   gtk_widget_hide(mapSelectorDialog);
 
    //DEALLOCATE THINGS
    prevSearchedIntersectionIdxs.clear();
@@ -781,9 +781,12 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
    }
    std::cout << "Successfully loaded map '" << nextMapPath << "'\n";
 
+   //Load new map info
+   loadFeatures();
+
    //Make EZGL rectangle with map borders
    ezgl::rectangle rect(initial_world.center(),initial_world.top_right());
-
    application->change_canvas_world_coordinates("MainCanvas",rect);
+
    application->refresh_drawing();
 }

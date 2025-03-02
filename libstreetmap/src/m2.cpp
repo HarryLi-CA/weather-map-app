@@ -298,7 +298,7 @@ void draw_main_canvas(ezgl::renderer *g)
    //iterate through all labels
    for(auto label = staticLabels.begin(); label != staticLabels.end(); label++)
    {
-      g->draw_text(label->position, label->text, label->feature->bounds.width()/1.5, label->feature->bounds.height()/1.5);
+      g->draw_text(label->position, label->text, label->feature->bounds.width(), label->feature->bounds.height());
    }
 }
 
@@ -704,6 +704,7 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
          intersectionInfo.append(getIntersectionName(intersectionList[i][j]) + ", ");
 
          prevSearchedIntersectionIdxs.push_back(intersectionList[i][j]);
+         intersectionFeatures[intersectionList[i][j]]->highlight = true;
       }
    }
 

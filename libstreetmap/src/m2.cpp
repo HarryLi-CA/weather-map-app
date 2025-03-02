@@ -281,8 +281,9 @@ void loadFeatures()
       DrawType drawType = POLYGON;
       //if feature is not closed, then it is a line
       if(!closed){drawType = LINE;}
+
       MapFeature* mapFeature = new MapFeature(layer,points,featureColor,drawType,MapFeatureType::FEATURE,(int)i); //create map feature object
-      mapFeatures.addFeature(mapFeature); //add map featue object to array
+      mapFeatures.addFeature(mapFeature); //add map feature object to array
    }
    cout << endl;
 }

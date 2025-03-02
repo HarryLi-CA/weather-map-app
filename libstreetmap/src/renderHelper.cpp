@@ -218,21 +218,34 @@ void addToRenderCellMap(pair<int, int> cell, MapFeature* feature, map<pair<int, 
 
 vector<MapFeature*> getFeaturesFromCells(vector<pair<int,int>> cells, map<pair<int, int>, vector<MapFeature*>*>&cellMap)
 {
-    vector<MapFeature*> features;
+    vector<MapFeature*> features; //vector of features to display
     for(auto cell = cells.begin(); cell < cells.end(); cell++)
     {
-        vector<MapFeature*>* featureList = (cellMap[*cell]);
-        if(featureList == nullptr){continue;}
-        for(auto feature = featureList->begin(); feature != featureList->end(); feature++)
+        vector<MapFeature*>* featureList = (cellMap[*cell]); //features partially located in this cell
+        if(featureList == nullptr){continue;} //if no featurs are in this cell (indicated by nullptr), skip cell
+        for(auto feature = featureList->begin(); feature != featureList->end(); feature++) //iterate through all features in list
         {
-            if((*feature)->inCellList){continue;}
-            (*feature)->inCellList = true;
-            features.push_back(*feature);
+            if((*feature)->inCellList){continue;} //if feature is already in vector to be displayed, do not duplicate it
+            (*feature)->inCellList = true; //flag feature as already in display list
+            features.push_back(*feature); //add feature to display list
         }
     }
+    //reset "in display list" flag for all added features
     for(auto feature = features.begin(); feature != features.end(); feature++)
     {
         (*feature)->inCellList = false;
     }
-    return features;
+    return features; //return vector of features to display
+}
+
+void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
+{
+   double angle = atan2(direction.y, direction.x);
+   //draw triangle based on initial angle
+   g->set_color(color);
+   g->fill_poly({
+      {center.x + 1.5*distanceFromCenter*cos(angle), center.y + 1.5*distanceFromCenter*sin(angle)},
+      {center.x + distanceFromCenter*cos(angle+2*M_PI/3.0), center.y + distanceFromCenter*sin(angle+2*M_PI/3.0)},
+      {center.x + distanceFromCenter*cos(angle+4*M_PI/3.0), center.y + distanceFromCenter*sin(angle+4*M_PI/3.0)},
+   });
 }

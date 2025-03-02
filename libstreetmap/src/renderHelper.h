@@ -58,18 +58,40 @@ typedef struct staticname_t {
 }StaticName;
 
 void setLatLonBounds(LatLon latlonMin, LatLon latlonMax); //setup constants for latlon to cartesian conversions using minimum and maximum latlon bounds
+
 double LatToY(double lat); //converts latitude angle to cartesian y coordinate
 double LonToX(double lon); //converts longitude angle to cartesian x coordinate 
+
 ezgl::point2d LatLonToPoint2D(LatLon latlonPoint); //converts a latitude/longitude point to an ezgl point2d object
+
 void updateMaximumLatLon(double& minimumLatitude, double& minimumLongitude, double& maximumLatitude,double& maximumLongitude, LatLon point); //updates minimum and maximum latitude/longitude values based on an input point
+
 int lengthToLayer(double length); //helper function to determine the layer of a length of road based on its length 
 double lengthToLayerInterpolate(double length); //helper function to determine the ratio between layers of a length of road based on its length
+
 bool insideRectangle(ezgl::rectangle rect, vector<ezgl::point2d>* points); //helper function to determine if a shape formed by a list of points are all outside rect
 ezgl::rectangle boundingRectangle(const vector<ezgl::point2d>* points); //helper function to create rectangle that perfectly contains set of points
 bool intersecting(ezgl::rectangle rectA, ezgl::rectangle rectB); //helper function to check if 2 rectangles are intersecting
+
 vector<pair<int,int>> getCurrentRenderCells(ezgl::camera* camera, double cellSize, LatLon bottomLeft); //helper function to get current render cell based on cellSize and camera position
 pair<int,int> getRenderCell(double originX, double originY, double cellSize, ezgl::point2d position); //returns render cell at a position
 vector<pair<int,int>> getBoundedRenderCells(ezgl::rectangle rect, double cellSize, LatLon bottomLeft); //returns all render cells inside of a given rectangle
 vector<pair<int,int>> getSafeBoundedRenderCells(ezgl::rectangle rect, double cellSize, LatLon bottomLeft); //returns all render cells inside of a given rectangle, adding a 1 cell buffer around the rectangle
 void addToRenderCellMap(pair<int, int> cell, MapFeature* feature, map<pair<int, int>, vector<MapFeature*>*>* cellMap); //inserts cells into cell map and assigns new vectors when needed
 vector<MapFeature*> getFeaturesFromCells(vector<pair<int,int>> cells, map<pair<int, int>, vector<MapFeature*>*>& cellMap); //returns all features corrosponding to a set of render cells
+void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter); //draws triangle around a center point
+
+template <typename T> bool vectorContains(vector<T>& vec, T& toFind) //returns true if toFind is an element of vec
+{
+    //iterate through vector
+    for(int index = 0; index < vec.size(); index++)
+    {
+        //if vector has object, return true
+        if(vec[index] == toFind)
+        {
+            return true;
+        }
+    }
+    //if entire vector is search and no object is found, return false
+    return false;
+}

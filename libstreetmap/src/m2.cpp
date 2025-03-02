@@ -71,17 +71,7 @@ const int kMaximumRenderCells = 100; //maximum number of render cells before swi
 const double kMaximumBuildingScaling = 2; //maximum number of meters per pixel to start drawing buildings
 const bool enableCellRendering = false;
 
-void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
-{
-   double angle = atan2(direction.y, direction.x);
-   //draw triangle based on initial angle
-   g->set_color(color);
-   g->fill_poly({
-      {center.x + distanceFromCenter*cos(angle), center.y + distanceFromCenter*sin(angle)},
-      {center.x + distanceFromCenter*cos(angle+2*M_PI/3.0), center.y + distanceFromCenter*sin(angle+2*M_PI/3.0)},
-      {center.x + distanceFromCenter*cos(angle+4*M_PI/3.0), center.y + distanceFromCenter*sin(angle+4*M_PI/3.0)},
-   });
-}
+
 
 void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, double lineWidth, double scaling, double realWorldScaling, ezgl::camera camera)
 {
@@ -378,7 +368,7 @@ void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to
       cout << "clicked: sID = " << getStreetSegmentInfo(clicked->dataIndex).streetID << endl;
       
    }
-   if(clicked->featureType == POINT && clicked->dataIndex < getNumIntersections()) //clicked on street segment
+   if(clicked->featureType == POINT && clicked->dataIndex < getNumIntersections()) //clicked on intersection
    {
       string intersection = getIntersectionName(clicked->dataIndex);
       cout << "intersection = " << intersection << endl;
@@ -407,7 +397,10 @@ void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, dou
       for(int i = 0; i < layer->second->size(); i++)
       {
          MapFeature* feature = (*(layer->second))[i];
+
+         if(!feature->major && feature->featureType != MapFeatureType::INTERSECTION){continue;} //only register clicks on major features or intersections
          if(!feature->wasRendered){continue;} //dont register non-rendered/invisible objects as clickable
+
          ezgl::rectangle bounds = feature->bounds;
          //for all features, compare distance from points
          for(auto point = feature->points->begin(); point != feature->points->end(); point++){
@@ -524,8 +517,10 @@ void loadFeatures()
             }
          }
       }
-   }
+   } 
 
+   vector<string> featureNames;
+   
    for(FeatureIdx featureIndex = 0; featureIndex < getNumFeatures(); featureIndex++)
    {
       vector<ezgl::point2d>* points = new vector<ezgl::point2d>; //create array to store cartesian points
@@ -620,8 +615,15 @@ void loadFeatures()
       string featureName = getFeatureName(featureIndex);
       if(featureName[0] != '<') //dont print text that is not meant to be displayed (denoted by being wrapped in '<>')
       {
-         staticLabels.push_back({featureName,mapFeature->bounds.center(),mapFeature}); //create static text structure and add to array for rendering
-         mapFeature->major = true; //if the feature has a name, it is a point of interest
+         //check for duplicates
+         bool duplicate = vectorContains<string>(featureNames, featureName); //whether the name is a duplicate, checked by seeing if name is in list of names already displayed
+         if(!duplicate || featureType == BUILDING) //buildings often have the same name, so duplicates can be allowed for those features
+         {
+            //if no duplicate is found, add label
+            staticLabels.push_back({featureName,mapFeature->bounds.center(),mapFeature}); //create static text structure and add to array for rendering
+            mapFeature->major = true; //if the feature has a name, it is a point of interest
+            featureNames.push_back(featureName); //detect duplicate
+         }
       }
    }
 

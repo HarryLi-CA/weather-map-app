@@ -168,7 +168,9 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, doub
       }
 }
 
-vector<IntersectionIdx> prevSearchedIdxs = {};
+//Stores the intersectionIdxs of the previously searched intersections
+vector<IntersectionIdx> prevSearchedIntersectionIdxs = {};
+//Stores the map names along with its path and a application pointer to send into the map changing callback
 pair<string,pair<string,ezgl::application*>> mapNames[19] = { {"BeijingBtn",{"/cad2/ece297s/public/maps/beijing_china.streets.bin",nullptr}},
                                        {"BeirutBtn",{"/cad2/ece297s/public/maps/beirut_lebanon.streets.bin",nullptr}},
                                        {"BerlinBtn",{"/cad2/ece297s/public/maps/berlin_germany.streets.bin",nullptr}},
@@ -651,9 +653,11 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
 void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
 
    //Make a clear highlighted intersections button
-
-   //Maybe guard against two letter street inputs
-   //will this be safe with empty string inputss?
+   for(int i = 0; i < prevSearchedIntersectionIdxs.size(); i++){
+      //unhighlight
+      cout << getIntersectionName(prevSearchedIntersectionIdxs[i]) << endl;
+   }
+   prevSearchedIntersectionIdxs.clear();
    
    //Extracting text from search bars
    GtkEntry* searchbar1 = GTK_ENTRY(application->get_object("searchbar1"));
@@ -667,7 +671,6 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
 
    //Create unique pairs of streetIdxs of the inputted streets
    set<pair<StreetIdx,StreetIdx>> streetIdPairs;
-
    for(int i = 0; i < street1Idxs.size(); ++i){
       for(int j = 0; street2Idxs.size(); ++j){
 
@@ -690,7 +693,6 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
 
    //Store the all intersections of each pair of streets
    vector<vector<IntersectionIdx>> intersectionList;
-
    auto it = streetIdPairs.begin();
    while(it != streetIdPairs.end()){
       intersectionList.push_back(findIntersectionsOfTwoStreets(*it));
@@ -701,12 +703,8 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
       return;
    }
 
-   //Mark each intersection for highlighting
-   // for(int i = 0; i < intersectionList.size(); i++){
-   //    for(int j = 0; j < intersectionList[i].size(); j++){
-   //       global[intersectionList[i][j]].highlight = on;
-   //    }
-   // }
+   //Dislay names of intersections in list
+   string intersectionInfo = "Intersections: ";
 
    // Mark each intersection for highlighting
    for(int i = 0; i < intersectionList.size(); i++){
@@ -716,7 +714,7 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
          //or cout too as it cant all fit into the status bar
          intersectionInfo.append(getIntersectionName(intersectionList[i][j]) + ", ");
 
-         prevSearchedIdxs.push_back(intersectionList[i][j]);
+         prevSearchedIntersectionIdxs.push_back(intersectionList[i][j]);
       }
    }
 
@@ -724,7 +722,6 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    application->refresh_drawing();
 
   return;
-
 }
 
 void searchbarAuto1(GtkEntry* searchbar1, ezgl::application *application){
@@ -750,16 +747,19 @@ void searchbarAuto1(GtkEntry* searchbar1, ezgl::application *application){
 //    }
 }
 
+//Callback that is called when select new map button is pressed
 void selectMap_cbk(GtkWidget */*widget*/, ezgl::application *application){
    GtkDialog * mapSelectorDialog = GTK_DIALOG(application->get_object("mapSelectorDialog"));
    gtk_dialog_run(mapSelectorDialog);
 }
 
+//Callback that is called when pressing the back button in the pop up map selector dialog, closes dialog
 void mapBackBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    GtkWidget * mapSelectorDialog = GTK_WIDGET(application->get_object("mapSelectorDialog"));
    gtk_widget_destroy(mapSelectorDialog);
 }
 
+//Callback function that changes the map, called when map is selected from the pop up dialog
 void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInfo){
    
    string nextMapPath = mapInfo->first;
@@ -770,6 +770,7 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
    gtk_widget_destroy(mapSelectorDialog);
 
    //DEALLOCATE THINGS
+   prevSearchedIntersectionIdxs.clear();
    
    closeMap();
 

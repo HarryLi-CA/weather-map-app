@@ -167,11 +167,35 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, doub
          }
       }
 }
+
+vector<IntersectionIdx> prevSearchedIdxs = {};
+pair<string,pair<string,ezgl::application*>> mapNames[19] = { {"BeijingBtn",{"/cad2/ece297s/public/maps/beijing_china.streets.bin",nullptr}},
+                                       {"BeirutBtn",{"/cad2/ece297s/public/maps/beirut_lebanon.streets.bin",nullptr}},
+                                       {"BerlinBtn",{"/cad2/ece297s/public/maps/berlin_germany.streets.bin",nullptr}},
+                                       {"BostonBtn",{"/cad2/ece297s/public/maps/boston_usa.streets.bin",nullptr}},
+                                       {"CapeTownBtn",{"/cad2/ece297s/public/maps/cape-town_south-africa.streets.bin",nullptr}},
+                                       {"GoldenHorseshoeBtn",{"/cad2/ece297s/public/maps/golden-horseshoe_canada.streets.bin",nullptr}},
+                                       {"HamiltonBtn",{"/cad2/ece297s/public/maps/hamilton_canada.streets.bin",nullptr}},
+                                       {"HongKongBtn",{"/cad2/ece297s/public/maps/hong-kong_china.streets.bin",nullptr}},
+                                       {"IcelandBtn",{"/cad2/ece297s/public/maps/iceland.streets.bin",nullptr}},
+                                       {"InterlakenBtn",{"/cad2/ece297s/public/maps/interlaken_switzerland.streets.bin",nullptr}},
+                                       {"LondonBtn",{"/cad2/ece297s/public/maps/london_england.streets.bin",nullptr}},
+                                       {"NewDehliBtn",{"/cad2/ece297s/public/maps/new-delhi_india.streets.bin",nullptr}},
+                                       {"NewYorkBtn",{"/cad2/ece297s/public/maps/new-york_usa.streets.bin",nullptr}},
+                                       {"RioDeJaneiroBtn",{"/cad2/ece297s/public/maps/rio-de-janeiro_brazil.streets.bin",nullptr}},
+                                       {"SaintHelenaBtn",{"/cad2/ece297s/public/maps/saint-helena.streets.bin",nullptr}},
+                                       {"SingaporeBtn",{"/cad2/ece297s/public/maps/singapore.streets.bin",nullptr}},
+                                       {"TehranBtn",{"/cad2/ece297s/public/maps/tehran_iran.streets.bin",nullptr}},
+                                       {"TokyoBtn",{"/cad2/ece297s/public/maps/tokyo_japan.streets.bin",nullptr}},
+                                       {"TorontoBtn",{"/cad2/ece297s/public/maps/toronto_canada.streets.bin",nullptr}}};
  
 void initial_setup(ezgl::application *application, bool /*new_window*/);
 
 void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application);
-void searchbarAuto1(GtkEntry* textEntryWidget, ezgl::application* application);
+void searchbarAuto1(GtkEntry* searchbar1, ezgl::application *application);
+void selectMap_cbk(GtkWidget */*widget*/, ezgl::application *application);
+void mapBackBtn_cbk(GtkWidget */*widget*/, ezgl::application *application);
+void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInfo);
 
 void draw_main_canvas(ezgl::renderer *g)
 {
@@ -610,6 +634,17 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    // GObject* searchbar1 = application->get_object("searchbar1");
    // g_signal_connect(searchbar1,"key-press-event",G_CALLBACK(searchbarAuto1),application);
 
+   GObject* SelectMapBtn = application->get_object("SelectMapBtn");
+   g_signal_connect(SelectMapBtn,"clicked",G_CALLBACK(selectMap_cbk),application);
+
+   GObject* mapBackBtn = application->get_object("mapBackBtn");
+   g_signal_connect(mapBackBtn,"clicked",G_CALLBACK(mapBackBtn_cbk),application);
+
+   for(int i = 0; i < 19; i++){
+      mapNames[i].second.second = application;
+      GObject* mapSelectionBtn = application->get_object(mapNames[i].first.c_str());
+      g_signal_connect(mapSelectionBtn,"clicked",G_CALLBACK(openMap_cbk),&mapNames[i].second);
+   }
 }
 
 //Callback that is called when search button is pressed
@@ -621,10 +656,10 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    //will this be safe with empty string inputss?
    
    //Extracting text from search bars
-   GtkEntry* seachbar1 = GTK_ENTRY(application->get_object("seachbar1"));
-   const gchar* searchText1 = gtk_entry_get_text(seachbar1);
-   GtkEntry* seachbar2 = GTK_ENTRY(application->get_object("seachbar2"));
-   const gchar* searchText2 = gtk_entry_get_text(seachbar2);
+   GtkEntry* searchbar1 = GTK_ENTRY(application->get_object("searchbar1"));
+   string searchText1 = string(gtk_entry_get_text(searchbar1));
+   GtkEntry* searchbar2 = GTK_ENTRY(application->get_object("searchbar2"));
+   string searchText2 = string(gtk_entry_get_text(searchbar2));
 
    //Obtain the streetIdx(s) of the inputted street names
    vector<StreetIdx> street1Idxs = findStreetIdsFromPartialStreetName(searchText1);
@@ -673,29 +708,81 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    //    }
    // }
 
+   // Mark each intersection for highlighting
+   for(int i = 0; i < intersectionList.size(); i++){
+      for(int j = 0; j < intersectionList[i].size(); j++){
+         // global[intersectionList[i][j]].highlight = on;
+
+         //or cout too as it cant all fit into the status bar
+         intersectionInfo.append(getIntersectionName(intersectionList[i][j]) + ", ");
+
+         prevSearchedIdxs.push_back(intersectionList[i][j]);
+      }
+   }
+
+   application->update_message(intersectionInfo);
    application->refresh_drawing();
 
   return;
 
 }
 
-// void searchbarAuto1(GtkEntry* textEntryWidget, ezgl::application* application){
+void searchbarAuto1(GtkEntry* searchbar1, ezgl::application *application){
 
-//    GtkListStore* liststore1 = GTK_LIST_STORE(application->get_object("liststore1"));
-
-//    //clear prev list
+//    GtkListStore* liststore1 = GTK_LIST_STORE(application->get_object("LSAuto1"));
+   
+//    //Reset past autcomplete list
 //    gtk_list_store_clear(liststore1);
 
-//    GtkEntry* seachbar1 = GTK_ENTRY(application->get_object("searchbar1"));
-//    string searchText1 = string(gtk_entry_get_text(seachbar1));
+//    const char* searchText1 = gtk_entry_get_text(searchbar1);
 
 //    vector<StreetIdx> street1Idxs = findStreetIdsFromPartialStreetName(searchText1);
-//    GtkTreeIter* iter = nullptr;
-   
-//    for(int i = 0; i < street1Idxs.size(); i++){
-//       getStreetName(street1Idxs[i]);
-      
-//       gtk_list_store_append(liststore1, iter);
-//       gtk_list_store_set(liststore1,iter,0,getStreetName(street1Idxs[i]));
+//    GtkTreeIter iter;
+
+//    if(street1Idxs.size() != 0){
+//       cout << getStreetName(street1Idxs[0]) << endl;
 //    }
-// }
+   
+//    for(int i = 0; i < street1Idxs.size(); i++){      
+//       gtk_list_store_append(liststore1, &iter);
+//       //maybe do .c_style()
+//       gtk_list_store_set(liststore1,&iter,0,getStreetName(street1Idxs[i]));
+//    }
+}
+
+void selectMap_cbk(GtkWidget */*widget*/, ezgl::application *application){
+   GtkDialog * mapSelectorDialog = GTK_DIALOG(application->get_object("mapSelectorDialog"));
+   gtk_dialog_run(mapSelectorDialog);
+}
+
+void mapBackBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
+   GtkWidget * mapSelectorDialog = GTK_WIDGET(application->get_object("mapSelectorDialog"));
+   gtk_widget_destroy(mapSelectorDialog);
+}
+
+void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInfo){
+   
+   string nextMapPath = mapInfo->first;
+   ezgl::application* application = mapInfo->second;
+
+   //Close Map Selection menu
+   GtkWidget * mapSelectorDialog = GTK_WIDGET(application->get_object("mapSelectorDialog"));
+   gtk_widget_destroy(mapSelectorDialog);
+
+   //DEALLOCATE THINGS
+   
+   closeMap();
+
+   bool load_success = loadMap(nextMapPath);
+   if(!load_success) {
+      std::cerr << "Failed to load map '" << nextMapPath << "'\n";
+      return;
+   }
+   std::cout << "Successfully loaded map '" << nextMapPath << "'\n";
+
+   //Make EZGL rectangle with map borders
+   ezgl::rectangle rect(initial_world.center(),initial_world.top_right());
+
+   application->change_canvas_world_coordinates("MainCanvas",rect);
+   application->refresh_drawing();
+}

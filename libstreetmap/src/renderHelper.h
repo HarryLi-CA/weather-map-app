@@ -31,6 +31,7 @@ class MapFeature {
     bool wasRendered; //cached value to store whether the feature was rendered this frame
     ezgl::color color; //color to draw the feature in
     bool highlight; //if true, the feature will be outlined (polygon) or highlighted (line)
+    bool major; //significant feature that should be displayed at larger distances (i.e major road)
     MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _color, DrawType _drawType, MapFeatureType _featureType, int _index);
 };
 

@@ -38,6 +38,7 @@ static ezgl::canvas* mainCanvas; //application canvas
 LatLon minPoints; //bottom left LatLon position
 LatLon maxPoints; //top right LatLon position
 vector<StaticName> staticLabels; //list of static text objects to draw
+vector<StreetIdx> streetLengthCache; //stored value of all loaded street lengths;
 //default colour constants for general objects
 const ezgl::color kColorDefaultGround = {235, 235, 235, 255}; 
 const ezgl::color kColorHighlight = {255, 87, 87, 255};
@@ -49,10 +50,13 @@ const ezgl::color kColorWater = {147, 194, 230, 255};
 const ezgl::color kColorBeach = {242,242,184, 255};
 const ezgl::color kColorIsland = {238, 242, 213, 255};
 //default colour constants for roads
-const ezgl::color kColorBasicRoad = {70, 70, 70, 255};
+const ezgl::color kColorBasicRoad = {140, 140, 140, 255};
 const ezgl::color kColorOnewayRoad = {219, 118, 118, 255};
+const ezgl::color kColorMajorRoad = {0, 0, 200, 255};
+const ezgl::color kColorOnewayMajorRoad = {148,0,211, 255};
 //define rendering constants
-const int minimumPixelsToDraw = 10; //minimum pixels a feature should take up on the screen to be drawn that cycle
+const int kMinimumPixelsToDraw = 10; //minimum pixels a feature should take up on the screen to be drawn that cycle
+const double kMinimumMajorRoadLength = 5000;
 
 
 void draw_main_canvas(ezgl::renderer *g)
@@ -99,9 +103,8 @@ void draw_main_canvas(ezgl::renderer *g)
                feature->wasRendered = false;
                if(!feature->highlight){break;}
                ezgl::point2d origin = (*(feature->points))[0];
-               ezgl::rectangle featureRect({origin.x - 10, origin.y - 10},{origin.x + 10, origin.y + 10});
                g->set_color(feature->color);
-               g->fill_rectangle(featureRect);
+               g->draw_arc(origin,10.0,0.0,360.0);
                
                feature->wasRendered = true; //feature was fully rendered this cycle
                break;
@@ -116,12 +119,17 @@ void draw_main_canvas(ezgl::renderer *g)
                //calculate the transparency of a street based on its length
                ezgl::rectangle& bounds = feature->bounds;
                ezgl::rectangle screen_rect(camera.world_to_screen(bounds.bottom_left()),camera.world_to_screen(bounds.top_right()));
-               if(!highlightedStreet && screen_rect.area() < minimumPixelsToDraw){break;} 
+               if(!feature->major && !highlightedStreet && screen_rect.area() < kMinimumPixelsToDraw){break;} 
                
                g->set_color(feature->color);
                if(highlightedStreet)
                {
                   g->set_color(kColorHighlight);
+               }
+               //if major road, make road wider as indication 
+               if(feature->major)
+               {
+                  g->set_line_width(lineWidth*2);
                }
                for(int i = 0; i < feature->points->size() - 1; i++)
                {
@@ -203,6 +211,13 @@ void loadFeatures()
    maxPoints = LatLon(maximumLatitude, maximumLongitude); //consolodate maximum latitude and longitude in latlon object
    setLatLonBounds(minPoints, maxPoints); //set constant for calculations in renderHelper
 
+   //Cache street lengths
+   for(StreetIdx streetIndex = 1; streetIndex < getNumStreets(); streetIndex++)
+   {
+      double streetLength = findStreetLength(streetIndex); //get length of street
+      streetLengthCache.push_back(streetLength); //cache street length
+   }
+   
    //Add intersection features
    for(IntersectionIdx intersectionIndex = 0; intersectionIndex < getNumIntersections(); intersectionIndex++)
    {
@@ -240,6 +255,21 @@ void loadFeatures()
       //set street id
       StreetIdx streetID = segmentInfo.streetID; //get street ID
       mapFeature->streetID = streetID; //set street id of feature to calculated street id
+      //check if street is a major street
+      if(streetID > 0) //street ID 0 can never be a major road as it is the default ID for minor roads
+      {  
+         double streetLength = streetLengthCache[streetID]; //get street length
+         bool majorRoad = segmentInfo.speedLimit > 18; //if road is long, it is a major road
+         if(majorRoad)
+         {
+            mapFeature->major = majorRoad;
+            mapFeature->color = kColorMajorRoad;
+            if(segmentInfo.oneWay)
+            {
+               mapFeature->color = kColorOnewayMajorRoad;
+            }
+         }
+      }
    }
 
    for(FeatureIdx featureIndex = 0; featureIndex < getNumFeatures(); featureIndex++)
@@ -351,7 +381,7 @@ void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to
    if(clicked->featureType == ROAD && clicked->dataIndex < getNumStreetSegments()) //clicked on street segment
    {
       StreetSegmentInfo segmentInfo = getStreetSegmentInfo(clicked->dataIndex);
-      cout << "clicked: " << getStreetName(getStreetSegmentInfo(clicked->dataIndex).streetID) << endl;
+      cout << "clicked: sID = " << getStreetSegmentInfo(clicked->dataIndex).streetID << endl;
       
    }
    mainCanvas->redraw();
@@ -359,7 +389,7 @@ void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to
 
 void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y)
 {
-   
+
    if(mapFeatures.layerMap.size() == 0){return;} //if there are no features, skip click detection
    cout << "click at " << x << ", " << y << endl;
    

@@ -35,6 +35,7 @@ MapFeature::MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _
     wasRendered = false;
     highlight = false;
     streetID = -1;
+    major = false;
 }
 
 FeatureList::FeatureList(){
@@ -54,7 +55,7 @@ void FeatureList::highlightFeature(MapFeature* feature)
     //highlight new feature
     feature->highlight = true;
     //if feature is a street segment, highlight entire street
-    if(feature->streetID >= 0)
+    if(feature->streetID > 0) //0 is a default street id, so avoid setting the highlighted street id to 0
     {
         highlightedStreetID = feature->streetID;
     }

@@ -40,6 +40,7 @@ static ezgl::canvas* mainCanvas; //application canvas
 LatLon minPoints; //bottom left LatLon position
 LatLon maxPoints; //top right LatLon position
 vector<StaticName> staticLabels; //list of static text objects to draw
+vector<MapFeature*> intersectionFeatures; //vector that takes in intersection index and return corropsonding map feature
 vector<StreetIdx> streetLengthCache; //stored value of all loaded street lengths;
 map<pair<int, int>, vector<MapFeature*>*> cellMap; //map of all render cells to list of features
 //default colour constants for general objects
@@ -497,7 +498,8 @@ void loadFeatures()
       }
       
       MapFeature* mapFeature = new MapFeature(1,points,roadColor,LINE,MapFeatureType::ROAD,(int)streetSegmentIndex);  //create map featur object
-      mapFeatures.addFeature(mapFeature);
+      mapFeatures.addFeature(mapFeature); //add feature to feature list
+      intersectionFeatures.push_back(mapFeature); //relate feature to corrosponding intersection index
 
       //set street id
       StreetIdx streetID = segmentInfo.streetID; //get street ID

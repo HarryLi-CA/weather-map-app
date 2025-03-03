@@ -289,6 +289,10 @@ void draw_main_canvas(ezgl::renderer *g)
    //set line settings
    g->set_line_width(lineWidth);
    g->set_line_cap(ezgl::line_cap::round);
+   g->set_font_size(10);
+   g->set_horiz_justification(ezgl::justification::center); //horizontally align text position with center of text
+   g->set_vert_justification(ezgl::justification::center); //vertically align text position with center of text
+   g->format_font("Arial",ezgl::font_slant::normal,ezgl::font_weight::normal);
    bool useCellRendering = false;
    vector<pair<int, int>> cells;
    if(enableCellRendering){
@@ -347,10 +351,7 @@ void draw_main_canvas(ezgl::renderer *g)
    
 
    //set text display settings
-   g->set_font_size(10);
-   g->set_horiz_justification(ezgl::justification::center); //horizontally align text position with center of text
-   g->set_vert_justification(ezgl::justification::center); //vertically align text position with center of text
-   //g->format_font("sans-serif",ezgl::font_slant::normal,ezgl::font_weight::bold);
+   
    g->set_color({0, 0, 0, 200}); //print transluscent black text
    //iterate through all labels
    for(auto label = staticLabels.begin(); label != staticLabels.end(); label++)

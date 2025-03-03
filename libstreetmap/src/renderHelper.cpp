@@ -52,7 +52,7 @@ MapFeature::~MapFeature()
 
 FeatureList::FeatureList(){
     //set default values
-    highlightedFeature = nullptr;
+    highlightedFeatures = vector<MapFeature*>();
     highlightedStreetID = -2;
 }
 
@@ -66,15 +66,19 @@ void FeatureList::clear()
         layer++;
     }
     layerMap.clear();
+    highlightedFeatures = {};
 }
 
-void FeatureList::highlightFeature(MapFeature* feature)
+void FeatureList::highlightFeature(MapFeature* feature, bool unhighlightOthers)
 {
     highlightedStreetID = -2; //reset highlighted street ID
     //if a feature is currently highlighted, remove the highlight (only one feature should be highlighted at a time)
-    if(highlightedFeature != nullptr)
-    {
-        highlightedFeature->highlight = false;
+    if(unhighlightOthers){
+        for(int featureIndex = 0; featureIndex < highlightedFeatures.size(); featureIndex++)
+        {
+            highlightedFeatures[featureIndex]->highlight = false;
+        }
+        highlightedFeatures = {};
     }
     //highlight new feature
     feature->highlight = true;
@@ -84,7 +88,7 @@ void FeatureList::highlightFeature(MapFeature* feature)
         highlightedStreetID = feature->streetID;
     }
     //store feature so it can be unhighlighted if needed
-    highlightedFeature = feature;
+    highlightedFeatures.push_back(feature);
 }
 
 void FeatureList::addFeature(MapFeature* feature)
@@ -316,4 +320,22 @@ void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d directi
 ezgl::point2d midpoint(ezgl::point2d A, ezgl::point2d B)
 {
     return {0.5*(A.x + B.x), 0.5*(A.y + B.y)};
+}
+
+string getKnownIntersectionName(IntersectionIdx index)
+{
+   string intersection = getIntersectionName(index);
+   //remove <unknown>s from features
+   int unknownIndex = intersection.find("<unknown> &");
+   if(unknownIndex > -1)
+   {  
+      intersection = intersection.replace(unknownIndex, 11,"");
+   }
+
+   unknownIndex = intersection.find("<unknown>");
+   if(unknownIndex > -1)
+   {  
+      intersection = intersection.replace(unknownIndex, 9,"");
+   }
+   return intersection;
 }

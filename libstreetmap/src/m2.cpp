@@ -136,7 +136,7 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, doub
             
             ezgl::point2d origin = (*(feature->points))[0];
             g->set_color(feature->color);
-            g->draw_arc(origin,10.0,0.0,360.0);
+            g->fill_arc(origin,7.0/scaling,0.0,360.0);
             
             feature->wasRendered = true; //feature was fully rendered this cycle
             break;
@@ -364,9 +364,12 @@ double getScaleFactor()
    return mainCanvas->get_camera().get_world_scale_factor().x;
 }
 
+
+
+
 void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to manage clicks on a specific MapFeature
 {
-   mapFeatures.highlightFeature(clicked);
+   mapFeatures.highlightFeature(clicked, true);
    auto g = app->get_renderer();
    if(clicked->featureType == FEATURE) //clicked on feature
    {
@@ -375,18 +378,19 @@ void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to
       LatLon currentFeaturePoint = getFeaturePoint(clicked->dataIndex, 0);
       IntersectionIdx closestInter = findClosestIntersection(currentFeaturePoint);
 
-      app->update_message("Clicked POI: " + getFeatureName(clicked->dataIndex) + ", Near: " + getIntersectionName(closestInter));
+      app->update_message("Clicked POI: " + getFeatureName(clicked->dataIndex) + ", Near: " + getKnownIntersectionName(closestInter));
 
    }
    if(clicked->featureType == ROAD && clicked->dataIndex < getNumStreetSegments()) //clicked on street segment
    {
       StreetSegmentInfo segmentInfo = getStreetSegmentInfo(clicked->dataIndex);
-      app->update_message("Clicked Street: " + getStreetName(segmentInfo.streetID));
+      string streetName = getStreetName(segmentInfo.streetID);
+      app->update_message("Clicked Street: " + streetName);
       
    }
    if(clicked->featureType == POINT && clicked->dataIndex < getNumIntersections()) //clicked on intersection
    {
-      string intersection = getIntersectionName(clicked->dataIndex);
+      string intersection = getKnownIntersectionName(clicked->dataIndex);
       app->update_message("Clicked Intersection: " + intersection);
       prevClickedIntersection = clicked->dataIndex;
 
@@ -811,12 +815,12 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    // Mark each intersection for highlighting
    for(int i = 0; i < numOfIntersectionLists; i++){
       for(int j = 0; j < intersectionList[i].size(); j++){
-         intersectionFeatures[intersectionList[i][j]]->highlight = true;
+         mapFeatures.highlightFeature(intersectionFeatures[intersectionList[i][j]], false);
 
          intersectionInfo.append(getIntersectionName(intersectionList[i][j]) + (", "));
 
          prevSearchedIntersectionIdxs.push_back(intersectionList[i][j]);
-         intersectionFeatures[intersectionList[i][j]]->highlight = true;
+         mapFeatures.highlightFeature(intersectionFeatures[intersectionList[i][j]], true);
       }
    }
 

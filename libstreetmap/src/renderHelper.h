@@ -45,11 +45,11 @@ class MapFeature {
 class FeatureList {
     public:
     map<int, vector<MapFeature*>*> layerMap; //map to store layers
-    MapFeature* highlightedFeature; //currently highlighted feature
+    vector<MapFeature*> highlightedFeatures; //currently highlighted feature
     StreetIdx highlightedStreetID; //currently highlighted street (-2 by default)
     FeatureList();
     void addFeature(MapFeature* feature); //adds feature to the map at the corresponding layer
-    void highlightFeature(MapFeature* feature); //highlights feature and unhighlights currently highlighted features
+    void highlightFeature(MapFeature* feature, bool unhighlightOthers); //highlights feature and unhighlights currently highlighted features
     void clear(); //deletes all vectors and map features in the layer map
 };
 
@@ -89,6 +89,9 @@ void mapRenderCells(double renderCellSize, LatLon bottomLeft, FeatureList& mapFe
 void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter); //draws triangle around a center point
 
 ezgl::point2d midpoint(ezgl::point2d A, ezgl::point2d B); //helper function to return midpoint between 2 point2d objects
+
+
+string getKnownIntersectionName(IntersectionIdx index); //helper function to get an intersection name while removing "<unknown> &" from the name
 
 template <typename T> bool vectorContains(vector<T>& vec, T& toFind) //returns true if toFind is an element of vec
 {

@@ -102,12 +102,12 @@ pair<string,pair<string,ezgl::application*>> mapNames[19] = { {"BeijingBtn",{"/c
                                                             {"TokyoBtn",{"/cad2/ece297s/public/maps/tokyo_japan.streets.bin",nullptr}},
                                                             {"TorontoBtn",{"/cad2/ece297s/public/maps/toronto_canada.streets.bin",nullptr}}};
 
-pair<string,WeatherLayer> filterNames[6] = { {"SnowBtn",SNOW},
-                                             {"TemperatureBtn",TEMPERATURE},
-                                             {"PrecipitationBtn",PRECIPITATION},
-                                             {"CloudsBtn",CLOUDS},
-                                             {"HumidityBtn",HUMIDITY},
-                                             {"WindBtn",WIND}};                              
+pair<string,pair<WeatherLayer,ezgl::application*>> filterNames[6] = { {"SnowBtn",{SNOW,nullptr}},
+                                                                     {"TemperatureBtn",{TEMPERATURE,nullptr}},
+                                                                     {"PrecipitationBtn",{PRECIPITATION,nullptr}},
+                                                                     {"CloudsBtn",{CLOUDS,nullptr}},
+                                                                     {"HumidityBtn",{HUMIDITY,nullptr}},
+                                                                     {"WindBtn",{WIND,nullptr}}};                              
 
 // void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
 // {
@@ -683,6 +683,7 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
 
    //initialize each filter button
    for(int i = 0; i < 6; i++){
+      filterNames[i].second.second = application;
       GObject* filterBtn = application->get_object(filterNames[i].first.c_str());
       g_signal_connect(filterBtn,"clicked",G_CALLBACK(changeFilter_cbk),&filterNames[i].second);
    }
@@ -849,9 +850,11 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
    resetCanvasParameters(application);
 }
 
-void changeFilter_cbk(GtkWidget */*widget*/, WeatherLayer * filterInfo){
+void changeFilter_cbk(GtkWidget */*widget*/, pair<WeatherLayer,ezgl::application*> * filterInfo){
 
-   mapTiles = downloadWeatherMaps(*filterInfo, currentScope, 1920, 1080);
+   mapTiles = downloadWeatherMaps(filterInfo->first, currentScope, 1920, 1080);
+   ezgl::application* application = filterInfo->second;
 
+   application->refresh_drawing();
    return;
 }

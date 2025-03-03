@@ -71,7 +71,42 @@ const int kMaximumRenderCells = 100; //maximum number of render cells before swi
 const double kMaximumBuildingScaling = 2; //maximum number of meters per pixel to start drawing buildings
 const bool enableCellRendering = false;
 
+//Stores the intersectionIdxs of the previously searched intersections
+vector<IntersectionIdx> prevSearchedIntersectionIdxs = {};
+//Stores previously clicked intersectionIdx;
+IntersectionIdx prevClickedIntersection = -1;
+//Stores the map names along with its path and a application pointer to send into the map changing callback
+pair<string,pair<string,ezgl::application*>> mapNames[19] = { {"BeijingBtn",{"/cad2/ece297s/public/maps/beijing_china.streets.bin",nullptr}},
+                                       {"BeirutBtn",{"/cad2/ece297s/public/maps/beirut_lebanon.streets.bin",nullptr}},
+                                       {"BerlinBtn",{"/cad2/ece297s/public/maps/berlin_germany.streets.bin",nullptr}},
+                                       {"BostonBtn",{"/cad2/ece297s/public/maps/boston_usa.streets.bin",nullptr}},
+                                       {"CapeTownBtn",{"/cad2/ece297s/public/maps/cape-town_south-africa.streets.bin",nullptr}},
+                                       {"GoldenHorseshoeBtn",{"/cad2/ece297s/public/maps/golden-horseshoe_canada.streets.bin",nullptr}},
+                                       {"HamiltonBtn",{"/cad2/ece297s/public/maps/hamilton_canada.streets.bin",nullptr}},
+                                       {"HongKongBtn",{"/cad2/ece297s/public/maps/hong-kong_china.streets.bin",nullptr}},
+                                       {"IcelandBtn",{"/cad2/ece297s/public/maps/iceland.streets.bin",nullptr}},
+                                       {"InterlakenBtn",{"/cad2/ece297s/public/maps/interlaken_switzerland.streets.bin",nullptr}},
+                                       {"LondonBtn",{"/cad2/ece297s/public/maps/london_england.streets.bin",nullptr}},
+                                       {"NewDehliBtn",{"/cad2/ece297s/public/maps/new-delhi_india.streets.bin",nullptr}},
+                                       {"NewYorkBtn",{"/cad2/ece297s/public/maps/new-york_usa.streets.bin",nullptr}},
+                                       {"RioDeJaneiroBtn",{"/cad2/ece297s/public/maps/rio-de-janeiro_brazil.streets.bin",nullptr}},
+                                       {"SaintHelenaBtn",{"/cad2/ece297s/public/maps/saint-helena.streets.bin",nullptr}},
+                                       {"SingaporeBtn",{"/cad2/ece297s/public/maps/singapore.streets.bin",nullptr}},
+                                       {"TehranBtn",{"/cad2/ece297s/public/maps/tehran_iran.streets.bin",nullptr}},
+                                       {"TokyoBtn",{"/cad2/ece297s/public/maps/tokyo_japan.streets.bin",nullptr}},
+                                       {"TorontoBtn",{"/cad2/ece297s/public/maps/toronto_canada.streets.bin",nullptr}}};
 
+void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
+{
+   double angle = atan2(direction.y, direction.x);
+   //draw triangle based on initial angle
+   g->set_color(color);
+   g->fill_poly({
+      {center.x + distanceFromCenter*cos(angle), center.y + distanceFromCenter*sin(angle)},
+      {center.x + distanceFromCenter*cos(angle+2*M_PI/3.0), center.y + distanceFromCenter*sin(angle+2*M_PI/3.0)},
+      {center.x + distanceFromCenter*cos(angle+4*M_PI/3.0), center.y + distanceFromCenter*sin(angle+4*M_PI/3.0)},
+   });
+}
 
 void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, double lineWidth, double scaling, double realWorldScaling, ezgl::camera camera)
 {
@@ -161,37 +196,6 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, doub
          }
       }
 }
-
-//Stores the intersectionIdxs of the previously searched intersections
-vector<IntersectionIdx> prevSearchedIntersectionIdxs = {};
-//Stores the map names along with its path and a application pointer to send into the map changing callback
-pair<string,pair<string,ezgl::application*>> mapNames[19] = { {"BeijingBtn",{"/cad2/ece297s/public/maps/beijing_china.streets.bin",nullptr}},
-                                       {"BeirutBtn",{"/cad2/ece297s/public/maps/beirut_lebanon.streets.bin",nullptr}},
-                                       {"BerlinBtn",{"/cad2/ece297s/public/maps/berlin_germany.streets.bin",nullptr}},
-                                       {"BostonBtn",{"/cad2/ece297s/public/maps/boston_usa.streets.bin",nullptr}},
-                                       {"CapeTownBtn",{"/cad2/ece297s/public/maps/cape-town_south-africa.streets.bin",nullptr}},
-                                       {"GoldenHorseshoeBtn",{"/cad2/ece297s/public/maps/golden-horseshoe_canada.streets.bin",nullptr}},
-                                       {"HamiltonBtn",{"/cad2/ece297s/public/maps/hamilton_canada.streets.bin",nullptr}},
-                                       {"HongKongBtn",{"/cad2/ece297s/public/maps/hong-kong_china.streets.bin",nullptr}},
-                                       {"IcelandBtn",{"/cad2/ece297s/public/maps/iceland.streets.bin",nullptr}},
-                                       {"InterlakenBtn",{"/cad2/ece297s/public/maps/interlaken_switzerland.streets.bin",nullptr}},
-                                       {"LondonBtn",{"/cad2/ece297s/public/maps/london_england.streets.bin",nullptr}},
-                                       {"NewDehliBtn",{"/cad2/ece297s/public/maps/new-delhi_india.streets.bin",nullptr}},
-                                       {"NewYorkBtn",{"/cad2/ece297s/public/maps/new-york_usa.streets.bin",nullptr}},
-                                       {"RioDeJaneiroBtn",{"/cad2/ece297s/public/maps/rio-de-janeiro_brazil.streets.bin",nullptr}},
-                                       {"SaintHelenaBtn",{"/cad2/ece297s/public/maps/saint-helena.streets.bin",nullptr}},
-                                       {"SingaporeBtn",{"/cad2/ece297s/public/maps/singapore.streets.bin",nullptr}},
-                                       {"TehranBtn",{"/cad2/ece297s/public/maps/tehran_iran.streets.bin",nullptr}},
-                                       {"TokyoBtn",{"/cad2/ece297s/public/maps/tokyo_japan.streets.bin",nullptr}},
-                                       {"TorontoBtn",{"/cad2/ece297s/public/maps/toronto_canada.streets.bin",nullptr}}};
- 
-void initial_setup(ezgl::application *application, bool /*new_window*/);
-
-void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application);
-void searchbarAuto1(GtkEntry* searchbar1, ezgl::application *application);
-void selectMap_cbk(GtkWidget */*widget*/, ezgl::application *application);
-void mapBackBtn_cbk(GtkWidget */*widget*/, ezgl::application *application);
-void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInfo);
 
 void draw_main_canvas(ezgl::renderer *g)
 {
@@ -312,20 +316,21 @@ void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to
       LatLon currentFeaturePoint = getFeaturePoint(clicked->dataIndex, 0);
       IntersectionIdx closestInter = findClosestIntersection(currentFeaturePoint);
 
-      app->update_message("clicked: " + getFeatureName(clicked->dataIndex) + " near: " + getIntersectionName(closestInter));
+      app->update_message("Clicked POI: " + getFeatureName(clicked->dataIndex) + ", Near: " + getIntersectionName(closestInter));
 
    }
    if(clicked->featureType == ROAD && clicked->dataIndex < getNumStreetSegments()) //clicked on street segment
    {
       StreetSegmentInfo segmentInfo = getStreetSegmentInfo(clicked->dataIndex);
-      cout << "clicked: sID = " << getStreetSegmentInfo(clicked->dataIndex).streetID << endl;
+      app->update_message("Clicked Street: " + getStreetName(segmentInfo.streetID));
       
    }
    if(clicked->featureType == POINT && clicked->dataIndex < getNumIntersections()) //clicked on intersection
    {
       string intersection = getIntersectionName(clicked->dataIndex);
-      cout << "intersection = " << intersection << endl;
-      
+      app->update_message("Clicked Intersection: " + intersection);
+      prevClickedIntersection = clicked->dataIndex;
+
    }
    mainCanvas->redraw();
 }
@@ -648,6 +653,10 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
       cout << getIntersectionName(prevSearchedIntersectionIdxs[i]) << endl;
    }
    prevSearchedIntersectionIdxs.clear();
+
+   if(prevClickedIntersection != -1){
+      intersectionFeatures[prevClickedIntersection]->highlight = false;
+   }
    
    //Extracting text from search bars
    GtkEntry* searchbar1 = GTK_ENTRY(application->get_object("searchbar1"));
@@ -695,26 +704,22 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    }
 
    //Dislay names of intersections in list
-   string intersectionInfo = "Intersections: ";
+   string intersectionInfo = "Searched Intersections: ";
 
    // Mark each intersection for highlighting
    for(int i = 0; i < numOfIntersectionLists; i++){
       for(int j = 0; j < intersectionList[i].size(); j++){
          intersectionFeatures[intersectionList[i][j]]->highlight = true;
 
-         //or cout too as it cant all fit into the status bar
-
-         intersectionInfo.append(getIntersectionName(intersectionList[i][j]));
-
-         if(i != numOfIntersectionLists-1 && j != intersectionList[numOfIntersectionLists-1].size() -1){
-            intersectionInfo.append(", ");
-         }
+         intersectionInfo.append(getIntersectionName(intersectionList[i][j]) + (", "));
 
          prevSearchedIntersectionIdxs.push_back(intersectionList[i][j]);
          intersectionFeatures[intersectionList[i][j]]->highlight = true;
       }
    }
 
+   intersectionInfo.pop_back();
+   intersectionInfo.pop_back();
    application->update_message(intersectionInfo);
    application->refresh_drawing();
 
@@ -723,25 +728,25 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
 
 void searchbarAuto1(GtkEntry* searchbar1, ezgl::application *application){
 
-//    GtkListStore* liststore1 = GTK_LIST_STORE(application->get_object("LSAuto1"));
+   // GtkListStore* liststore1 = GTK_LIST_STORE(application->get_object("LSAuto1"));
    
-//    //Reset past autcomplete list
-//    gtk_list_store_clear(liststore1);
+   // //Reset past autcomplete list
+   // gtk_list_store_clear(liststore1);
 
-//    const char* searchText1 = gtk_entry_get_text(searchbar1);
+   // const char* searchText1 = gtk_entry_get_text(searchbar1);
 
-//    vector<StreetIdx> street1Idxs = findStreetIdsFromPartialStreetName(searchText1);
-//    GtkTreeIter iter;
+   // vector<StreetIdx> street1Idxs = findStreetIdsFromPartialStreetName(searchText1);
+   // GtkTreeIter iter;
 
-//    if(street1Idxs.size() != 0){
-//       cout << getStreetName(street1Idxs[0]) << endl;
-//    }
+   // if(street1Idxs.size() != 0){
+   //    cout << getStreetName(street1Idxs[0]) << endl;
+   // }
    
-//    for(int i = 0; i < street1Idxs.size(); i++){      
-//       gtk_list_store_append(liststore1, &iter);
-//       //maybe do .c_style()
-//       gtk_list_store_set(liststore1,&iter,0,getStreetName(street1Idxs[i]));
-//    }
+   // for(int i = 0; i < street1Idxs.size(); i++){      
+   //    gtk_list_store_append(liststore1, &iter);
+   //    //maybe do .c_style()
+   //    gtk_list_store_set(liststore1,&iter,0,getStreetName(street1Idxs[i]));
+   // }
 }
 
 //Callback that is called when select new map button is pressed

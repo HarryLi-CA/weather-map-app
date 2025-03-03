@@ -32,6 +32,7 @@
 #include "ezgl/graphics.hpp"
 #include "ezgl/camera.hpp"
 #include <set>
+#include <ctime>
 
 using namespace std;
 
@@ -747,6 +748,18 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
       GObject* filterBtn = application->get_object(filterNames[i].first.c_str());
       g_signal_connect(filterBtn,"clicked",G_CALLBACK(changeFilter_cbk),&filterNames[i].second);
    }
+   
+   std::time_t sunriseTimeFull = currentWeather.sunrise;
+   string sunriseTime = asctime(std::localtime(&sunriseTimeFull));
+   sunriseTime = sunriseTime.substr(11, 8);
+   GtkLabel* sunriseLabel = GTK_LABEL(application->get_object("SunriseTimeLabel"));
+   gtk_label_set_text(sunriseLabel,sunriseTime.c_str());
+
+   std::time_t sunsetTimeFULL = currentWeather.sunset;
+   string sunsetTime = asctime(std::localtime(&sunsetTimeFULL));
+   sunsetTime = sunsetTime.substr(11, 8);
+   GtkLabel* sunsetLabel = GTK_LABEL(application->get_object("SunsetTimeLabel"));
+   gtk_label_set_text(sunsetLabel,sunsetTime.c_str());
 }
 
 //Callback that is called when search button is pressed

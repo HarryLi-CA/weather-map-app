@@ -726,8 +726,6 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    GObject* searchBtn = application->get_object("searchBtn");
    g_signal_connect(searchBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
 
-   // GObject* searchbar1 = application->get_object("searchbar1");
-   // g_signal_connect(searchbar1,"key-press-event",G_CALLBACK(searchbarAuto1),application);
 
    GObject* SelectMapBtn = application->get_object("SelectMapBtn");
    g_signal_connect(SelectMapBtn,"clicked",G_CALLBACK(selectMap_cbk),application);
@@ -749,12 +747,14 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
       g_signal_connect(filterBtn,"clicked",G_CALLBACK(changeFilter_cbk),&filterNames[i].second);
    }
    
+   //Display sunrise onto ui
    std::time_t sunriseTimeFull = currentWeather.sunrise;
    string sunriseTime = asctime(std::localtime(&sunriseTimeFull));
    sunriseTime = sunriseTime.substr(11, 8);
    GtkLabel* sunriseLabel = GTK_LABEL(application->get_object("SunriseTimeLabel"));
    gtk_label_set_text(sunriseLabel,sunriseTime.c_str());
 
+   //Display sunset onto ui
    std::time_t sunsetTimeFULL = currentWeather.sunset;
    string sunsetTime = asctime(std::localtime(&sunsetTimeFULL));
    sunsetTime = sunsetTime.substr(11, 8);
@@ -845,29 +845,6 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
   return;
 }
 
-void searchbarAuto1(GtkEntry* searchbar1, ezgl::application *application){
-
-   // GtkListStore* liststore1 = GTK_LIST_STORE(application->get_object("LSAuto1"));
-   
-   // //Reset past autcomplete list
-   // gtk_list_store_clear(liststore1);
-
-   // const char* searchText1 = gtk_entry_get_text(searchbar1);
-
-   // vector<StreetIdx> street1Idxs = findStreetIdsFromPartialStreetName(searchText1);
-   // GtkTreeIter iter;
-
-   // if(street1Idxs.size() != 0){
-   //    cout << getStreetName(street1Idxs[0]) << endl;
-   // }
-   
-   // for(int i = 0; i < street1Idxs.size(); i++){      
-   //    gtk_list_store_append(liststore1, &iter);
-   //    //maybe do .c_style()
-   //    gtk_list_store_set(liststore1,&iter,0,getStreetName(street1Idxs[i]));
-   // }
-}
-
 //Callback that is called when select new map button is pressed
 void selectMap_cbk(GtkWidget */*widget*/, ezgl::application *application){
    GtkDialog * mapSelectorDialog = GTK_DIALOG(application->get_object("mapSelectorDialog"));
@@ -923,6 +900,7 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
    resetCanvasParameters(application);
 }
 
+//callback function that happens when any filter button is pressed
 void changeFilter_cbk(GtkWidget */*widget*/, pair<WeatherLayer,ezgl::application*> * filterInfo){
 
    mapTiles = downloadWeatherMaps(filterInfo->first, currentScope, 1920, 1080);

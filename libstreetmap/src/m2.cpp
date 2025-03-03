@@ -322,6 +322,7 @@ void draw_main_canvas(ezgl::renderer *g)
 
    //draw weather overlay
    //getMapTilesFromBounds();
+   if(mapTiles.size()>0){
    double tileSize = LonToX(mapTiles[0].tileBounds.max.longitude()) - LonToX(mapTiles[0].tileBounds.min.longitude());
    double zoom = getScaleFactor();
    for (size_t i = 0; i < mapTiles.size(); i++)
@@ -331,14 +332,15 @@ void draw_main_canvas(ezgl::renderer *g)
       ezgl::point2d minPoint2d= LatLonToPoint2D(mapTiles[i].tileBounds.min);
       ezgl::point2d maxPoint2d= LatLonToPoint2D(mapTiles[i].tileBounds.max);
 
-      //cout<< "ratio: " << 1/(tileSize/zoom) <<endl;
-      double metersPerPixel = tileSize/256.0;
+      //cout<< "ratio: " << 1/(tileSize/zoom) <<endl;TILESIZE
+      double metersPerPixel = tileSize/TILEWIDTH;
       double screenMperP = screenLength/pixelLength;
       double targetLength = tileSize/screenMperP;
-      double scalingFactor = targetLength/256.0;
+      double scalingFactor = targetLength/TILEWIDTH;
 
       g->draw_surface(currentSurface, {(minPoint2d.x+maxPoint2d.x)/2,(minPoint2d.y+maxPoint2d.y)/2},scalingFactor);
       g->free_surface(currentSurface);
+   }
    }
    
 
@@ -666,7 +668,7 @@ void loadFeatures()
    currentScope.min = minPoints;
    currentScope.max = maxPoints;
    //Load weather map
-   mapTiles = downloadWeatherMaps(SNOW, currentScope, 1920, 1080);
+   mapTiles = downloadWeatherMaps(NOFILTER, currentScope, 1920, 1080);
    
    currentWeather = getWeatherData(
       LatLon(

@@ -22,6 +22,7 @@
 #include "m2.h"
 #include "m1.h"
 #include "renderHelper.h"
+#include "OpenWeatherHelper.h"
 #include <vector>
 #include <map>
 #include "StreetsDatabaseAPI.h"
@@ -70,6 +71,10 @@ const double kRenderCellSize = 300; //size of each render cell
 const int kMaximumRenderCells = 100; //maximum number of render cells before switching to direct rendering
 const double kMaximumBuildingScaling = 2; //maximum number of meters per pixel to start drawing buildings
 const bool enableCellRendering = false;
+
+LatLonBounds currentScope; // scope of city map
+vector<MapTileData> mapTiles;
+WeatherData currentWeather; // weather including sunset and sunrise in epoch time
 
 void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
 {
@@ -297,8 +302,26 @@ void draw_main_canvas(ezgl::renderer *g)
          layer++;
       }
    }
+
+   //draw weather overlay
+   //getMapTilesFromBounds();
+   double tileSize = LonToX(mapTiles[0].tileBounds.max.longitude()) - LonToX(mapTiles[0].tileBounds.min.longitude());
+   for (size_t i = 0; i < mapTiles.size(); i++)
+   {
+      const char* surfURL = mapTiles[i].url.c_str();
+      ezgl::surface* currentSurface = g->load_png(surfURL);
+      cout << "screen length "<< screenLength<<endl;
+      cout << "pixel length "<< pixelLength<<endl;
+      LatLon tlSpot = LatLon(
+         (mapTiles[i].tileBounds.min.latitude() + mapTiles[i].tileBounds.max.latitude())/2, 
+         (mapTiles[i].tileBounds.min.longitude()+mapTiles[i].tileBounds.max.longitude())/2
+      );
+
+      g->draw_surface(currentSurface, LatLonToPoint2D(tlSpot),1/zoom*221.25);
+      g->free_surface(currentSurface);
+   }
    
-   
+
    //set text display settings
    g->set_font_size(10);
    g->set_horiz_justification(ezgl::justification::center); //horizontally align text position with center of text
@@ -629,6 +652,20 @@ void loadFeatures()
       mapRenderCells();
       cout << endl;
    }
+
+   //download weather map data
+   currentScope.min = minPoints;
+   currentScope.max = maxPoints;
+   //Load weather map
+   mapTiles = downloadWeatherMaps(SNOW, currentScope, 1920, 1080);
+   
+   currentWeather = getWeatherData(
+      LatLon(
+         (currentScope.max.latitude() + currentScope.min.latitude())/2,
+         (currentScope.max.longitude() + currentScope.min.longitude())/2
+      ),
+      time(nullptr)
+   );
 }
 
 

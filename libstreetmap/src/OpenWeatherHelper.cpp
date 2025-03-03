@@ -2,6 +2,9 @@
 #include <vector>
 #include <cmath>
 #include <curl/curl.h>
+#include <fstream>
+#include <sstream>
+#include <iostream>
 #include "m1.h"
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
@@ -18,7 +21,7 @@ pair<double,double> getGlobalCoordsFromLatLon(LatLon l, double mapWidth){
     double latitude    = l.latitude();
     double longitude   = l.longitude();
 
-    double mapWidth    = mapWidth;
+    //double mapWidth    = mapWidth;
     double mapHeight   = mapWidth;
 
     double x = (longitude+180)*(mapWidth/360); // x val
@@ -28,11 +31,11 @@ pair<double,double> getGlobalCoordsFromLatLon(LatLon l, double mapWidth){
     return make_pair(x, y);
 }
 
-LatLon getGlobalCoordsFromLatLon(pair<double,double> coords, double mapWidth){
+LatLon getLatLonFromGlobalCoords(pair<double,double> coords, double mapWidth){
     double x    = coords.first; // (φ)
     double y   = coords.second;   // (λ)
 
-    double mapWidth    = mapWidth;
+    //double mapWidth    = mapWidth;
     double mapHeight   = mapWidth;
 
     // x = (longitude+180)*(mapWidth/360)
@@ -51,9 +54,9 @@ LatLon getGlobalCoordsFromLatLon(pair<double,double> coords, double mapWidth){
 
 
 
-vector<MapTileData> getMapTilesFromBounds (LatLonBounds currentScope, int pixelHeight, int pixelLength){
-    int optimalTilesWide = pixelHeight / TILEWIDTH + 1; // minimum tiles for max resolution 
-    int optimalTilesHigh = pixelLength / TILEWIDTH + 1;
+vector<MapTileData> getMapTilesFromBounds (LatLonBounds currentScope, int pixelLength, int pixelHeight){
+    int optimalTilesWide = pixelLength / TILEWIDTH + 1; // minimum tiles for max resolution 
+    int optimalTilesHigh = pixelHeight / TILEWIDTH + 1;
     
     int z = 0;
     int zoom = 1;
@@ -73,31 +76,30 @@ vector<MapTileData> getMapTilesFromBounds (LatLonBounds currentScope, int pixelH
     minGlobalCoords = getGlobalCoordsFromLatLon(currentScope.min, zoom);
     maxGlobalCoords = getGlobalCoordsFromLatLon(currentScope.max, zoom);
 
+    // rearrange for new coord system
+    double temp = minGlobalCoords.second;
+    minGlobalCoords.second = maxGlobalCoords.second;
+    maxGlobalCoords.second = temp;
+    // cout << minGlobalCoords.first << " " << minGlobalCoords.second << endl;
+    // cout << maxGlobalCoords.first << " " << maxGlobalCoords.second << endl;
+
     vector<MapTileData> out;
-    for(int i = minGlobalCoords.first; i < maxGlobalCoords.first; i++){ 
-        for(int j = minGlobalCoords.first; j < maxGlobalCoords.second; j++){
-            LatLonBounds tileBounds = {
-                .min = getGlobalCoordsFromLatLon(make_pair(i,j),zoom),
-                .max = getGlobalCoordsFromLatLon(make_pair(i+1,j+1),zoom)
-            };
-            MapTileData m = {.x = i, .y = j, .z = z, .tileBounds = tileBounds};
+    for(int i = (int)minGlobalCoords.first; i <= (int)maxGlobalCoords.first; i++){ 
+        for(int j = (int)minGlobalCoords.second; j <= (int)maxGlobalCoords.second; j++){
+            LatLonBounds tileBounds;
+                tileBounds.min = getLatLonFromGlobalCoords(make_pair(i,j),zoom);
+                tileBounds.max = getLatLonFromGlobalCoords(make_pair(i+1,j+1),zoom);
+            MapTileData m; m.x = i; m.y = j; m.z = z; m.tileBounds = tileBounds;
+            m.url = "libstreetmap/imgs/" + to_string(m.z) + "_" + to_string(m.x) + "_" + to_string(m.y) + ".png";
             out.push_back(m);
         }
     }
     return out;
 }
 
-enum WeatherLayer{
-    PRECIPITATION, //Precipitation intensity
-    SNOW, // Depth of snow
-    WIND, // Joint display of speed wind (color) and wind direction (arrows)
-    TEMPERATURE, //Air temperature at a height of 2 meters
-    HUMIDITY, //Relative humidity
-    CLOUDS //Cloudiness
-};
 
 string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData){
-    string baseURL = "http://maps.openweathermap.org/maps/2.0/weather/TS0/3/2/2";
+    string baseURL = "http://maps.openweathermap.org/maps/2.0/weather/";
     switch(wL){
         case PRECIPITATION:
             baseURL+= "PR0";
@@ -106,10 +108,10 @@ string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData){
             baseURL+= "SD0";
             break;
         case WIND:
-            baseURL+= "SD0";
+            baseURL+= "WND";
             break;
         case TEMPERATURE:
-            baseURL+= "WND";
+            baseURL+= "TA2";
             break;
         case HUMIDITY:
             baseURL+= "HRD0";
@@ -121,30 +123,80 @@ string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData){
             throw wL;
             break;
     }
-    baseURL += '/' + tileData.z + '/' + tileData.x + '/' + tileData.y;
-    baseURL += "?opacity=0.3&";
-    baseURL += "?appid=" + APIKey;
+    baseURL += '/' + to_string(tileData.z) + '/' + to_string(tileData.x) + '/' + to_string(tileData.y);
+    baseURL += "?opacity=0.8&";
+    baseURL += "appid=" + APIKey;
     return baseURL;
+}
+
+static size_t data_write(void* buf, size_t size, size_t nmemb, void* userp)
+{
+	if (userp)
+	{
+		std::ostream& os = *static_cast<std::ostream*>(userp);
+		std::streamsize len = size * nmemb;
+		if (os.write(static_cast<char*>(buf), len))
+			return len;
+	}
+
+	return 0;
+}
+
+
+CURLcode curl_read(const std::string& url, std::ostream& os, long timeout = 30)
+{
+	CURLcode code(CURLE_FAILED_INIT);
+	CURL* curl = curl_easy_init();
+
+	if (curl)
+	{
+		if (CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &data_write))
+			&& CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L))
+			&& CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L))
+			&& CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_FILE, &os))
+			&& CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout))
+			&& CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_URL, url.c_str())))
+		{
+			code = curl_easy_perform(curl);
+		}
+		curl_easy_cleanup(curl);
+	}
+    curl_global_cleanup();
+	return code;
+}
+CURLcode res;
+vector<MapTileData> downloadWeatherMaps(WeatherLayer wL, LatLonBounds currentScope, int pixelHeight, int pixelLength){
+    vector<MapTileData> mapTiles = getMapTilesFromBounds (currentScope, pixelHeight, pixelLength);
+
+    res = curl_global_init(CURL_GLOBAL_ALL);
+    for(int i = 0; i < mapTiles.size(); i++){
+        MapTileData curMapTile = mapTiles[i];
+        string url = getMapAPIURLFromParameters(wL, curMapTile);
+        cout<<url<<endl;
+        string outputURL = curMapTile.url;
+        std::ofstream ofs(outputURL, std::ostream::binary);
+
+        if (CURLE_OK == curl_read(url, ofs))
+        {
+        }
+        ofs.close();
+    }
+    return mapTiles;
 }
 
 string weatherJson = "";
 
 static size_t write_weather_data(void *buffer, size_t size, size_t nmemb, void *userp) {
-    cout << "In my own custom callback function" << endl;
     if (buffer && nmemb) {
-        /* NOTE: This example allocates an extra byte for NULL-terminating the
-        * buffer as we know the received data is ASCII text. This may
-        * not be always true (e.g. binary data like images).
-        */
-        char myBuf[nmemb + 1] = {0}; // Zeroes out the array
-        strncpy(myBuf, (char *)buffer, nmemb);
-        weatherJson = myBuf;
-        }
-        return nmemb;
+    char myBuf[nmemb + 1] = {0}; // Zeroes out the array
+    //strncpy(myBuf, (char *)buffer, nmemb);
+    weatherJson = (char *)buffer;
+    }
+    return nmemb;
 }
 
 void fetchWeatherData(LatLon location){
-    CURLcode res = curl_global_init(CURL_GLOBAL_ALL);
+    res = curl_global_init(CURL_GLOBAL_ALL);
     if (res != CURLE_OK) {
     cout << "ERROR: Unable to initialize libcurl" << endl;
     cout << curl_easy_strerror(res) << endl;
@@ -156,10 +208,12 @@ void fetchWeatherData(LatLon location){
     return;
     } else {
     // Set web URL to fetch page/data from
-    string apiURL = "https://api.openweathermap.org/data/2.5/forecast/daily?lat=" +
+    string apiURL = "http://api.openweathermap.org/data/2.5/forecast/daily?lat=" +
     to_string(location.latitude()) +
     "&lon="+to_string(location.longitude()) +
-    "&appid=***REMOVED***";
+    "&cnt=16&appid=***REMOVED***";
+
+    cout<<"Getting WeatherData from: "<<apiURL<<endl;
 
     res = curl_easy_setopt(curlHandle, CURLOPT_URL, apiURL);
     if (res != CURLE_OK) {
@@ -170,7 +224,6 @@ void fetchWeatherData(LatLon location){
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, write_weather_data);
     res = curl_easy_perform(curlHandle);
     }
-    cout << endl << endl;
     if (res == CURLE_OK) {
     } else {
     cout << "ERROR: res == " << res << endl;
@@ -186,6 +239,7 @@ void fetchWeatherData(LatLon location){
 
 WeatherData getWeatherData(LatLon location, int time){
     fetchWeatherData(location);
+    cout <<"fetched weather data:" << weatherJson <<endl;
     size_t lastIdx = weatherJson.find("\"dt\":");
     size_t curIdx = weatherJson.find("\"dt\":", lastIdx+1);
     int curDay = stoi(weatherJson.substr(curIdx+5));
@@ -198,12 +252,8 @@ WeatherData getWeatherData(LatLon location, int time){
     }
     size_t sunriseIdx = weatherJson.find("\"sunrise\":", lastIdx+1);
     size_t sunsetIdx = weatherJson.find("\"sunset\":", lastIdx+1);
-    WeatherData out = {
-        .sunrise = stoi(weatherJson.substr(sunriseIdx+10)),
-        .sunset = stoi(weatherJson.substr(sunriseIdx+9))
-    };
+    WeatherData out;
+    out.sunrise = stoi(weatherJson.substr(sunriseIdx+10));
+    out.sunset = stoi(weatherJson.substr(sunsetIdx+9));
     return out;
 }
-
-
-

@@ -874,6 +874,21 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
    //Load new map info
    loadFeatures();
 
+
+   //Display sunrise onto ui
+   std::time_t sunriseTimeFull = currentWeather.sunrise;
+   string sunriseTime = asctime(std::localtime(&sunriseTimeFull));
+   sunriseTime = sunriseTime.substr(11, 8);
+   GtkLabel* sunriseLabel = GTK_LABEL(application->get_object("SunriseTimeLabel"));
+   gtk_label_set_text(sunriseLabel,sunriseTime.c_str());
+
+   //Display sunset onto ui
+   std::time_t sunsetTimeFULL = currentWeather.sunset;
+   string sunsetTime = asctime(std::localtime(&sunsetTimeFULL));
+   sunsetTime = sunsetTime.substr(11, 8);
+   GtkLabel* sunsetLabel = GTK_LABEL(application->get_object("SunsetTimeLabel"));
+   gtk_label_set_text(sunsetLabel,sunsetTime.c_str());
+
    //Get new paramters
    resetCanvasParameters(application);
 }

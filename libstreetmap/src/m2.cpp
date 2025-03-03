@@ -96,17 +96,17 @@ pair<string,pair<string,ezgl::application*>> mapNames[19] = { {"BeijingBtn",{"/c
                                        {"TokyoBtn",{"/cad2/ece297s/public/maps/tokyo_japan.streets.bin",nullptr}},
                                        {"TorontoBtn",{"/cad2/ece297s/public/maps/toronto_canada.streets.bin",nullptr}}};
 
-void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
-{
-   double angle = atan2(direction.y, direction.x);
-   //draw triangle based on initial angle
-   g->set_color(color);
-   g->fill_poly({
-      {center.x + distanceFromCenter*cos(angle), center.y + distanceFromCenter*sin(angle)},
-      {center.x + distanceFromCenter*cos(angle+2*M_PI/3.0), center.y + distanceFromCenter*sin(angle+2*M_PI/3.0)},
-      {center.x + distanceFromCenter*cos(angle+4*M_PI/3.0), center.y + distanceFromCenter*sin(angle+4*M_PI/3.0)},
-   });
-}
+// void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
+// {
+//    double angle = atan2(direction.y, direction.x);
+//    //draw triangle based on initial angle
+//    g->set_color(color);
+//    g->fill_poly({
+//       {center.x + distanceFromCenter*cos(angle), center.y + distanceFromCenter*sin(angle)},
+//       {center.x + distanceFromCenter*cos(angle+2*M_PI/3.0), center.y + distanceFromCenter*sin(angle+2*M_PI/3.0)},
+//       {center.x + distanceFromCenter*cos(angle+4*M_PI/3.0), center.y + distanceFromCenter*sin(angle+4*M_PI/3.0)},
+//    });
+// }
 
 void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, double lineWidth, double scaling, double realWorldScaling, ezgl::camera camera)
 {

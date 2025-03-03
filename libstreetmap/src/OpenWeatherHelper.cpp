@@ -101,6 +101,9 @@ vector<MapTileData> getMapTilesFromBounds (LatLonBounds currentScope, int pixelL
 string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData){
     string baseURL = "http://maps.openweathermap.org/maps/2.0/weather/";
     switch(wL){
+        case NOFILTER:
+            return "";
+            break;
         case PRECIPITATION:
             baseURL+= "PR0";
             break;
@@ -172,6 +175,10 @@ vector<MapTileData> downloadWeatherMaps(WeatherLayer wL, LatLonBounds currentSco
     for(int i = 0; i < mapTiles.size(); i++){
         MapTileData curMapTile = mapTiles[i];
         string url = getMapAPIURLFromParameters(wL, curMapTile);
+        if(url == ""){
+            return {};
+        }
+
         cout<<url<<endl;
         string outputURL = curMapTile.url;
         std::ofstream ofs(outputURL, std::ostream::binary);

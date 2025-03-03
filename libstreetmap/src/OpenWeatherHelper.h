@@ -16,12 +16,14 @@
 using namespace std;
 
 enum WeatherLayer{
+    NOFILTER,
     PRECIPITATION, //Precipitation intensity
     SNOW, // Depth of snow
     WIND, // Joint display of speed wind (color) and wind direction (arrows)
     TEMPERATURE, //Air temperature at a height of 2 meters
     HUMIDITY, //Relative humidity
-    CLOUDS //Cloudiness
+    CLOUDS, //Cloudiness
+    WEIGHTED // in progress
 };
 //data to construct a map tile
 struct MapTileData {

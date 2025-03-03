@@ -188,9 +188,7 @@ string weatherJson = "";
 
 static size_t write_weather_data(void *buffer, size_t size, size_t nmemb, void *userp) {
     if (buffer && nmemb) {
-    char myBuf[nmemb + 1] = {0}; // Zeroes out the array
-    //strncpy(myBuf, (char *)buffer, nmemb);
-    weatherJson = (char *)buffer;
+        weatherJson = (char *)buffer;
     }
     return nmemb;
 }
@@ -208,7 +206,12 @@ void fetchWeatherData(LatLon location){
     return;
     } else {
     // Set web URL to fetch page/data from
-    res = curl_easy_setopt(curlHandle, CURLOPT_URL, "https://api.openweathermap.org/data/2.5/forecast/daily?lat=43.699989&lon=-79.394989&cnt=16&appid=***REMOVED***");
+    string apiURL = "https://api.openweathermap.org/data/2.5/forecast/daily?lat="+
+        to_string(location.latitude())+
+        "&lon=" +
+        to_string(location.longitude())+
+        "&cnt=16&appid=" + APIKey;
+    res = curl_easy_setopt(curlHandle, CURLOPT_URL, apiURL.c_str());
     if (res != CURLE_OK) {
     cout << "ERROR: Unable to set libcurl option" << endl;
     cout << curl_easy_strerror(res) << endl;

@@ -21,9 +21,8 @@ void initial_setup(ezgl::application *application, bool /*new_window*/);
 void draw_main_canvas(ezgl::renderer *g); //callback to draw on main canvas
 void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y); //callback when mouse clicks on map
 void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application); //Callback that is called when search button is pressed
-void searchbarAuto1(GtkEntry* searchbar1, ezgl::application *application); 
 void selectMap_cbk(GtkWidget */*widget*/, ezgl::application *application); //Callback that is called when select new map button is pressed
 void mapBackBtn_cbk(GtkWidget */*widget*/, ezgl::application *application); //Callback that is called when pressing the back button in the pop up map selector dialog, closes dialog
 void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInfo); //Callback function that changes the map, called when map is selected from the pop up dialog
 void changeFilter_cbk(GtkWidget */*widget*/, pair<WeatherLayer,ezgl::application*> *filterInfo); //callback function that happens when any filter button is pressed
-
+void changeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* application);

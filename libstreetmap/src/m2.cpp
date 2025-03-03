@@ -738,16 +738,28 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    //Display sunrise onto ui
    std::time_t sunriseTimeFull = currentWeather.sunrise;
    string sunriseTime = asctime(std::localtime(&sunriseTimeFull));
-   sunriseTime = sunriseTime.substr(11, 8);
+   sunriseTime = sunriseTime.substr(11, 5);
    GtkLabel* sunriseLabel = GTK_LABEL(application->get_object("SunriseTimeLabel"));
    gtk_label_set_text(sunriseLabel,sunriseTime.c_str());
 
    //Display sunset onto ui
    std::time_t sunsetTimeFULL = currentWeather.sunset;
    string sunsetTime = asctime(std::localtime(&sunsetTimeFULL));
-   sunsetTime = sunsetTime.substr(11, 8);
+   sunsetTime = sunsetTime.substr(11, 5);
    GtkLabel* sunsetLabel = GTK_LABEL(application->get_object("SunsetTimeLabel"));
    gtk_label_set_text(sunsetLabel,sunsetTime.c_str());
+
+   GtkRange* timeSlider = GTK_RANGE(application->get_object("TimeSlider"));
+   g_signal_connect(timeSlider,"value-changed",G_CALLBACK(changeCurrentTime_cbk),application);
+
+   //show current time on slider
+   time_t selectedTime = std::time(nullptr);
+
+   //change date and time on ui
+   string selectedTimeText = asctime(std::localtime(&selectedTime));
+   selectedTimeText = selectedTimeText.substr(0,16);
+   GtkLabel* selectedTimeLabel = GTK_LABEL(application->get_object("selectedTimeLabel"));
+   gtk_label_set_text(selectedTimeLabel,selectedTimeText.c_str());
 }
 
 void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
@@ -880,14 +892,14 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
    //Display sunrise onto ui
    std::time_t sunriseTimeFull = currentWeather.sunrise;
    string sunriseTime = asctime(std::localtime(&sunriseTimeFull));
-   sunriseTime = sunriseTime.substr(11, 8);
+   sunriseTime = sunriseTime.substr(11, 5);
    GtkLabel* sunriseLabel = GTK_LABEL(application->get_object("SunriseTimeLabel"));
    gtk_label_set_text(sunriseLabel,sunriseTime.c_str());
 
    //Display sunset onto ui
    std::time_t sunsetTimeFULL = currentWeather.sunset;
    string sunsetTime = asctime(std::localtime(&sunsetTimeFULL));
-   sunsetTime = sunsetTime.substr(11, 8);
+   sunsetTime = sunsetTime.substr(11, 5);
    GtkLabel* sunsetLabel = GTK_LABEL(application->get_object("SunsetTimeLabel"));
    gtk_label_set_text(sunsetLabel,sunsetTime.c_str());
 
@@ -902,4 +914,37 @@ void changeFilter_cbk(GtkWidget */*widget*/, pair<WeatherLayer,ezgl::application
    ezgl::application* application = filterInfo->second;
 
    application->refresh_drawing();
+}
+
+void changeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* application){
+   
+   //range from 0 days to 10 days in increments of 1/3 days
+   double selectedRange = gtk_range_get_value(sliderRange);
+   time_t currentTime = std::time(nullptr);
+
+   //current time plus number of 1/3 days times epoch time of 1/3 days
+   std::time_t selectedTime = currentTime + selectedRange*28800;
+
+   //change date and time on ui
+   string selectedTimeText = asctime(std::localtime(&selectedTime));
+   selectedTimeText = selectedTimeText.substr(0,16);
+   GtkLabel* selectedTimeLabel = GTK_LABEL(application->get_object("selectedTimeLabel"));
+   gtk_label_set_text(selectedTimeLabel,selectedTimeText.c_str());
+
+   //refresh value
+   application->refresh_drawing();
+
+   //Display sunrise onto ui
+   std::time_t sunriseTimeFull = currentWeather.sunrise;
+   string sunriseTime = asctime(std::localtime(&sunriseTimeFull));
+   sunriseTime = sunriseTime.substr(11, 5);
+   GtkLabel* sunriseLabel = GTK_LABEL(application->get_object("SunriseTimeLabel"));
+   gtk_label_set_text(sunriseLabel,sunriseTime.c_str());
+
+   //Display sunset onto ui
+   std::time_t sunsetTimeFULL = currentWeather.sunset;
+   string sunsetTime = asctime(std::localtime(&sunsetTimeFULL));
+   sunsetTime = sunsetTime.substr(11, 5);
+   GtkLabel* sunsetLabel = GTK_LABEL(application->get_object("SunsetTimeLabel"));
+   gtk_label_set_text(sunsetLabel,sunsetTime.c_str());
 }

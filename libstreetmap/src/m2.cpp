@@ -59,7 +59,7 @@ const ezgl::color kColorIsland = {238, 242, 213, 255};
 //default colour constants for roads
 const ezgl::color kColorBasicRoad = {180, 180, 180, 255};
 const ezgl::color kColorOnewayRoad = {219, 118, 118, 255};
-const double kColorOnewayIndicatorBrightness = 255;
+const uint_fast8_t kColorOnewayIndicatorBrightness = 255;
 const ezgl::color kColorMajorRoad = {0, 0, 200, 255};
 const ezgl::color kColorOnewayMajorRoad = {148,0,211, 255};
 const ezgl::color kColorStreetName = {255, 255, 255, 255};
@@ -125,7 +125,7 @@ pair<string,pair<WeatherLayer,ezgl::application*>> filterNames[6] = { {"SnowBtn"
 //    });
 // }
 
-void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, double lineWidth, double scaling, double realWorldScaling, ezgl::camera camera)
+void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, double scaling, double realWorldScaling, ezgl::camera camera)
 {  
    switch(feature->drawType)
       {
@@ -178,7 +178,6 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, doub
                
                double magnitude = sqrt(dir.x*dir.x + dir.y*dir.y); //magnitude of dir
                if(magnitude > 0){
-                  ezgl::color roadColour = feature->color;
                   ezgl::color indicatorColour = {kColorOnewayIndicatorBrightness,kColorOnewayIndicatorBrightness,kColorOnewayIndicatorBrightness,200};
                   ezgl::point2d midpoint = (*feature->points)[feature->points->size()/2]; //approximate mid point to be the point halfway along the list of points
                   //draw triangle on road
@@ -197,7 +196,6 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, doub
                ezgl::point2d midPoint = midpoint(fromPoint, toPoint);
                //get displacement vector between points
                ezgl::point2d delta = {toPoint.x - fromPoint.x, toPoint.y - fromPoint.y};
-               cout << delta.y << ", " << delta.x << endl;
                double angle = (atan2(delta.y, delta.x))/kDegreeToRadian; //angle from horizontal axis (counter clockwise) of street segment
                if(angle > 90){angle -= 180;}
                if(angle < -90){angle += 180;}
@@ -239,6 +237,9 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, doub
             feature->wasRendered = true; //feature was fully rendered this cycle
             break;
          }
+         default: {
+            break;
+         }
       }
 
       //reset temporary settings
@@ -251,28 +252,18 @@ void draw_main_canvas(ezgl::renderer *g)
    ezgl::rectangle rect(initial_world.bottom_left(),initial_world.top_right());
    g->set_color(kColorDefaultGround);
    g->fill_rectangle(rect);
-
-   //initialize initial resolution values if they are at their default values (-1)
-   auto layer = mapFeatures.layerMap.begin();
    
    double zoom = getScaleFactor();
 
    double pixelLength = mainCanvas->get_camera().get_screen().width();
-   double pixelHeight = mainCanvas->get_camera().get_screen().height();
    double screenLength = mainCanvas->get_camera().get_world().width();
-   double screenHeight = mainCanvas->get_camera().get_world().height();
    double scaling = pixelLength/screenLength;
    double worldToScreenScale = screenLength/pixelLength;
-   double screenArea = screenLength*screenHeight;
 
    int lineWidth = max(1.0, kRoadWidth*scaling);
 
    auto& camera = mainCanvas->get_camera();
-   ezgl::rectangle cameraRect = camera.get_world();
-   
-
-   double whRatio = (double)mainCanvas->width()/(double)mainCanvas->height(); //ratio of canvas width to canvas height
-   
+   ezgl::rectangle cameraRect = camera.get_world();  
 
    double rectWidth = cameraRect.width()/(camera.get_screen().width()/mainCanvas->width()); //caculate world width of canvas
    double rectHeight = cameraRect.height()/(camera.get_screen().height()/mainCanvas->height()); //calculate world height of canvas
@@ -298,11 +289,9 @@ void draw_main_canvas(ezgl::renderer *g)
    vector<pair<int, int>> cells;
    if(enableCellRendering){
       //get cells currently on screen
-      vector<pair<int, int>> cells = getCurrentRenderCells(&camera,kRenderCellSize,minPoints);
+      cells = getCurrentRenderCells(&camera,kRenderCellSize,minPoints);
       //if number of cells is low, use cell rendering method
-      cout << "cells: " << cells.size() << endl;
-      bool useCellRendering = cells.size() <= kMaximumRenderCells; //use render cells to cull features
-      cout << "cell rendering: " << useCellRendering << endl;
+      useCellRendering = cells.size() <= kMaximumRenderCells; //use render cells to cull features
    }
    if(useCellRendering){
       vector<MapFeature*> cellFeatures = getFeaturesFromCells(cells, cellMap);
@@ -311,7 +300,7 @@ void draw_main_canvas(ezgl::renderer *g)
          MapFeature* feature = cellFeatures[i];
          g->set_color({0, 0, 0, 255});
          g->set_line_width(lineWidth);
-         drawFeature(feature,g,screenArea,lineWidth,scaling,worldToScreenScale,camera);
+         drawFeature(feature,g,lineWidth,scaling,worldToScreenScale,camera);
       }
    }
    else //if number of cells is too high, directly render each element
@@ -328,7 +317,7 @@ void draw_main_canvas(ezgl::renderer *g)
             if(feature->drawType != POINT && !intersecting(cameraRect,feature->bounds)){continue;} //check if bounds for camera and feaure are intersecting
             g->set_color({0, 0, 0, 255});
             g->set_line_width(lineWidth);
-            drawFeature(feature,g,screenArea,lineWidth,scaling,worldToScreenScale,camera);
+            drawFeature(feature,g,lineWidth,scaling,worldToScreenScale,camera);
          }
          layer++;
       }
@@ -336,13 +325,10 @@ void draw_main_canvas(ezgl::renderer *g)
 
    //draw weather overlay
    //getMapTilesFromBounds();
-   double tileSize = LonToX(mapTiles[0].tileBounds.max.longitude()) - LonToX(mapTiles[0].tileBounds.min.longitude());
    for (size_t i = 0; i < mapTiles.size(); i++)
    {
       const char* surfURL = mapTiles[i].url.c_str();
       ezgl::surface* currentSurface = g->load_png(surfURL);
-      cout << "screen length "<< screenLength<<endl;
-      cout << "pixel length "<< pixelLength<<endl;
       ezgl::point2d minPoint2d= LatLonToPoint2D(mapTiles[i].tileBounds.min);
       ezgl::point2d maxPoint2d= LatLonToPoint2D(mapTiles[i].tileBounds.max);
 
@@ -372,11 +358,8 @@ double getScaleFactor()
 void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to manage clicks on a specific MapFeature
 {
    mapFeatures.highlightFeature(clicked, true);
-   auto g = app->get_renderer();
    if(clicked->featureType == FEATURE) //clicked on feature
    {
-      OSMID osmid = getFeatureOSMID(clicked->dataIndex);
-
       LatLon currentFeaturePoint = getFeaturePoint(clicked->dataIndex, 0);
       IntersectionIdx closestInter = findClosestIntersection(currentFeaturePoint);
 
@@ -390,7 +373,7 @@ void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to
       app->update_message("Clicked Street: " + streetName);
       
    }
-   if(clicked->featureType == POINT && clicked->dataIndex < getNumIntersections()) //clicked on intersection
+   if(clicked->featureType == MapFeatureType::INTERSECTION && clicked->dataIndex < getNumIntersections()) //clicked on intersection
    {
       string intersection = getKnownIntersectionName(clicked->dataIndex);
       app->update_message("Clicked Intersection: " + intersection);
@@ -403,9 +386,6 @@ void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to
 void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y)
 {
    if(mapFeatures.layerMap.size() == 0){return;} //if there are no features, skip click detection
-   cout << "click at " << x << ", " << y << endl;
-   
-   auto& camera = mainCanvas->get_camera();
 
    map<const OSMID, string> wayRoute;
 
@@ -423,8 +403,6 @@ void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, dou
 
          if(!feature->major && feature->featureType != MapFeatureType::INTERSECTION){continue;} //only register clicks on major features or intersections
          if(!feature->wasRendered){continue;} //dont register non-rendered/invisible objects as clickable
-
-         ezgl::rectangle bounds = feature->bounds;
          //for all features, compare distance from points
          for(auto point = feature->points->begin(); point != feature->points->end(); point++){
             double xDist = point->x - x;
@@ -476,7 +454,6 @@ void loadFeatures()
    setLatLonBounds(minPoints, maxPoints); //set constant for calculations in renderHelper
 
    numberOfStreets = getNumStreets();
-   cout << "getting " << numberOfStreets << endl;
 
    //Cache street lengths
    for(StreetIdx streetIndex = 1; streetIndex < numberOfStreets; streetIndex++)
@@ -502,7 +479,7 @@ void loadFeatures()
       vector<LatLon> curvePoints = *getStreetSegmentPoints(streetSegmentIndex); //get cached curve points for street segment
       vector<ezgl::point2d>* points = new vector<ezgl::point2d>;
 
-      int longestSegmentIndex; //index of point before longest subsegment of street segment  
+      int longestSegmentIndex = 0; //index of point before longest subsegment of street segment  
       double longestLength = 0;
       
       int curvePointCount = curvePoints.size();
@@ -552,7 +529,6 @@ void loadFeatures()
       //check if street is a major street
       if(streetID > 0) //street ID 0 can never be a major road as it is the default ID for minor roads
       {  
-         double streetLength = streetLengthCache[streetID]; //get street length
          bool majorRoad = segmentInfo.speedLimit > 18; //if road is long, it is a major road
          if(majorRoad)
          {
@@ -587,7 +563,6 @@ void loadFeatures()
       }
 
       int layer = -2; //layer of feature (default is -2)
-      double drawArea = findFeatureArea(featureIndex); //area of feature to use to decide whether to render the feature at a specific zoom
       double maximumScaling = DBL_MAX;
       ezgl::color featureColor = kColorBuilding; //colour of feature (default is building) 
       FeatureType featureType = getFeatureType(featureIndex); //get feature type
@@ -645,6 +620,13 @@ void loadFeatures()
             layer = -2;
             break;
          }
+         case GLACIER:{
+            featureColor = kColorBeach; 
+            layer = -6;
+         }
+         default: {
+            break;
+         }
       }
       
       //default draw type is a polygon
@@ -675,9 +657,7 @@ void loadFeatures()
    }
 
    if(enableCellRendering){
-      cout << "starting to map render cells" << endl;
       mapRenderCells(kRenderCellSize, minPoints, mapFeatures, cellMap);
-      cout << endl;
    }
 
    //download weather map data
@@ -716,7 +696,6 @@ void drawMap() {
    ezgl::application application(settings); //create application
    initial_world = ezgl::rectangle(LatLonToPoint2D(minPoints),LatLonToPoint2D(maxPoints));
    mainCanvas = application.add_canvas("MainCanvas", draw_main_canvas, initial_world);
-   application.mouse_press_callback;
    //create window
    application.run(initial_setup,on_mouse_click,nullptr,nullptr);
 
@@ -763,14 +742,12 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    gtk_label_set_text(sunsetLabel,sunsetTime.c_str());
 }
 
-//Callback that is called when search button is pressed
 void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
 
    //Make a clear highlighted intersections button
    for(int i = 0; i < prevSearchedIntersectionIdxs.size(); i++){
       //unhighlight
       intersectionFeatures[prevSearchedIntersectionIdxs[i]]->highlight = false;
-      cout << getIntersectionName(prevSearchedIntersectionIdxs[i]) << endl;
    }
    prevSearchedIntersectionIdxs.clear();
 
@@ -846,13 +823,11 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
   return;
 }
 
-//Callback that is called when select new map button is pressed
 void selectMap_cbk(GtkWidget */*widget*/, ezgl::application *application){
    GtkDialog * mapSelectorDialog = GTK_DIALOG(application->get_object("mapSelectorDialog"));
    gtk_dialog_run(mapSelectorDialog);
 }
 
-//Callback that is called when pressing the back button in the pop up map selector dialog, closes dialog
 void mapBackBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    GtkWidget * mapSelectorDialog = GTK_WIDGET(application->get_object("mapSelectorDialog"));
    gtk_widget_hide(mapSelectorDialog);
@@ -869,7 +844,6 @@ void resetCanvasParameters(ezgl::application* app) //helper function to reset th
    app->refresh_drawing();
 }
 
-//Callback function that changes the map, called when map is selected from the pop up dialog
 void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInfo){
    
    string nextMapPath = mapInfo->first;
@@ -901,7 +875,6 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
    resetCanvasParameters(application);
 }
 
-//callback function that happens when any filter button is pressed
 void changeFilter_cbk(GtkWidget */*widget*/, pair<WeatherLayer,ezgl::application*> * filterInfo){
 
    mapTiles = downloadWeatherMaps(filterInfo->first, currentScope, 1920, 1080);

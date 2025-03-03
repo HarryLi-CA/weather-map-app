@@ -129,7 +129,7 @@ string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData){
     return baseURL;
 }
 
-static size_t data_write(void* buf, size_t size, size_t nmemb, void* userp)
+size_t data_write(void* buf, size_t size, size_t nmemb, void* userp)
 {
 	if (userp)
 	{
@@ -186,7 +186,7 @@ vector<MapTileData> downloadWeatherMaps(WeatherLayer wL, LatLonBounds currentSco
 
 string weatherJson = "";
 
-static size_t write_weather_data(void *buffer, size_t size, size_t nmemb, void *userp) {
+size_t write_weather_data(void *buffer, size_t nmemb) {
     if (buffer && nmemb) {
         weatherJson = (char *)buffer;
     }

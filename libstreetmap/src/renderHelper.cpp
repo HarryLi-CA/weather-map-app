@@ -271,6 +271,9 @@ void mapRenderCells(double renderCellSize, LatLon bottomLeft, FeatureList& mapFe
                cells = getBoundedRenderCells(bounds,renderCellSize,bottomLeft);
                break;
             }
+            default: {
+                break;
+            }
          }
 
          for(auto cell = cells.begin(); cell != cells.end(); cell++)

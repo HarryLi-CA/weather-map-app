@@ -50,10 +50,10 @@ LatLon getLatLonFromGlobalCoords(pair<double,double> coords, double mapWidth);
 vector<MapTileData> getMapTilesFromBounds (LatLonBounds currentScope, int pixelHeight, int pixelLength);
 
 //Converts tile and weather to specific api url
-string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData);
+string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData, int date);
 
 // download weather maps for current city
-vector<MapTileData> downloadWeatherMaps(WeatherLayer wL, LatLonBounds currentScope, int pixelHeight, int pixelLength);
+vector<MapTileData> downloadWeatherMaps(WeatherLayer wL, LatLonBounds currentScope, int pixelHeight, int pixelLength, int date);
 
 //helper for libcurl receiving weather data
 size_t write_weather_data(void *buffer, size_t nmemb);

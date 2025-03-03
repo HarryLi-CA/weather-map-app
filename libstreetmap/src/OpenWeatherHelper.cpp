@@ -98,7 +98,7 @@ vector<MapTileData> getMapTilesFromBounds (LatLonBounds currentScope, int pixelL
 }
 
 
-string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData){
+string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData, int date){
     string baseURL = "http://maps.openweathermap.org/maps/2.0/weather/";
     switch(wL){
         case NOFILTER:
@@ -127,8 +127,9 @@ string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData){
             break;
     }
     baseURL += '/' + to_string(tileData.z) + '/' + to_string(tileData.x) + '/' + to_string(tileData.y);
-    baseURL += "?opacity=0.5&";
-    baseURL += "appid=" + APIKey;
+    baseURL += "?opacity=0.5";
+    baseURL += "&date=" + date;
+    baseURL += "&appid=" + APIKey;
     return baseURL;
 }
 
@@ -168,13 +169,14 @@ CURLcode curl_read(const std::string& url, std::ostream& os, long timeout = 30)
 	return code;
 }
 CURLcode res;
-vector<MapTileData> downloadWeatherMaps(WeatherLayer wL, LatLonBounds currentScope, int pixelHeight, int pixelLength){
+
+vector<MapTileData> downloadWeatherMaps(WeatherLayer wL, LatLonBounds currentScope, int pixelHeight, int pixelLength, int date){
     vector<MapTileData> mapTiles = getMapTilesFromBounds (currentScope, pixelHeight, pixelLength);
 
     res = curl_global_init(CURL_GLOBAL_ALL);
     for(int i = 0; i < mapTiles.size(); i++){
         MapTileData curMapTile = mapTiles[i];
-        string url = getMapAPIURLFromParameters(wL, curMapTile);
+        string url = getMapAPIURLFromParameters(wL, curMapTile,date);
         if(url == ""){
             return {};
         }

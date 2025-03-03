@@ -670,7 +670,7 @@ void loadFeatures()
    currentScope.min = minPoints;
    currentScope.max = maxPoints;
    //Load weather map
-   mapTiles = downloadWeatherMaps(NOFILTER, currentScope, 1920, 1080);
+   mapTiles = downloadWeatherMaps(NOFILTER, currentScope, 1920, 1080, time(nullptr));
    
    currentWeather = getWeatherData(
       LatLon(
@@ -898,7 +898,7 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
 void changeFilter_cbk(GtkWidget */*widget*/, pair<WeatherLayer,ezgl::application*> * filterInfo){
 
    //update current weather filter
-   mapTiles = downloadWeatherMaps(filterInfo->first, currentScope, 1920, 1080);
+   mapTiles = downloadWeatherMaps(filterInfo->first, currentScope, 1920, 1080, time(nullptr));
    ezgl::application* application = filterInfo->second;
 
    application->refresh_drawing();

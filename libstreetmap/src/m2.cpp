@@ -83,24 +83,31 @@ vector<IntersectionIdx> prevSearchedIntersectionIdxs = {};
 IntersectionIdx prevClickedIntersection = -1;
 //Stores the map names along with its path and a application pointer to send into the map changing callback
 pair<string,pair<string,ezgl::application*>> mapNames[19] = { {"BeijingBtn",{"/cad2/ece297s/public/maps/beijing_china.streets.bin",nullptr}},
-                                       {"BeirutBtn",{"/cad2/ece297s/public/maps/beirut_lebanon.streets.bin",nullptr}},
-                                       {"BerlinBtn",{"/cad2/ece297s/public/maps/berlin_germany.streets.bin",nullptr}},
-                                       {"BostonBtn",{"/cad2/ece297s/public/maps/boston_usa.streets.bin",nullptr}},
-                                       {"CapeTownBtn",{"/cad2/ece297s/public/maps/cape-town_south-africa.streets.bin",nullptr}},
-                                       {"GoldenHorseshoeBtn",{"/cad2/ece297s/public/maps/golden-horseshoe_canada.streets.bin",nullptr}},
-                                       {"HamiltonBtn",{"/cad2/ece297s/public/maps/hamilton_canada.streets.bin",nullptr}},
-                                       {"HongKongBtn",{"/cad2/ece297s/public/maps/hong-kong_china.streets.bin",nullptr}},
-                                       {"IcelandBtn",{"/cad2/ece297s/public/maps/iceland.streets.bin",nullptr}},
-                                       {"InterlakenBtn",{"/cad2/ece297s/public/maps/interlaken_switzerland.streets.bin",nullptr}},
-                                       {"LondonBtn",{"/cad2/ece297s/public/maps/london_england.streets.bin",nullptr}},
-                                       {"NewDehliBtn",{"/cad2/ece297s/public/maps/new-delhi_india.streets.bin",nullptr}},
-                                       {"NewYorkBtn",{"/cad2/ece297s/public/maps/new-york_usa.streets.bin",nullptr}},
-                                       {"RioDeJaneiroBtn",{"/cad2/ece297s/public/maps/rio-de-janeiro_brazil.streets.bin",nullptr}},
-                                       {"SaintHelenaBtn",{"/cad2/ece297s/public/maps/saint-helena.streets.bin",nullptr}},
-                                       {"SingaporeBtn",{"/cad2/ece297s/public/maps/singapore.streets.bin",nullptr}},
-                                       {"TehranBtn",{"/cad2/ece297s/public/maps/tehran_iran.streets.bin",nullptr}},
-                                       {"TokyoBtn",{"/cad2/ece297s/public/maps/tokyo_japan.streets.bin",nullptr}},
-                                       {"TorontoBtn",{"/cad2/ece297s/public/maps/toronto_canada.streets.bin",nullptr}}};
+                                                            {"BeirutBtn",{"/cad2/ece297s/public/maps/beirut_lebanon.streets.bin",nullptr}},
+                                                            {"BerlinBtn",{"/cad2/ece297s/public/maps/berlin_germany.streets.bin",nullptr}},
+                                                            {"BostonBtn",{"/cad2/ece297s/public/maps/boston_usa.streets.bin",nullptr}},
+                                                            {"CapeTownBtn",{"/cad2/ece297s/public/maps/cape-town_south-africa.streets.bin",nullptr}},
+                                                            {"GoldenHorseshoeBtn",{"/cad2/ece297s/public/maps/golden-horseshoe_canada.streets.bin",nullptr}},
+                                                            {"HamiltonBtn",{"/cad2/ece297s/public/maps/hamilton_canada.streets.bin",nullptr}},
+                                                            {"HongKongBtn",{"/cad2/ece297s/public/maps/hong-kong_china.streets.bin",nullptr}},
+                                                            {"IcelandBtn",{"/cad2/ece297s/public/maps/iceland.streets.bin",nullptr}},
+                                                            {"InterlakenBtn",{"/cad2/ece297s/public/maps/interlaken_switzerland.streets.bin",nullptr}},
+                                                            {"LondonBtn",{"/cad2/ece297s/public/maps/london_england.streets.bin",nullptr}},
+                                                            {"NewDehliBtn",{"/cad2/ece297s/public/maps/new-delhi_india.streets.bin",nullptr}},
+                                                            {"NewYorkBtn",{"/cad2/ece297s/public/maps/new-york_usa.streets.bin",nullptr}},
+                                                            {"RioDeJaneiroBtn",{"/cad2/ece297s/public/maps/rio-de-janeiro_brazil.streets.bin",nullptr}},
+                                                            {"SaintHelenaBtn",{"/cad2/ece297s/public/maps/saint-helena.streets.bin",nullptr}},
+                                                            {"SingaporeBtn",{"/cad2/ece297s/public/maps/singapore.streets.bin",nullptr}},
+                                                            {"TehranBtn",{"/cad2/ece297s/public/maps/tehran_iran.streets.bin",nullptr}},
+                                                            {"TokyoBtn",{"/cad2/ece297s/public/maps/tokyo_japan.streets.bin",nullptr}},
+                                                            {"TorontoBtn",{"/cad2/ece297s/public/maps/toronto_canada.streets.bin",nullptr}}};
+
+pair<string,pair<string,ezgl::application*>> filterNames[6] = { {"SnowBtn",{"SNOW",nullptr}},
+                                                               {"TemperatureBtn",{"TEMPERATURE",nullptr}},
+                                                               {"PrecipitationBtn",{"PRECIPITATION",nullptr}},
+                                                               {"CloudsBtn",{"CLOUDS",nullptr}},
+                                                               {"HumidityBtn",{"HUMIDITY",nullptr}},
+                                                               {"WindBtn",{"WIND",nullptr}}};                              
 
 // void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
 // {
@@ -324,8 +331,6 @@ double getScaleFactor()
 {
    return mainCanvas->get_camera().get_world_scale_factor().x;
 }
-
-
 
 void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to manage clicks on a specific MapFeature
 {
@@ -635,9 +640,6 @@ void unloadFeatures()
    staticLabels.clear(); //delete all static labels
 }
 
-
-
-
 void drawMap() {
    // Set up the ezgl graphics window and hand control to it, as shown in the 
    // ezgl example program. 
@@ -672,10 +674,18 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    GObject* mapBackBtn = application->get_object("mapBackBtn");
    g_signal_connect(mapBackBtn,"clicked",G_CALLBACK(mapBackBtn_cbk),application);
 
+   //initialize each button on switch map pop-up
    for(int i = 0; i < 19; i++){
       mapNames[i].second.second = application;
       GObject* mapSelectionBtn = application->get_object(mapNames[i].first.c_str());
       g_signal_connect(mapSelectionBtn,"clicked",G_CALLBACK(openMap_cbk),&mapNames[i].second);
+   }
+
+   //initialize each filter button
+   for(int i = 0; i < 6; i++){
+      filterNames[i].second.second = application;
+      GObject* filterBtn = application->get_object(filterNames[i].first.c_str());
+      g_signal_connect(filterBtn,"clicked",G_CALLBACK(changeFilter_cbk),&filterNames[i].second);
    }
 }
 
@@ -838,4 +848,8 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
 
    //Get new paramters
    resetCanvasParameters(application);
+}
+
+void changeFilter_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * filterInfo){
+   return;
 }

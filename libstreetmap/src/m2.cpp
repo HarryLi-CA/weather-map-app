@@ -75,7 +75,7 @@ const int kMaximumRenderCells = 100; //maximum number of render cells before swi
 const double kMaximumBuildingScaling = 2; //maximum number of meters per pixel to start drawing buildings
 const bool enableCellRendering = false; //enable cell rendering method (possibly buggy)
 const double kRoadWidth = 7.5; //width of roads
-
+const double TILERATIO = 0.000005805;
 LatLonBounds currentScope; // scope of city map
 vector<MapTileData> mapTiles;
 WeatherData currentWeather; // weather including sunset and sunrise in epoch time
@@ -252,8 +252,6 @@ void draw_main_canvas(ezgl::renderer *g)
    ezgl::rectangle rect(initial_world.bottom_left(),initial_world.top_right());
    g->set_color(kColorDefaultGround);
    g->fill_rectangle(rect);
-   
-   double zoom = getScaleFactor();
 
    double pixelLength = mainCanvas->get_camera().get_screen().width();
    double screenLength = mainCanvas->get_camera().get_world().width();
@@ -325,6 +323,9 @@ void draw_main_canvas(ezgl::renderer *g)
 
    //draw weather overlay
    //getMapTilesFromBounds();
+   double tileSize = LonToX(mapTiles[0].tileBounds.max.longitude()) - LonToX(mapTiles[0].tileBounds.min.longitude());
+   double mapSize = LonToX(currentScope.max.longitude()) - LonToX(currentScope.min.longitude());
+   double zoom = getScaleFactor();
    for (size_t i = 0; i < mapTiles.size(); i++)
    {
       const char* surfURL = mapTiles[i].url.c_str();
@@ -332,7 +333,7 @@ void draw_main_canvas(ezgl::renderer *g)
       ezgl::point2d minPoint2d= LatLonToPoint2D(mapTiles[i].tileBounds.min);
       ezgl::point2d maxPoint2d= LatLonToPoint2D(mapTiles[i].tileBounds.max);
 
-      g->draw_surface(currentSurface, {(minPoint2d.x+maxPoint2d.x)/2,(minPoint2d.y+maxPoint2d.y)/2},1/zoom*221.25);
+      g->draw_surface(currentSurface, {(minPoint2d.x+maxPoint2d.x)/2,(minPoint2d.y+maxPoint2d.y)/2},TILERATIO*tileSize*pixelLength/zoom);
       g->free_surface(currentSurface);
    }
    

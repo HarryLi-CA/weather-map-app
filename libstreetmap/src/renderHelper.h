@@ -34,7 +34,9 @@ class MapFeature {
     bool highlight; //if true, the feature will be outlined (polygon) or highlighted (line)
     bool major; //significant feature that should be displayed at larger distances (i.e major road, POIs)
     bool inCellList; //was added to cell list for rendering this frame
-    bool directional;
+    bool directional; //is the road strictly unidirectional (only applicable to roads)
+    int longestPointSegmentIndex; //index before the longest segment of a curved line (only applicable to roads)
+    double longestSegmentLength; //length of the longest segment of a turn segment (only applicable to roads)
     MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _color, DrawType _drawType, MapFeatureType _featureType, int _index);
     ~MapFeature();
 };
@@ -85,6 +87,8 @@ vector<MapFeature*> getFeaturesFromCells(vector<pair<int,int>> cells, map<pair<i
 void mapRenderCells(double renderCellSize, LatLon bottomLeft, FeatureList& mapFeatures, map<pair<int, int>, vector<MapFeature*>*>& cellMap); //maps all features ina feature list based on their render cells to a render cell map
 
 void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter); //draws triangle around a center point
+
+ezgl::point2d midpoint(ezgl::point2d A, ezgl::point2d B); //helper function to return midpoint between 2 point2d objects
 
 template <typename T> bool vectorContains(vector<T>& vec, T& toFind) //returns true if toFind is an element of vec
 {

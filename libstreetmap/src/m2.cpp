@@ -43,6 +43,7 @@ vector<StaticName> staticLabels; //list of static text objects to draw
 vector<MapFeature*> intersectionFeatures; //vector that takes in intersection index and return correpsonding map feature
 vector<StreetIdx> streetLengthCache; //stored value of all loaded street lengths;
 map<pair<int, int>, vector<MapFeature*>*> cellMap; //map of all render cells to list of features
+int numberOfStreets = 0; //save number of streets for fast access
 //default colour constants for general objects
 const ezgl::color kColorDefaultGround = {235, 235, 235, 255}; 
 const ezgl::color kColorHighlight = {255, 87, 87, 255};
@@ -54,11 +55,12 @@ const ezgl::color kColorWater = {147, 194, 230, 255};
 const ezgl::color kColorBeach = {242,242,184, 255};
 const ezgl::color kColorIsland = {238, 242, 213, 255};
 //default colour constants for roads
-const ezgl::color kColorBasicRoad = {140, 140, 140, 255};
+const ezgl::color kColorBasicRoad = {180, 180, 180, 255};
 const ezgl::color kColorOnewayRoad = {219, 118, 118, 255};
 const double kColorOnewayIndicatorBrightness = 255;
 const ezgl::color kColorMajorRoad = {0, 0, 200, 255};
 const ezgl::color kColorOnewayMajorRoad = {148,0,211, 255};
+const ezgl::color kColorStreetName = {255, 255, 255, 255};
 //scaling values for window resizing
 double initialWidth = -1;
 double initialHeight = -1;
@@ -69,12 +71,13 @@ const double kMinimumMajorRoadLength = 5000; //minimum length for a road to be c
 const double kRenderCellSize = 300; //size of each render cell
 const int kMaximumRenderCells = 100; //maximum number of render cells before switching to direct rendering
 const double kMaximumBuildingScaling = 2; //maximum number of meters per pixel to start drawing buildings
-const bool enableCellRendering = false;
+const bool enableCellRendering = false; //enable cell rendering method (possibly buggy)
+const double kRoadWidth = 7.5; //width of roads
 
 
 
 void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, double lineWidth, double scaling, double realWorldScaling, ezgl::camera camera)
-{
+{  
    switch(feature->drawType)
       {
          case POINT: {
@@ -114,12 +117,16 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, doub
             {
                g->draw_line((*feature->points)[i],(*feature->points)[i+1]);
             }
+            //get direction of road
+            ezgl::point2d from = (*feature->points)[0]; //first position in the street
+            ezgl::point2d to = (*feature->points)[feature->points->size() - 1]; //last position in the street
+            ezgl::point2d dir = {to.x - from.x, to.y - from.y}; //direction vector for street
+            
+
             //draw arrow if street is directional
             if(feature->directional && lineWidth*lineWidthScale > kOnewayIndicatorSize)
             {
-               ezgl::point2d from = (*feature->points)[0]; //first position in the street
-               ezgl::point2d to = (*feature->points)[feature->points->size() - 1]; //last position in the street
-               ezgl::point2d dir = {to.x - from.x, to.y - from.y}; //direction vector for street
+               
                double magnitude = sqrt(dir.x*dir.x + dir.y*dir.y); //magnitude of dir
                if(magnitude > 0){
                   ezgl::color roadColour = feature->color;
@@ -129,7 +136,31 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, doub
                   drawTriangle(g,midpoint,dir,indicatorColour,kOnewayIndicatorSize/scaling);
                }
             }
-            
+            //draw street name if applicable
+            if(feature->streetID < numberOfStreets && feature->streetID > 0){
+               
+               int longestIndex = feature->longestPointSegmentIndex;
+               //get longest segment points
+               ezgl::point2d fromPoint = (*feature->points)[longestIndex];
+               ezgl::point2d toPoint = (*feature->points)[longestIndex+1];
+
+               //get point in the middle of longest segment
+               ezgl::point2d midPoint = midpoint(fromPoint, toPoint);
+               //get displacement vector between points
+               ezgl::point2d delta = {toPoint.x - fromPoint.x, toPoint.y - fromPoint.y};
+               cout << delta.y << ", " << delta.x << endl;
+               double angle = (atan2(delta.y, delta.x))/kDegreeToRadian; //angle from horizontal axis (counter clockwise) of street segment
+               if(angle > 90){angle -= 180;}
+               if(angle < -90){angle += 180;}
+               string streetName = getStreetName(feature->streetID);
+
+               //if(angle > 180){angle -= 180;} //unflip angles that point downward
+
+               //roate and draw text
+               g->set_color(kColorStreetName);
+               g->set_text_rotation(angle);
+               g->draw_text(midPoint,streetName,feature->longestSegmentLength,lineWidth*lineWidthScale);
+            }
             feature->wasRendered = true; //feature was fully rendered this cycle
             break;
          }
@@ -160,6 +191,9 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, doub
             break;
          }
       }
+
+      //reset temporary settings
+      g->set_text_rotation(0);
 }
 
 //Stores the intersectionIdxs of the previously searched intersections
@@ -213,7 +247,7 @@ void draw_main_canvas(ezgl::renderer *g)
    double worldToScreenScale = screenLength/pixelLength;
    double screenArea = screenLength*screenHeight;
 
-   int lineWidth = max(1.0, 5.0*scaling);
+   int lineWidth = max(1.0, kRoadWidth*scaling);
 
    auto& camera = mainCanvas->get_camera();
    ezgl::rectangle cameraRect = camera.get_world();
@@ -290,8 +324,6 @@ void draw_main_canvas(ezgl::renderer *g)
    {
       g->draw_text(label->position, label->text, label->feature->bounds.width(), label->feature->bounds.height());
    }
-
-   g->draw_rectangle(cameraRect);
 }
 
 double getScaleFactor()
@@ -400,8 +432,11 @@ void loadFeatures()
    maxPoints = LatLon(maximumLatitude, maximumLongitude); //consolodate maximum latitude and longitude in latlon object
    setLatLonBounds(minPoints, maxPoints); //set constant for calculations in renderHelper
 
+   numberOfStreets = getNumStreets();
+   cout << "getting " << numberOfStreets << endl;
+
    //Cache street lengths
-   for(StreetIdx streetIndex = 1; streetIndex < getNumStreets(); streetIndex++)
+   for(StreetIdx streetIndex = 1; streetIndex < numberOfStreets; streetIndex++)
    {
       double streetLength = findStreetLength(streetIndex); //get length of street
       streetLengthCache.push_back(streetLength); //cache street length
@@ -423,11 +458,30 @@ void loadFeatures()
    {
       vector<LatLon> curvePoints = *getStreetSegmentPoints(streetSegmentIndex); //get cached curve points for street segment
       vector<ezgl::point2d>* points = new vector<ezgl::point2d>;
-      for(int pointIndex = 0; pointIndex < curvePoints.size(); pointIndex++)
+
+      int longestSegmentIndex; //index of point before longest subsegment of street segment  
+      double longestLength = 0;
+      
+      int curvePointCount = curvePoints.size();
+      for(int pointIndex = 0; pointIndex < curvePointCount; pointIndex++)
       {
          LatLon curvePoint = curvePoints[pointIndex];
          ezgl::point2d translatedPoint = LatLonToPoint2D(curvePoint);
          points->push_back(translatedPoint);
+
+         if(pointIndex < curvePointCount - 1)
+         {
+            //calculate distance between points
+            double xDistance = translatedPoint.x - LatLonToPoint2D(curvePoints[pointIndex+1]).x;
+            double yDistance = translatedPoint.y - LatLonToPoint2D(curvePoints[pointIndex+1]).y;
+
+            double distance = sqrt(xDistance*xDistance + yDistance*yDistance);
+            if(distance > longestLength) //check if this segment is the longest so far
+            {
+               longestLength = distance;
+               longestSegmentIndex = pointIndex;
+            }
+         }
       }
       auto segmentInfo = getStreetSegmentInfo(streetSegmentIndex); //street segment info
    
@@ -442,7 +496,9 @@ void loadFeatures()
       MapFeature* mapFeature = new MapFeature(1,points,roadColor,LINE,MapFeatureType::ROAD,(int)streetSegmentIndex);  //create map featur object
       mapFeatures.addFeature(mapFeature); //add feature to feature list
       intersectionFeatures.push_back(mapFeature); //relate feature to corresponding intersection index
-
+      //add longest street data
+      mapFeature->longestPointSegmentIndex = longestSegmentIndex;
+      mapFeature->longestSegmentLength = longestLength;
       //set street id
       StreetIdx streetID = segmentInfo.streetID; //get street ID
       mapFeature->streetID = streetID; //set street id of feature to calculated street id

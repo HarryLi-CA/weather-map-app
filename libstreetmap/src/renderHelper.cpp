@@ -34,12 +34,14 @@ MapFeature::MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _
 
     //set default values
     wasRendered = false;
-    highlight = false;
+    highlight = false; 
     streetID = -1;
     major = false;
     inCellList = false;
     directional = false;
     maximumScaling = DBL_MAX;
+    longestPointSegmentIndex = -1;
+    longestSegmentLength = 0;
 }
 
 MapFeature::~MapFeature()
@@ -309,4 +311,9 @@ void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d directi
       {center.x + distanceFromCenter*cos(angle+2*M_PI/3.0), center.y + distanceFromCenter*sin(angle+2*M_PI/3.0)},
       {center.x + distanceFromCenter*cos(angle+4*M_PI/3.0), center.y + distanceFromCenter*sin(angle+4*M_PI/3.0)},
    });
+}
+
+ezgl::point2d midpoint(ezgl::point2d A, ezgl::point2d B)
+{
+    return {0.5*(A.x + B.x), 0.5*(A.y + B.y)};
 }

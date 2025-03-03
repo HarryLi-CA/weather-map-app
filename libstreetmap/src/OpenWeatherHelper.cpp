@@ -1,0 +1,252 @@
+#include <limits.h>
+#include <vector>
+#include <cmath>
+#include <curl/curl.h>
+#include <fstream>
+#include <sstream>
+#include <iostream>
+#include "m1.h"
+#include "StreetsDatabaseAPI.h"
+#include "OSMDatabaseAPI.h"
+#include "OpenWeatherHelper.h"
+
+#define PI 3.14159265358979323846264338327950288
+#define TILEWIDTH 256
+#define MAXZ 9
+using namespace std;
+
+string APIKey = "***REMOVED***";
+
+pair<double,double> getGlobalCoordsFromLatLon(LatLon l, double mapWidth){
+    double latitude    = l.latitude();
+    double longitude   = l.longitude();
+
+    //double mapWidth    = mapWidth;
+    double mapHeight   = mapWidth;
+
+    double x = (longitude+180)*(mapWidth/360); // x val
+
+    double mercN = log(tan((PI/4)+(latitude*kDegreeToRadian/2)));
+    double y     = (mapHeight/2)-(mapWidth*mercN/(2*PI)); // get y value without offset
+    return make_pair(x, y);
+}
+
+LatLon getLatLonFromGlobalCoords(pair<double,double> coords, double mapWidth){
+    double x    = coords.first; // (φ)
+    double y   = coords.second;   // (λ)
+
+    //double mapWidth    = mapWidth;
+    double mapHeight   = mapWidth;
+
+    // x = (longitude+180)*(mapWidth/360)
+    // longitude = x/mapwidth*360 - 180
+    double longitude = x/mapWidth*360 - 180;
+    
+    // y     = (mapHeight/2)-(mapWidth*mercN/(2*PI))
+    // (-y +(mapHeight/2))/mapWidth * 2 * PI    = (mercN)
+    double mercN = (-y +(mapHeight/2))/mapWidth * 2 * PI;
+
+    // mercN = log(tan((PI/4)+(latitude*kDegreeToRadian/2)))
+    // (atan(exp(mercN)) - PI/4)/kDegreeToRadian*2= (latitude)
+    double lattitude = (atan(exp(mercN)) - PI/4)/kDegreeToRadian*2;
+    return LatLon(lattitude, longitude);
+}
+
+
+
+vector<MapTileData> getMapTilesFromBounds (LatLonBounds currentScope, int pixelLength, int pixelHeight){
+    int optimalTilesWide = pixelLength / TILEWIDTH + 1; // minimum tiles for max resolution 
+    int optimalTilesHigh = pixelHeight / TILEWIDTH + 1;
+    
+    int z = 0;
+    int zoom = 1;
+
+    pair<double,double> minGlobalCoords = getGlobalCoordsFromLatLon(currentScope.min, zoom);
+    pair<double,double> maxGlobalCoords = getGlobalCoordsFromLatLon(currentScope.max, zoom);
+
+    double currentTilesWide = maxGlobalCoords.first - minGlobalCoords.first;
+    double currentTilesHigh = maxGlobalCoords.second - minGlobalCoords.second;
+    for(;z < MAXZ || (currentTilesWide > optimalTilesWide && optimalTilesHigh>currentTilesHigh); z++){
+        currentTilesWide*=2;
+        currentTilesHigh*=2;
+        zoom*=2;
+    }
+
+    //now get real coords
+    minGlobalCoords = getGlobalCoordsFromLatLon(currentScope.min, zoom);
+    maxGlobalCoords = getGlobalCoordsFromLatLon(currentScope.max, zoom);
+
+    // rearrange for new coord system
+    double temp = minGlobalCoords.second;
+    minGlobalCoords.second = maxGlobalCoords.second;
+    maxGlobalCoords.second = temp;
+    // cout << minGlobalCoords.first << " " << minGlobalCoords.second << endl;
+    // cout << maxGlobalCoords.first << " " << maxGlobalCoords.second << endl;
+
+    vector<MapTileData> out;
+    for(int i = (int)minGlobalCoords.first; i <= (int)maxGlobalCoords.first; i++){ 
+        for(int j = (int)minGlobalCoords.second; j <= (int)maxGlobalCoords.second; j++){
+            LatLonBounds tileBounds;
+                tileBounds.min = getLatLonFromGlobalCoords(make_pair(i,j),zoom);
+                tileBounds.max = getLatLonFromGlobalCoords(make_pair(i+1,j+1),zoom);
+            MapTileData m; m.x = i; m.y = j; m.z = z; m.tileBounds = tileBounds;
+            m.url = "libstreetmap/imgs/" + to_string(m.z) + "_" + to_string(m.x) + "_" + to_string(m.y) + ".png";
+            out.push_back(m);
+        }
+    }
+    return out;
+}
+
+
+string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData){
+    string baseURL = "http://maps.openweathermap.org/maps/2.0/weather/";
+    switch(wL){
+        case PRECIPITATION:
+            baseURL+= "PR0";
+            break;
+        case SNOW:
+            baseURL+= "SD0";
+            break;
+        case WIND:
+            baseURL+= "WND";
+            break;
+        case TEMPERATURE:
+            baseURL+= "TA2";
+            break;
+        case HUMIDITY:
+            baseURL+= "HRD0";
+            break;
+        case CLOUDS:
+            baseURL+= "CL";
+            break;
+        default:
+            throw wL;
+            break;
+    }
+    baseURL += '/' + to_string(tileData.z) + '/' + to_string(tileData.x) + '/' + to_string(tileData.y);
+    baseURL += "?opacity=0.5&";
+    baseURL += "appid=" + APIKey;
+    return baseURL;
+}
+
+static size_t data_write(void* buf, size_t size, size_t nmemb, void* userp)
+{
+	if (userp)
+	{
+		std::ostream& os = *static_cast<std::ostream*>(userp);
+		std::streamsize len = size * nmemb;
+		if (os.write(static_cast<char*>(buf), len))
+			return len;
+	}
+
+	return 0;
+}
+
+
+CURLcode curl_read(const std::string& url, std::ostream& os, long timeout = 30)
+{
+	CURLcode code(CURLE_FAILED_INIT);
+	CURL* curl = curl_easy_init();
+
+	if (curl)
+	{
+		if (CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &data_write))
+			&& CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L))
+			&& CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L))
+			&& CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_FILE, &os))
+			&& CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout))
+			&& CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_URL, url.c_str())))
+		{
+			code = curl_easy_perform(curl);
+		}
+		curl_easy_cleanup(curl);
+	}
+    curl_global_cleanup();
+	return code;
+}
+CURLcode res;
+vector<MapTileData> downloadWeatherMaps(WeatherLayer wL, LatLonBounds currentScope, int pixelHeight, int pixelLength){
+    vector<MapTileData> mapTiles = getMapTilesFromBounds (currentScope, pixelHeight, pixelLength);
+
+    res = curl_global_init(CURL_GLOBAL_ALL);
+    for(int i = 0; i < mapTiles.size(); i++){
+        MapTileData curMapTile = mapTiles[i];
+        string url = getMapAPIURLFromParameters(wL, curMapTile);
+        cout<<url<<endl;
+        string outputURL = curMapTile.url;
+        std::ofstream ofs(outputURL, std::ostream::binary);
+
+        if (CURLE_OK == curl_read(url, ofs))
+        {
+        }
+        ofs.close();
+    }
+    return mapTiles;
+}
+
+string weatherJson = "";
+
+static size_t write_weather_data(void *buffer, size_t size, size_t nmemb, void *userp) {
+    if (buffer && nmemb) {
+    char myBuf[nmemb + 1] = {0}; // Zeroes out the array
+    //strncpy(myBuf, (char *)buffer, nmemb);
+    weatherJson = (char *)buffer;
+    }
+    return nmemb;
+}
+
+void fetchWeatherData(LatLon location){
+    res = curl_global_init(CURL_GLOBAL_ALL);
+    if (res != CURLE_OK) {
+    cout << "ERROR: Unable to initialize libcurl" << endl;
+    cout << curl_easy_strerror(res) << endl;
+    return ;
+    }
+    CURL *curlHandle = curl_easy_init();
+    if ( !curlHandle ) {
+    cout << "ERROR: Unable to get easy handle" << endl;
+    return;
+    } else {
+    // Set web URL to fetch page/data from
+    res = curl_easy_setopt(curlHandle, CURLOPT_URL, "https://api.openweathermap.org/data/2.5/forecast/daily?lat=43.699989&lon=-79.394989&cnt=16&appid=***REMOVED***");
+    if (res != CURLE_OK) {
+    cout << "ERROR: Unable to set libcurl option" << endl;
+    cout << curl_easy_strerror(res) << endl;
+    } else {
+    // Perform web transfer request
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, write_weather_data);
+    //curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, weatherJson); 
+    res = curl_easy_perform(curlHandle);
+    }
+    if (res == CURLE_OK) {
+    } else {
+    cout << "ERROR: res == " << res << endl;
+    cout << curl_easy_strerror(res) << endl;
+    cout << "See https://curl.haxx.se/libcurl/c/libcurl-errors.html "
+    "for error codes" << endl;
+    }
+    curl_easy_cleanup(curlHandle);
+    curlHandle = nullptr;
+    }
+    curl_global_cleanup();
+}
+
+WeatherData getWeatherData(LatLon location, int time){
+    fetchWeatherData(location);
+    size_t lastIdx = weatherJson.find("\"dt\":");
+    size_t curIdx = weatherJson.find("\"dt\":", lastIdx+1);
+    int curDay = stoi(weatherJson.substr(curIdx+5));
+    while (curIdx != string::npos && time < curDay)
+    {
+        lastIdx = curIdx;
+        curIdx = weatherJson.find("\"dt\":", lastIdx+1);
+        if(curIdx != string::npos)
+            curDay = stoi(weatherJson.substr(curIdx+5));
+    }
+    size_t sunriseIdx = weatherJson.find("\"sunrise\":", lastIdx+1);
+    size_t sunsetIdx = weatherJson.find("\"sunset\":", lastIdx+1);
+    WeatherData out;
+    out.sunrise = stoi(weatherJson.substr(sunriseIdx+10));
+    out.sunset = stoi(weatherJson.substr(sunsetIdx+9));
+    return out;
+}

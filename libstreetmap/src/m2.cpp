@@ -22,6 +22,7 @@
 #include "m2.h"
 #include "m1.h"
 #include "renderHelper.h"
+#include "OpenWeatherHelper.h"
 #include <vector>
 #include <map>
 #include "StreetsDatabaseAPI.h"
@@ -74,7 +75,54 @@ const double kMaximumBuildingScaling = 2; //maximum number of meters per pixel t
 const bool enableCellRendering = false; //enable cell rendering method (possibly buggy)
 const double kRoadWidth = 7.5; //width of roads
 
+LatLonBounds currentScope; // scope of city map
+vector<MapTileData> mapTiles;
+WeatherData currentWeather; // weather including sunset and sunrise in epoch time
 
+
+//Stores the intersectionIdxs of the previously searched intersections
+vector<IntersectionIdx> prevSearchedIntersectionIdxs = {};
+//Stores previously clicked intersectionIdx;
+IntersectionIdx prevClickedIntersection = -1;
+//Stores the map names along with its path and a application pointer to send into the map changing callback
+pair<string,pair<string,ezgl::application*>> mapNames[19] = { {"BeijingBtn",{"/cad2/ece297s/public/maps/beijing_china.streets.bin",nullptr}},
+                                                            {"BeirutBtn",{"/cad2/ece297s/public/maps/beirut_lebanon.streets.bin",nullptr}},
+                                                            {"BerlinBtn",{"/cad2/ece297s/public/maps/berlin_germany.streets.bin",nullptr}},
+                                                            {"BostonBtn",{"/cad2/ece297s/public/maps/boston_usa.streets.bin",nullptr}},
+                                                            {"CapeTownBtn",{"/cad2/ece297s/public/maps/cape-town_south-africa.streets.bin",nullptr}},
+                                                            {"GoldenHorseshoeBtn",{"/cad2/ece297s/public/maps/golden-horseshoe_canada.streets.bin",nullptr}},
+                                                            {"HamiltonBtn",{"/cad2/ece297s/public/maps/hamilton_canada.streets.bin",nullptr}},
+                                                            {"HongKongBtn",{"/cad2/ece297s/public/maps/hong-kong_china.streets.bin",nullptr}},
+                                                            {"IcelandBtn",{"/cad2/ece297s/public/maps/iceland.streets.bin",nullptr}},
+                                                            {"InterlakenBtn",{"/cad2/ece297s/public/maps/interlaken_switzerland.streets.bin",nullptr}},
+                                                            {"LondonBtn",{"/cad2/ece297s/public/maps/london_england.streets.bin",nullptr}},
+                                                            {"NewDehliBtn",{"/cad2/ece297s/public/maps/new-delhi_india.streets.bin",nullptr}},
+                                                            {"NewYorkBtn",{"/cad2/ece297s/public/maps/new-york_usa.streets.bin",nullptr}},
+                                                            {"RioDeJaneiroBtn",{"/cad2/ece297s/public/maps/rio-de-janeiro_brazil.streets.bin",nullptr}},
+                                                            {"SaintHelenaBtn",{"/cad2/ece297s/public/maps/saint-helena.streets.bin",nullptr}},
+                                                            {"SingaporeBtn",{"/cad2/ece297s/public/maps/singapore.streets.bin",nullptr}},
+                                                            {"TehranBtn",{"/cad2/ece297s/public/maps/tehran_iran.streets.bin",nullptr}},
+                                                            {"TokyoBtn",{"/cad2/ece297s/public/maps/tokyo_japan.streets.bin",nullptr}},
+                                                            {"TorontoBtn",{"/cad2/ece297s/public/maps/toronto_canada.streets.bin",nullptr}}};
+
+pair<string,pair<WeatherLayer,ezgl::application*>> filterNames[6] = { {"SnowBtn",{SNOW,nullptr}},
+                                                                     {"TemperatureBtn",{TEMPERATURE,nullptr}},
+                                                                     {"PrecipitationBtn",{PRECIPITATION,nullptr}},
+                                                                     {"CloudsBtn",{CLOUDS,nullptr}},
+                                                                     {"HumidityBtn",{HUMIDITY,nullptr}},
+                                                                     {"WindBtn",{WIND,nullptr}}};                              
+
+// void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
+// {
+//    double angle = atan2(direction.y, direction.x);
+//    //draw triangle based on initial angle
+//    g->set_color(color);
+//    g->fill_poly({
+//       {center.x + distanceFromCenter*cos(angle), center.y + distanceFromCenter*sin(angle)},
+//       {center.x + distanceFromCenter*cos(angle+2*M_PI/3.0), center.y + distanceFromCenter*sin(angle+2*M_PI/3.0)},
+//       {center.x + distanceFromCenter*cos(angle+4*M_PI/3.0), center.y + distanceFromCenter*sin(angle+4*M_PI/3.0)},
+//    });
+// }
 
 void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, double lineWidth, double scaling, double realWorldScaling, ezgl::camera camera)
 {  
@@ -196,37 +244,6 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double screenArea, doub
       g->set_text_rotation(0);
 }
 
-//Stores the intersectionIdxs of the previously searched intersections
-vector<IntersectionIdx> prevSearchedIntersectionIdxs = {};
-//Stores the map names along with its path and a application pointer to send into the map changing callback
-pair<string,pair<string,ezgl::application*>> mapNames[19] = { {"BeijingBtn",{"/cad2/ece297s/public/maps/beijing_china.streets.bin",nullptr}},
-                                       {"BeirutBtn",{"/cad2/ece297s/public/maps/beirut_lebanon.streets.bin",nullptr}},
-                                       {"BerlinBtn",{"/cad2/ece297s/public/maps/berlin_germany.streets.bin",nullptr}},
-                                       {"BostonBtn",{"/cad2/ece297s/public/maps/boston_usa.streets.bin",nullptr}},
-                                       {"CapeTownBtn",{"/cad2/ece297s/public/maps/cape-town_south-africa.streets.bin",nullptr}},
-                                       {"GoldenHorseshoeBtn",{"/cad2/ece297s/public/maps/golden-horseshoe_canada.streets.bin",nullptr}},
-                                       {"HamiltonBtn",{"/cad2/ece297s/public/maps/hamilton_canada.streets.bin",nullptr}},
-                                       {"HongKongBtn",{"/cad2/ece297s/public/maps/hong-kong_china.streets.bin",nullptr}},
-                                       {"IcelandBtn",{"/cad2/ece297s/public/maps/iceland.streets.bin",nullptr}},
-                                       {"InterlakenBtn",{"/cad2/ece297s/public/maps/interlaken_switzerland.streets.bin",nullptr}},
-                                       {"LondonBtn",{"/cad2/ece297s/public/maps/london_england.streets.bin",nullptr}},
-                                       {"NewDehliBtn",{"/cad2/ece297s/public/maps/new-delhi_india.streets.bin",nullptr}},
-                                       {"NewYorkBtn",{"/cad2/ece297s/public/maps/new-york_usa.streets.bin",nullptr}},
-                                       {"RioDeJaneiroBtn",{"/cad2/ece297s/public/maps/rio-de-janeiro_brazil.streets.bin",nullptr}},
-                                       {"SaintHelenaBtn",{"/cad2/ece297s/public/maps/saint-helena.streets.bin",nullptr}},
-                                       {"SingaporeBtn",{"/cad2/ece297s/public/maps/singapore.streets.bin",nullptr}},
-                                       {"TehranBtn",{"/cad2/ece297s/public/maps/tehran_iran.streets.bin",nullptr}},
-                                       {"TokyoBtn",{"/cad2/ece297s/public/maps/tokyo_japan.streets.bin",nullptr}},
-                                       {"TorontoBtn",{"/cad2/ece297s/public/maps/toronto_canada.streets.bin",nullptr}}};
- 
-void initial_setup(ezgl::application *application, bool /*new_window*/);
-
-void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application);
-void searchbarAuto1(GtkEntry* searchbar1, ezgl::application *application);
-void selectMap_cbk(GtkWidget */*widget*/, ezgl::application *application);
-void mapBackBtn_cbk(GtkWidget */*widget*/, ezgl::application *application);
-void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInfo);
-
 void draw_main_canvas(ezgl::renderer *g)
 {
    //rect value to draw to screen
@@ -237,7 +254,7 @@ void draw_main_canvas(ezgl::renderer *g)
    //initialize initial resolution values if they are at their default values (-1)
    auto layer = mapFeatures.layerMap.begin();
    
-
+   double zoom = getScaleFactor();
 
    double pixelLength = mainCanvas->get_camera().get_screen().width();
    double pixelHeight = mainCanvas->get_camera().get_screen().height();
@@ -311,8 +328,24 @@ void draw_main_canvas(ezgl::renderer *g)
          layer++;
       }
    }
+
+   //draw weather overlay
+   //getMapTilesFromBounds();
+   double tileSize = LonToX(mapTiles[0].tileBounds.max.longitude()) - LonToX(mapTiles[0].tileBounds.min.longitude());
+   for (size_t i = 0; i < mapTiles.size(); i++)
+   {
+      const char* surfURL = mapTiles[i].url.c_str();
+      ezgl::surface* currentSurface = g->load_png(surfURL);
+      cout << "screen length "<< screenLength<<endl;
+      cout << "pixel length "<< pixelLength<<endl;
+      ezgl::point2d minPoint2d= LatLonToPoint2D(mapTiles[i].tileBounds.min);
+      ezgl::point2d maxPoint2d= LatLonToPoint2D(mapTiles[i].tileBounds.max);
+
+      g->draw_surface(currentSurface, {(minPoint2d.x+maxPoint2d.x)/2,(minPoint2d.y+maxPoint2d.y)/2},1/zoom*221.25);
+      g->free_surface(currentSurface);
+   }
    
-   
+
    //set text display settings
    g->set_font_size(10);
    g->set_horiz_justification(ezgl::justification::center); //horizontally align text position with center of text
@@ -331,8 +364,6 @@ double getScaleFactor()
    return mainCanvas->get_camera().get_world_scale_factor().x;
 }
 
-
-
 void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to manage clicks on a specific MapFeature
 {
    mapFeatures.highlightFeature(clicked);
@@ -340,19 +371,25 @@ void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to
    if(clicked->featureType == FEATURE) //clicked on feature
    {
       OSMID osmid = getFeatureOSMID(clicked->dataIndex);
-      cout << "clicked: " << getFeatureName(clicked->dataIndex) << endl;
+
+      LatLon currentFeaturePoint = getFeaturePoint(clicked->dataIndex, 0);
+      IntersectionIdx closestInter = findClosestIntersection(currentFeaturePoint);
+
+      app->update_message("Clicked POI: " + getFeatureName(clicked->dataIndex) + ", Near: " + getIntersectionName(closestInter));
+
    }
    if(clicked->featureType == ROAD && clicked->dataIndex < getNumStreetSegments()) //clicked on street segment
    {
       StreetSegmentInfo segmentInfo = getStreetSegmentInfo(clicked->dataIndex);
-      cout << "clicked: sID = " << getStreetSegmentInfo(clicked->dataIndex).streetID << endl;
+      app->update_message("Clicked Street: " + getStreetName(segmentInfo.streetID));
       
    }
    if(clicked->featureType == POINT && clicked->dataIndex < getNumIntersections()) //clicked on intersection
    {
       string intersection = getIntersectionName(clicked->dataIndex);
-      cout << "intersection = " << intersection << endl;
-      
+      app->update_message("Clicked Intersection: " + intersection);
+      prevClickedIntersection = clicked->dataIndex;
+
    }
    mainCanvas->redraw();
 }
@@ -636,6 +673,20 @@ void loadFeatures()
       mapRenderCells(kRenderCellSize, minPoints, mapFeatures, cellMap);
       cout << endl;
    }
+
+   //download weather map data
+   currentScope.min = minPoints;
+   currentScope.max = maxPoints;
+   //Load weather map
+   mapTiles = downloadWeatherMaps(SNOW, currentScope, 1920, 1080);
+   
+   currentWeather = getWeatherData(
+      LatLon(
+         (currentScope.max.latitude() + currentScope.min.latitude())/2,
+         (currentScope.max.longitude() + currentScope.min.longitude())/2
+      ),
+      time(nullptr)
+   );
 }
 
 void unloadFeatures()
@@ -644,9 +695,6 @@ void unloadFeatures()
    cellMap.clear(); //delete all elements in cell map
    staticLabels.clear(); //delete all static labels
 }
-
-
-
 
 void drawMap() {
    // Set up the ezgl graphics window and hand control to it, as shown in the 
@@ -666,7 +714,6 @@ void drawMap() {
    //create window
    application.run(initial_setup,on_mouse_click,nullptr,nullptr);
 
-
 }
 
 void initial_setup(ezgl::application *application, bool /*new_window*/){
@@ -683,10 +730,18 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    GObject* mapBackBtn = application->get_object("mapBackBtn");
    g_signal_connect(mapBackBtn,"clicked",G_CALLBACK(mapBackBtn_cbk),application);
 
+   //initialize each button on switch map pop-up
    for(int i = 0; i < 19; i++){
       mapNames[i].second.second = application;
       GObject* mapSelectionBtn = application->get_object(mapNames[i].first.c_str());
       g_signal_connect(mapSelectionBtn,"clicked",G_CALLBACK(openMap_cbk),&mapNames[i].second);
+   }
+
+   //initialize each filter button
+   for(int i = 0; i < 6; i++){
+      filterNames[i].second.second = application;
+      GObject* filterBtn = application->get_object(filterNames[i].first.c_str());
+      g_signal_connect(filterBtn,"clicked",G_CALLBACK(changeFilter_cbk),&filterNames[i].second);
    }
 }
 
@@ -700,6 +755,10 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
       cout << getIntersectionName(prevSearchedIntersectionIdxs[i]) << endl;
    }
    prevSearchedIntersectionIdxs.clear();
+
+   if(prevClickedIntersection != -1){
+      intersectionFeatures[prevClickedIntersection]->highlight = false;
+   }
    
    //Extracting text from search bars
    GtkEntry* searchbar1 = GTK_ENTRY(application->get_object("searchbar1"));
@@ -740,28 +799,29 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
       intersectionList.push_back(findIntersectionsOfTwoStreets(*it));
       it++;
    }
-
-   if(intersectionList.size() == 0){
+   int numOfIntersectionLists = intersectionList.size();
+   if(numOfIntersectionLists == 0){
       application->update_message("No intersections found");
       return;
    }
 
    //Dislay names of intersections in list
-   string intersectionInfo = "Intersections: ";
+   string intersectionInfo = "Searched Intersections: ";
 
    // Mark each intersection for highlighting
-   for(int i = 0; i < intersectionList.size(); i++){
+   for(int i = 0; i < numOfIntersectionLists; i++){
       for(int j = 0; j < intersectionList[i].size(); j++){
          intersectionFeatures[intersectionList[i][j]]->highlight = true;
 
-         //or cout too as it cant all fit into the status bar
-         intersectionInfo.append(getIntersectionName(intersectionList[i][j]) + ", ");
+         intersectionInfo.append(getIntersectionName(intersectionList[i][j]) + (", "));
 
          prevSearchedIntersectionIdxs.push_back(intersectionList[i][j]);
          intersectionFeatures[intersectionList[i][j]]->highlight = true;
       }
    }
 
+   intersectionInfo.pop_back();
+   intersectionInfo.pop_back();
    application->update_message(intersectionInfo);
    application->refresh_drawing();
 
@@ -770,25 +830,25 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
 
 void searchbarAuto1(GtkEntry* searchbar1, ezgl::application *application){
 
-//    GtkListStore* liststore1 = GTK_LIST_STORE(application->get_object("LSAuto1"));
+   // GtkListStore* liststore1 = GTK_LIST_STORE(application->get_object("LSAuto1"));
    
-//    //Reset past autcomplete list
-//    gtk_list_store_clear(liststore1);
+   // //Reset past autcomplete list
+   // gtk_list_store_clear(liststore1);
 
-//    const char* searchText1 = gtk_entry_get_text(searchbar1);
+   // const char* searchText1 = gtk_entry_get_text(searchbar1);
 
-//    vector<StreetIdx> street1Idxs = findStreetIdsFromPartialStreetName(searchText1);
-//    GtkTreeIter iter;
+   // vector<StreetIdx> street1Idxs = findStreetIdsFromPartialStreetName(searchText1);
+   // GtkTreeIter iter;
 
-//    if(street1Idxs.size() != 0){
-//       cout << getStreetName(street1Idxs[0]) << endl;
-//    }
+   // if(street1Idxs.size() != 0){
+   //    cout << getStreetName(street1Idxs[0]) << endl;
+   // }
    
-//    for(int i = 0; i < street1Idxs.size(); i++){      
-//       gtk_list_store_append(liststore1, &iter);
-//       //maybe do .c_style()
-//       gtk_list_store_set(liststore1,&iter,0,getStreetName(street1Idxs[i]));
-//    }
+   // for(int i = 0; i < street1Idxs.size(); i++){      
+   //    gtk_list_store_append(liststore1, &iter);
+   //    //maybe do .c_style()
+   //    gtk_list_store_set(liststore1,&iter,0,getStreetName(street1Idxs[i]));
+   // }
 }
 
 //Callback that is called when select new map button is pressed
@@ -844,4 +904,13 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
 
    //Get new paramters
    resetCanvasParameters(application);
+}
+
+void changeFilter_cbk(GtkWidget */*widget*/, pair<WeatherLayer,ezgl::application*> * filterInfo){
+
+   mapTiles = downloadWeatherMaps(filterInfo->first, currentScope, 1920, 1080);
+   ezgl::application* application = filterInfo->second;
+
+   application->refresh_drawing();
+   return;
 }

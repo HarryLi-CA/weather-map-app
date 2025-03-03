@@ -1,5 +1,5 @@
 #pragma once
-#include "ezgl/canvas.hpp";
+#include "ezgl/canvas.hpp"
 #include "StreetsDatabaseAPI.h"
 #include <map>
 

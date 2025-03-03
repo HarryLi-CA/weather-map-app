@@ -201,21 +201,9 @@ void draw_main_canvas(ezgl::renderer *g)
    g->fill_rectangle(rect);
 
    //initialize initial resolution values if they are at their default values (-1)
-   if(initialWidth == -1)
-   {
-      initialWidth = mainCanvas->width();
-   }
-   if(initialHeight == -1)
-   {
-      initialHeight = mainCanvas->height();
-   }
-   
-   cout << initialWidth << ", " << initialHeight << endl;
-   
    auto layer = mapFeatures.layerMap.begin();
    
-   double zoom = getScaleFactor();
-   double absoluteLength = findDistanceBetweenTwoPoints(minPoints, maxPoints);
+
 
    double pixelLength = mainCanvas->get_camera().get_screen().width();
    double pixelHeight = mainCanvas->get_camera().get_screen().height();
@@ -224,16 +212,18 @@ void draw_main_canvas(ezgl::renderer *g)
    double scaling = pixelLength/screenLength;
    double worldToScreenScale = screenLength/pixelLength;
    double screenArea = screenLength*screenHeight;
-   double invisibilityFactor = 0.5/absoluteLength;
+
    int lineWidth = max(1.0, 5.0*scaling);
-   
+
    auto& camera = mainCanvas->get_camera();
    ezgl::rectangle cameraRect = camera.get_world();
-   double xScale = (double)mainCanvas->width()/(double)initialWidth;
-   double yScale = (double)mainCanvas->height()/(double)initialHeight;
-   cout << "scale: " << xScale << ", " << yScale << endl;
-   double rectWidth = cameraRect.width()*xScale;
-   double rectHeight = cameraRect.height()*yScale;
+   
+
+   double whRatio = (double)mainCanvas->width()/(double)mainCanvas->height(); //ratio of canvas width to canvas height
+   
+
+   double rectWidth = cameraRect.width()/(camera.get_screen().width()/mainCanvas->width()); //caculate world width of canvas
+   double rectHeight = cameraRect.height()/(camera.get_screen().height()/mainCanvas->height()); //calculate world height of canvas
    cameraRect = ezgl::rectangle(
       {cameraRect.center_x() - rectWidth/2.0, cameraRect.center_y() - rectHeight/2.0},
       {cameraRect.center_x() + rectWidth/2.0, cameraRect.center_y() + rectHeight/2.0}
@@ -300,6 +290,8 @@ void draw_main_canvas(ezgl::renderer *g)
    {
       g->draw_text(label->position, label->text, label->feature->bounds.width(), label->feature->bounds.height());
    }
+
+   g->draw_rectangle(cameraRect);
 }
 
 double getScaleFactor()
@@ -590,6 +582,12 @@ void loadFeatures()
    }
 }
 
+void unloadFeatures()
+{
+   mapFeatures.clear(); //delete all elements in the map
+   cellMap.clear(); //delete all elements in cell map
+   staticLabels.clear(); //delete all static labels
+}
 
 
 
@@ -749,6 +747,17 @@ void mapBackBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    gtk_widget_hide(mapSelectorDialog);
 }
 
+void resetCanvasParameters(ezgl::application* app) //helper function to reset the canvas if values are changed
+{
+   //initialHeight = -1;
+   //initialWidth = -1;
+   initial_world = ezgl::rectangle(LatLonToPoint2D(minPoints),LatLonToPoint2D(maxPoints));
+   app->change_canvas_world_coordinates("MainCanvas",initial_world);
+   //delete mainCanvas;
+   mainCanvas = app->get_canvas("MainCanvas");
+   app->refresh_drawing();
+}
+
 //Callback function that changes the map, called when map is selected from the pop up dialog
 void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInfo){
    
@@ -771,12 +780,12 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
    }
    std::cout << "Successfully loaded map '" << nextMapPath << "'\n";
 
+   //Unload old map info
+   unloadFeatures();
+
    //Load new map info
    loadFeatures();
 
-   //Make EZGL rectangle with map borders
-   ezgl::rectangle rect(initial_world.center(),initial_world.top_right());
-   application->change_canvas_world_coordinates("MainCanvas",rect);
-
-   application->refresh_drawing();
+   //Get new paramters
+   resetCanvasParameters(application);
 }

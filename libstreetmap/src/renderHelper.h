@@ -36,6 +36,7 @@ class MapFeature {
     bool inCellList; //was added to cell list for rendering this frame
     bool directional;
     MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _color, DrawType _drawType, MapFeatureType _featureType, int _index);
+    ~MapFeature();
 };
 
 //customized container for storing and sorting map features
@@ -45,8 +46,9 @@ class FeatureList {
     MapFeature* highlightedFeature; //currently highlighted feature
     StreetIdx highlightedStreetID; //currently highlighted street (-2 by default)
     FeatureList();
-    void addFeature(MapFeature* feature);
-    void highlightFeature(MapFeature* feature);
+    void addFeature(MapFeature* feature); //adds feature to the map at the corresponding layer
+    void highlightFeature(MapFeature* feature); //highlights feature and unhighlights currently highlighted features
+    void clear(); //deletes all vectors and map features in the layer map
 };
 
 //structure used to define text to draw

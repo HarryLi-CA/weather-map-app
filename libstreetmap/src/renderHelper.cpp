@@ -42,10 +42,28 @@ MapFeature::MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _
     maximumScaling = DBL_MAX;
 }
 
+MapFeature::~MapFeature()
+{
+    //delete points
+    delete [] points;
+}
+
 FeatureList::FeatureList(){
     //set default values
     highlightedFeature = nullptr;
     highlightedStreetID = -2;
+}
+
+void FeatureList::clear()
+{
+    //delete all features in each layer
+    auto layer = layerMap.begin();
+    while(layer != layerMap.end())
+    {
+        (*layer->second).clear();
+        layer++;
+    }
+    layerMap.clear();
 }
 
 void FeatureList::highlightFeature(MapFeature* feature)

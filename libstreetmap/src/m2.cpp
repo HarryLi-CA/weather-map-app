@@ -324,7 +324,6 @@ void draw_main_canvas(ezgl::renderer *g)
    //draw weather overlay
    //getMapTilesFromBounds();
    double tileSize = LonToX(mapTiles[0].tileBounds.max.longitude()) - LonToX(mapTiles[0].tileBounds.min.longitude());
-   double mapSize = LonToX(currentScope.max.longitude()) - LonToX(currentScope.min.longitude());
    double zoom = getScaleFactor();
    for (size_t i = 0; i < mapTiles.size(); i++)
    {

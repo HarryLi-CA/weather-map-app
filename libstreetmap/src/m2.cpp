@@ -102,12 +102,12 @@ pair<string,pair<string,ezgl::application*>> mapNames[19] = { {"BeijingBtn",{"/c
                                                             {"TokyoBtn",{"/cad2/ece297s/public/maps/tokyo_japan.streets.bin",nullptr}},
                                                             {"TorontoBtn",{"/cad2/ece297s/public/maps/toronto_canada.streets.bin",nullptr}}};
 
-pair<string,pair<string,ezgl::application*>> filterNames[6] = { {"SnowBtn",{"SNOW",nullptr}},
-                                                               {"TemperatureBtn",{"TEMPERATURE",nullptr}},
-                                                               {"PrecipitationBtn",{"PRECIPITATION",nullptr}},
-                                                               {"CloudsBtn",{"CLOUDS",nullptr}},
-                                                               {"HumidityBtn",{"HUMIDITY",nullptr}},
-                                                               {"WindBtn",{"WIND",nullptr}}};                              
+pair<string,pair<WeatherLayer,ezgl::application*>> filterNames[6] = { {"SnowBtn",{SNOW,nullptr}},
+                                                               {"TemperatureBtn",{TEMPERATURE,nullptr}},
+                                                               {"PrecipitationBtn",{PRECIPITATION,nullptr}},
+                                                               {"CloudsBtn",{CLOUDS,nullptr}},
+                                                               {"HumidityBtn",{HUMIDITY,nullptr}},
+                                                               {"WindBtn",{WIND,nullptr}}};                              
 
 // void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
 // {
@@ -850,6 +850,9 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
    resetCanvasParameters(application);
 }
 
-void changeFilter_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * filterInfo){
+void changeFilter_cbk(GtkWidget */*widget*/, pair<WeatherLayer,ezgl::application*> * filterInfo){
+
+   mapTiles = downloadWeatherMaps(filterInfo->first, currentScope, 1920, 1080);
+
    return;
 }

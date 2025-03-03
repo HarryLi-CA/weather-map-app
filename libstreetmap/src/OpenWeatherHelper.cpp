@@ -124,7 +124,7 @@ string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData){
             break;
     }
     baseURL += '/' + to_string(tileData.z) + '/' + to_string(tileData.x) + '/' + to_string(tileData.y);
-    baseURL += "?opacity=0.8&";
+    baseURL += "?opacity=0.5&";
     baseURL += "appid=" + APIKey;
     return baseURL;
 }

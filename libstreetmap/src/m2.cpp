@@ -297,12 +297,10 @@ void draw_main_canvas(ezgl::renderer *g)
       ezgl::surface* currentSurface = g->load_png(surfURL);
       cout << "screen length "<< screenLength<<endl;
       cout << "pixel length "<< pixelLength<<endl;
-      LatLon tlSpot = LatLon(
-         (mapTiles[i].tileBounds.min.latitude() + mapTiles[i].tileBounds.max.latitude())/2, 
-         (mapTiles[i].tileBounds.min.longitude()+mapTiles[i].tileBounds.max.longitude())/2
-      );
+      ezgl::point2d minPoint2d= LatLonToPoint2D(mapTiles[i].tileBounds.min);
+      ezgl::point2d maxPoint2d= LatLonToPoint2D(mapTiles[i].tileBounds.max);
 
-      g->draw_surface(currentSurface, LatLonToPoint2D(tlSpot),1/zoom*221.25);
+      g->draw_surface(currentSurface, {(minPoint2d.x+maxPoint2d.x)/2,(minPoint2d.y+maxPoint2d.y)/2},1/zoom*221.25);
       g->free_surface(currentSurface);
    }
    

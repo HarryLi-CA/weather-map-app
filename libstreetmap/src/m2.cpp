@@ -68,12 +68,12 @@ double initialWidth = -1;
 double initialHeight = -1;
 //define rendering constants
 const double kOnewayIndicatorSize = 6.0; //size from center to vertex of indicator triangle
-const int kMinimumPixelsToDraw = 2000; //minimum pixels a feature should take up on the screen to be drawn that cycle
+const int kMinimumPixelsToDraw = 100; //minimum pixels a feature should take up on the screen to be drawn that cycle
 const double kMinimumMajorRoadLength = 5000; //minimum length for a road to be considered a major road
 const double kRenderCellSize = 300; //size of each render cell
-const int kMaximumRenderCells = 100; //maximum number of render cells before switching to direct rendering
+const int kMaximumRenderCells = 50000; //maximum number of render cells before switching to direct rendering
 const double kMaximumBuildingScaling = 2; //maximum number of meters per pixel to start drawing buildings
-const bool enableCellRendering = false; //enable cell rendering method (possibly buggy)
+const bool enableCellRendering = true; //enable cell rendering method (possibly buggy)
 const double kRoadWidth = 7.5; //width of roads
 const double TILERATIO = 0.000005805;
 LatLonBounds currentScope; // scope of city map
@@ -218,7 +218,7 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
             const ezgl::rectangle& bounds = feature->bounds;
             
             const ezgl::rectangle screen_rect(camera.world_to_screen(bounds.bottom_left()),camera.world_to_screen(bounds.top_right()));
-            if(!feature->highlight && screen_rect.area() < 10){break;} 
+            if(!feature->highlight && screen_rect.area() < kMinimumPixelsToDraw){break;} 
          
             g->set_color(feature->color);
             g->fill_poly(*(feature->points));
@@ -289,7 +289,9 @@ void draw_main_canvas(ezgl::renderer *g)
       cells = getCurrentRenderCells(&camera,kRenderCellSize,minPoints);
       //if number of cells is low, use cell rendering method
       useCellRendering = cells.size() <= kMaximumRenderCells; //use render cells to cull features
+      cout << cells.size() << endl;
    }
+   
    if(useCellRendering){
       vector<MapFeature*> cellFeatures = getFeaturesFromCells(cells, cellMap);
       for(int i = 0; i < cellFeatures.size(); i++)

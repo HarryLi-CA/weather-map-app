@@ -76,9 +76,6 @@ LatLonBounds currentScope; // scope of city map
 vector<MapTileData> mapTiles;
 WeatherData currentWeather; // weather including sunset and sunrise in epoch time
 
-LatLonBounds currentScope; // scope of city map
-vector<MapTileData> mapTiles;
-WeatherData currentWeather; // weather including sunset and sunrise in epoch time
 
 //Stores the intersectionIdxs of the previously searched intersections
 vector<IntersectionIdx> prevSearchedIntersectionIdxs = {};
@@ -216,7 +213,7 @@ void draw_main_canvas(ezgl::renderer *g)
    //initialize initial resolution values if they are at their default values (-1)
    auto layer = mapFeatures.layerMap.begin();
    
-
+   double zoom = getScaleFactor();
 
    double pixelLength = mainCanvas->get_camera().get_screen().width();
    double pixelHeight = mainCanvas->get_camera().get_screen().height();

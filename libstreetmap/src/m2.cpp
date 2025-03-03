@@ -68,7 +68,7 @@ double initialWidth = -1;
 double initialHeight = -1;
 //define rendering constants
 const double kOnewayIndicatorSize = 6.0; //size from center to vertex of indicator triangle
-const int kMinimumPixelsToDraw = 20; //minimum pixels a feature should take up on the screen to be drawn that cycle
+const int kMinimumPixelsToDraw = 2000; //minimum pixels a feature should take up on the screen to be drawn that cycle
 const double kMinimumMajorRoadLength = 5000; //minimum length for a road to be considered a major road
 const double kRenderCellSize = 300; //size of each render cell
 const int kMaximumRenderCells = 100; //maximum number of render cells before switching to direct rendering
@@ -332,7 +332,13 @@ void draw_main_canvas(ezgl::renderer *g)
       ezgl::point2d minPoint2d= LatLonToPoint2D(mapTiles[i].tileBounds.min);
       ezgl::point2d maxPoint2d= LatLonToPoint2D(mapTiles[i].tileBounds.max);
 
-      g->draw_surface(currentSurface, {(minPoint2d.x+maxPoint2d.x)/2,(minPoint2d.y+maxPoint2d.y)/2},TILERATIO*tileSize*pixelLength/zoom);
+      //cout<< "ratio: " << 1/(tileSize/zoom) <<endl;
+      double metersPerPixel = tileSize/256.0;
+      double screenMperP = screenLength/pixelLength;
+      double targetLength = tileSize/screenMperP;
+      double scalingFactor = targetLength/256.0;
+
+      g->draw_surface(currentSurface, {(minPoint2d.x+maxPoint2d.x)/2,(minPoint2d.y+maxPoint2d.y)/2},scalingFactor);
       g->free_surface(currentSurface);
    }
    

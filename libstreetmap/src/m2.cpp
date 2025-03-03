@@ -621,13 +621,13 @@ void loadFeatures()
    //Load weather map
    mapTiles = downloadWeatherMaps(SNOW, currentScope, 1920, 1080);
    
-   // currentWeather = getWeatherData(
-   //    LatLon(
-   //       (currentScope.max.latitude() + currentScope.min.latitude())/2,
-   //       (currentScope.max.longitude() + currentScope.min.longitude())/2
-   //    ),
-   //    time(nullptr)
-   // );
+   currentWeather = getWeatherData(
+      LatLon(
+         (currentScope.max.latitude() + currentScope.min.latitude())/2,
+         (currentScope.max.longitude() + currentScope.min.longitude())/2
+      ),
+      time(nullptr)
+   );
 }
 
 void unloadFeatures()

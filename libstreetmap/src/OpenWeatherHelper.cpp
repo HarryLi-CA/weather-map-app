@@ -200,7 +200,7 @@ void fetchWeatherData(LatLon location){
     if (res != CURLE_OK) {
     cout << "ERROR: Unable to initialize libcurl" << endl;
     cout << curl_easy_strerror(res) << endl;
-    return;
+    return ;
     }
     CURL *curlHandle = curl_easy_init();
     if ( !curlHandle ) {
@@ -208,20 +208,14 @@ void fetchWeatherData(LatLon location){
     return;
     } else {
     // Set web URL to fetch page/data from
-    string apiURL = "http://api.openweathermap.org/data/2.5/forecast/daily?lat=" +
-    to_string(location.latitude()) +
-    "&lon="+to_string(location.longitude()) +
-    "&cnt=16&appid=***REMOVED***";
-
-    cout<<"Getting WeatherData from: "<<apiURL<<endl;
-
-    res = curl_easy_setopt(curlHandle, CURLOPT_URL, apiURL);
+    res = curl_easy_setopt(curlHandle, CURLOPT_URL, "https://api.openweathermap.org/data/2.5/forecast/daily?lat=43.699989&lon=-79.394989&cnt=16&appid=***REMOVED***");
     if (res != CURLE_OK) {
     cout << "ERROR: Unable to set libcurl option" << endl;
     cout << curl_easy_strerror(res) << endl;
     } else {
     // Perform web transfer request
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, write_weather_data);
+    //curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, weatherJson); 
     res = curl_easy_perform(curlHandle);
     }
     if (res == CURLE_OK) {
@@ -239,16 +233,15 @@ void fetchWeatherData(LatLon location){
 
 WeatherData getWeatherData(LatLon location, int time){
     fetchWeatherData(location);
-    cout <<"fetched weather data:" << weatherJson <<endl;
     size_t lastIdx = weatherJson.find("\"dt\":");
     size_t curIdx = weatherJson.find("\"dt\":", lastIdx+1);
     int curDay = stoi(weatherJson.substr(curIdx+5));
     while (curIdx != string::npos && time < curDay)
     {
         lastIdx = curIdx;
-        curIdx = weatherJson.find("\"dt\":", lastIdx+5);
+        curIdx = weatherJson.find("\"dt\":", lastIdx+1);
         if(curIdx != string::npos)
-            curDay = stoi(weatherJson.substr(curIdx));
+            curDay = stoi(weatherJson.substr(curIdx+5));
     }
     size_t sunriseIdx = weatherJson.find("\"sunrise\":", lastIdx+1);
     size_t sunsetIdx = weatherJson.find("\"sunset\":", lastIdx+1);

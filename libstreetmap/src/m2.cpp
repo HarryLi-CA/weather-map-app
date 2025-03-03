@@ -80,12 +80,11 @@ LatLonBounds currentScope; // scope of city map
 vector<MapTileData> mapTiles;
 WeatherData currentWeather; // weather including sunset and sunrise in epoch time
 
-
 //Stores the intersectionIdxs of the previously searched intersections
 vector<IntersectionIdx> prevSearchedIntersectionIdxs = {};
 //Stores previously clicked intersectionIdx;
 IntersectionIdx prevClickedIntersection = -1;
-//Stores the map names along with its path and a application pointer to send into the map changing callback
+//Stores the map button id along with its path and a application pointer to send into the map changing callback
 pair<string,pair<string,ezgl::application*>> mapNames[19] = { {"BeijingBtn",{"/cad2/ece297s/public/maps/beijing_china.streets.bin",nullptr}},
                                                             {"BeirutBtn",{"/cad2/ece297s/public/maps/beirut_lebanon.streets.bin",nullptr}},
                                                             {"BerlinBtn",{"/cad2/ece297s/public/maps/berlin_germany.streets.bin",nullptr}},
@@ -105,7 +104,7 @@ pair<string,pair<string,ezgl::application*>> mapNames[19] = { {"BeijingBtn",{"/c
                                                             {"TehranBtn",{"/cad2/ece297s/public/maps/tehran_iran.streets.bin",nullptr}},
                                                             {"TokyoBtn",{"/cad2/ece297s/public/maps/tokyo_japan.streets.bin",nullptr}},
                                                             {"TorontoBtn",{"/cad2/ece297s/public/maps/toronto_canada.streets.bin",nullptr}}};
-
+//Stores the filter button id as well as the WeatherLayer it is asciated to
 pair<string,pair<WeatherLayer,ezgl::application*>> filterNames[6] = { {"SnowBtn",{SNOW,nullptr}},
                                                                      {"TemperatureBtn",{TEMPERATURE,nullptr}},
                                                                      {"PrecipitationBtn",{PRECIPITATION,nullptr}},
@@ -357,9 +356,6 @@ double getScaleFactor()
 {
    return mainCanvas->get_camera().get_world_scale_factor().x;
 }
-
-
-
 
 void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to manage clicks on a specific MapFeature
 {
@@ -709,13 +705,15 @@ void drawMap() {
 
 void initial_setup(ezgl::application *application, bool /*new_window*/){
 
+   //initializing search button for two streets to intersection search
    GObject* searchBtn = application->get_object("searchBtn");
    g_signal_connect(searchBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
 
-
+   //initializing button that opens pop up window with map choices
    GObject* SelectMapBtn = application->get_object("SelectMapBtn");
    g_signal_connect(SelectMapBtn,"clicked",G_CALLBACK(selectMap_cbk),application);
 
+   //initizlizing back button on the pop up window with map choices
    GObject* mapBackBtn = application->get_object("mapBackBtn");
    g_signal_connect(mapBackBtn,"clicked",G_CALLBACK(mapBackBtn_cbk),application);
 
@@ -750,9 +748,8 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
 
 void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
 
-   //Make a clear highlighted intersections button
+   //unhighlight previously searched intersections
    for(int i = 0; i < prevSearchedIntersectionIdxs.size(); i++){
-      //unhighlight
       intersectionFeatures[prevSearchedIntersectionIdxs[i]]->highlight = false;
    }
    prevSearchedIntersectionIdxs.clear();
@@ -825,8 +822,6 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    intersectionInfo.pop_back();
    application->update_message(intersectionInfo);
    application->refresh_drawing();
-
-  return;
 }
 
 void selectMap_cbk(GtkWidget */*widget*/, ezgl::application *application){
@@ -883,9 +878,9 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
 
 void changeFilter_cbk(GtkWidget */*widget*/, pair<WeatherLayer,ezgl::application*> * filterInfo){
 
+   //update current weather filter
    mapTiles = downloadWeatherMaps(filterInfo->first, currentScope, 1920, 1080);
    ezgl::application* application = filterInfo->second;
 
    application->refresh_drawing();
-   return;
 }

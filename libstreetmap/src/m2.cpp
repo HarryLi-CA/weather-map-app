@@ -110,7 +110,10 @@ pair<string,pair<WeatherLayer,ezgl::application*>> filterNames[6] = { {"SnowBtn"
                                                                      {"PrecipitationBtn",{PRECIPITATION,nullptr}},
                                                                      {"CloudsBtn",{CLOUDS,nullptr}},
                                                                      {"HumidityBtn",{HUMIDITY,nullptr}},
-                                                                     {"WindBtn",{WIND,nullptr}}};                              
+                                                                     {"WindBtn",{WIND,nullptr}}};
+
+WeatherLayer currWeatherLayer = NOFILTER;  
+std::time_t currentTime = std::time(nullptr);                            
 
 // void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
 // {
@@ -677,7 +680,7 @@ void loadFeatures()
          (currentScope.max.latitude() + currentScope.min.latitude())/2,
          (currentScope.max.longitude() + currentScope.min.longitude())/2
       ),
-      time(nullptr)
+      currentTime
    );
 }
 
@@ -910,8 +913,9 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
 void changeFilter_cbk(GtkWidget */*widget*/, pair<WeatherLayer,ezgl::application*> * filterInfo){
 
    //update current weather filter
-   mapTiles = downloadWeatherMaps(filterInfo->first, currentScope, 1920, 1080, time(nullptr));
+   mapTiles = downloadWeatherMaps(filterInfo->first, currentScope, 1920, 1080, currentTime);
    ezgl::application* application = filterInfo->second;
+   currWeatherLayer = filterInfo->first;
 
    application->refresh_drawing();
 }
@@ -920,18 +924,18 @@ void changeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* applicatio
    
    //range from 0 days to 10 days in increments of 1/3 days
    double selectedRange = gtk_range_get_value(sliderRange);
-   time_t currentTime = std::time(nullptr);
 
    //current time plus number of 1/3 days times epoch time of 1/3 days
-   std::time_t selectedTime = currentTime + selectedRange*28800;
+   currentTime = std::time(nullptr) + selectedRange*28800*100;
 
    //change date and time on ui
-   string selectedTimeText = asctime(std::localtime(&selectedTime));
+   string selectedTimeText = asctime(std::localtime(&currentTime));
    selectedTimeText = selectedTimeText.substr(0,16);
    GtkLabel* selectedTimeLabel = GTK_LABEL(application->get_object("selectedTimeLabel"));
    gtk_label_set_text(selectedTimeLabel,selectedTimeText.c_str());
 
    //refresh value
+   mapTiles = downloadWeatherMaps(currWeatherLayer, currentScope, 1920, 1080, currentTime);
    application->refresh_drawing();
 
    //Display sunrise onto ui

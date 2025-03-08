@@ -1,0 +1,20 @@
+.dark {
+    color: #ffffff;
+    background-color: #1a1a1a;
+}
+
+.status {
+    background-color: #868686;
+    border-radius: 10px;
+}
+
+.filter {
+    background-color: #333333;
+    border-radius: 100%;
+    font-size: large;
+}
+
+.uiBtn {
+    background-color: #333333;
+    color: #ffffff;
+}

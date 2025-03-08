@@ -23,6 +23,9 @@
             <property name="can-focus">False</property>
             <property name="orientation">vertical</property>
             <property name="spacing">2</property>
+            <style>
+              <class name="status"/>
+            </style>
           </object>
           <packing>
             <property name="left-attach">0</property>
@@ -123,11 +126,14 @@
                     <property name="spacing">6</property>
                     <child>
                       <object class="GtkButton" id="HumidityBtn">
-                        <property name="label" translatable="yes">Humidity 🥵️</property>
-                        <property name="name">Humidity</property>
+                        <property name="label" translatable="yes">🔥️</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
+                        <property name="relief">none</property>
+                        <style>
+                          <class name="filter"/>
+                        </style>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -138,11 +144,15 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="SnowBtn">
-                        <property name="label" translatable="yes">Snow ❄️</property>
+                        <property name="label" translatable="yes">❄️</property>
                         <property name="name">Clouds</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
+                        <property name="relief">none</property>
+                        <style>
+                          <class name="filter"/>
+                        </style>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -153,10 +163,14 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="WindBtn">
-                        <property name="label" translatable="yes">Wind 🍃️</property>
+                        <property name="label" translatable="yes">🍃️</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
+                        <property name="relief">none</property>
+                        <style>
+                          <class name="filter"/>
+                        </style>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -167,11 +181,15 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="PrecipitationBtn">
-                        <property name="label" translatable="yes">Precipitation ☔️</property>
+                        <property name="label" translatable="yes">☔️</property>
                         <property name="name">Snow</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
+                        <property name="relief">none</property>
+                        <style>
+                          <class name="filter"/>
+                        </style>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -182,11 +200,15 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="TemperatureBtn">
-                        <property name="label" translatable="yes">Temperature 🌡️</property>
+                        <property name="label" translatable="yes">🌡️</property>
                         <property name="name">PrecipitationBtn</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
+                        <property name="relief">none</property>
+                        <style>
+                          <class name="filter"/>
+                        </style>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -197,11 +219,15 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="CloudsBtn">
-                        <property name="label" translatable="yes">Clouds 🌫️</property>
+                        <property name="label" translatable="yes">☁️</property>
                         <property name="name">Temperature</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
+                        <property name="relief">none</property>
+                        <style>
+                          <class name="filter"/>
+                        </style>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -216,6 +242,10 @@
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
+                        <property name="relief">none</property>
+                        <style>
+                          <class name="uiBtn"/>
+                        </style>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -531,6 +561,9 @@
         </child>
       </object>
     </child>
+    <style>
+      <class name="dark"/>
+    </style>
   </object>
   <object class="GtkDialog" id="mapSelectorDialog">
     <property name="can-focus">False</property>

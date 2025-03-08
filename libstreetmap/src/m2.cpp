@@ -105,11 +105,11 @@ pair<string,pair<string,ezgl::application*>> mapNames[19] = { {"BeijingBtn",{"/c
                                                             {"TokyoBtn",{"/cad2/ece297s/public/maps/tokyo_japan.streets.bin",nullptr}},
                                                             {"TorontoBtn",{"/cad2/ece297s/public/maps/toronto_canada.streets.bin",nullptr}}};
 //Stores the filter button id as well as the WeatherLayer it is asciated to
-pair<string,pair<WeatherLayer,ezgl::application*>> filterNames[7] = { {"SnowBtn",{SNOW,nullptr}},
+pair<string,pair<WeatherLayer,ezgl::application*>> filterNames[6] = { {"SnowBtn",{SNOW,nullptr}},
                                                                      {"TemperatureBtn",{TEMPERATURE,nullptr}},
                                                                      {"PrecipitationBtn",{PRECIPITATION,nullptr}},
                                                                      {"CloudsBtn",{CLOUDS,nullptr}},
-                                                                     {"HumidityBtn",{HUMIDITY,nullptr}},
+                                                                     //{"HumidityBtn",{HUMIDITY,nullptr}},
                                                                      {"WindBtn",{WIND,nullptr}},
                                                                      {"ClearBtn",{NOFILTER,nullptr}}};
 
@@ -713,6 +713,16 @@ void drawMap() {
 
 void initial_setup(ezgl::application *application, bool /*new_window*/){
 
+   //Initialize CSS
+   GtkCssProvider* css = gtk_css_provider_new();
+   gtk_css_provider_load_from_path(css, "libstreetmap/src/style.css", NULL); //Replace the filepath string with your .css filepath
+
+   GdkDisplay *display = gdk_display_get_default();
+   GdkScreen *screen = gdk_display_get_default_screen(display);
+   gtk_style_context_add_provider_for_screen(screen, GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+   
+   g_object_unref(css);
+
    //initializing search button for two streets to intersection search
    GObject* searchBtn = application->get_object("searchBtn");
    g_signal_connect(searchBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
@@ -733,7 +743,7 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    }
 
    //initialize each filter button
-   for(int i = 0; i < 7; i++){
+   for(int i = 0; i < 6; i++){
       filterNames[i].second.second = application;
       GObject* filterBtn = application->get_object(filterNames[i].first.c_str());
       g_signal_connect(filterBtn,"clicked",G_CALLBACK(changeFilter_cbk),&filterNames[i].second);

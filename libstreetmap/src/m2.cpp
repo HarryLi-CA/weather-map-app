@@ -275,13 +275,7 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
       g->set_text_rotation(0);
 }
 
-void draw_main_canvas(ezgl::renderer *g)
-{
-   if(isDrawing){
-      isDrawing++;
-      return;
-   }
-   isDrawing = 1;
+void thread_safe_draw_main_canvas(ezgl::renderer *g){
    //rect value to draw to screen
    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
    ezgl::rectangle rect(initial_world.bottom_left(),initial_world.top_right());
@@ -305,9 +299,9 @@ void draw_main_canvas(ezgl::renderer *g)
       {cameraRect.center_x() + rectWidth/2.0, cameraRect.center_y() + rectHeight/2.0}
    );
    //check if camera dimensions are correct
-   
+
    //cout << 100.0/screenArea << ", " << absoluteLength << endl;
-   
+
 
    map<const OSMID, string> wayRoute;
 
@@ -325,7 +319,7 @@ void draw_main_canvas(ezgl::renderer *g)
    if(enableCellRendering){
       useCellRendering = true;
    }
-   
+
    if(useCellRendering){
       vector<MapFeature*> cellFeatures;
       vector<Quad<MapFeature>*> quads;
@@ -392,10 +386,10 @@ void draw_main_canvas(ezgl::renderer *g)
       }
    }
    }
-   
+
 
    //set text display settings
-   
+
    g->set_color({0, 0, 0, 200}); //print transluscent black text
    //iterate through all labels
    for(auto label = staticLabels.begin(); label != staticLabels.end(); label++)
@@ -410,10 +404,21 @@ void draw_main_canvas(ezgl::renderer *g)
    g->draw_text(cameraRect.center(), to_string(useCellRendering) + ": " + to_string(fps));
    
    if(isDrawing > 1){
-      isDrawing = false;
-      draw_main_canvas(g);
+      isDrawing = 1;
+      thread_safe_draw_main_canvas(g);
    }
-   isDrawing = false;
+}
+
+void draw_main_canvas(ezgl::renderer *g)
+{
+   if(isDrawing>0){
+      isDrawing=2;
+      return;
+   }
+   isDrawing = 1;
+   thread_safe_draw_main_canvas(g);
+
+   isDrawing = 0;
 }
 
 double getScaleFactor()

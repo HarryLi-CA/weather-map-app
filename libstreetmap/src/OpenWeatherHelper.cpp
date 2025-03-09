@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <thread>
 #include "m1.h"
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
@@ -97,7 +98,9 @@ vector<MapTileData> getMapTilesFromBounds (LatLonBounds currentScope, int pixelL
     return out;
 }
 
-
+void getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData, int date, string& url){
+    url = getMapAPIURLFromParameters(wL, tileData, date);
+}
 string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData, int date){
     string baseURL = "http://maps.openweathermap.org/maps/2.0/weather/";
     switch(wL){
@@ -128,7 +131,7 @@ string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData, int dat
     }
     baseURL += '/' + to_string(tileData.z) + '/' + to_string(tileData.x) + '/' + to_string(tileData.y);
     baseURL += "?opacity=0.5";
-    baseURL += "&date=" + date;
+    baseURL += "&date=" + to_string(date);
     baseURL += "&appid=" + APIKey;
     return baseURL;
 }
@@ -174,6 +177,9 @@ vector<MapTileData> downloadWeatherMaps(WeatherLayer wL, LatLonBounds currentSco
     vector<MapTileData> mapTiles = getMapTilesFromBounds (currentScope, pixelHeight, pixelLength);
 
     res = curl_global_init(CURL_GLOBAL_ALL);
+
+    vector<thread> downloadingThreads;
+
     for(int i = 0; i < mapTiles.size(); i++){
         MapTileData curMapTile = mapTiles[i];
         string url = getMapAPIURLFromParameters(wL, curMapTile,date);
@@ -181,7 +187,7 @@ vector<MapTileData> downloadWeatherMaps(WeatherLayer wL, LatLonBounds currentSco
             return {};
         }
 
-        cout<<url<<endl;
+        cout<<"loaded map tile: "<<url<<endl;
         string outputURL = curMapTile.url;
         std::ofstream ofs(outputURL, std::ostream::binary);
 

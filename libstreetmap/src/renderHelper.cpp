@@ -1,9 +1,13 @@
 #include "renderHelper.h"
+#include "ezgl/point.hpp"
+#include "ezgl/rectangle.hpp"
 #include <vector>
 #include "StreetsDatabaseAPI.h"
 #include "m1.h"
 #include <stdio.h>
 #include <map>
+#include "QuadTree.h"
+#include "pointMath.h"
 
 using namespace std;
 
@@ -54,6 +58,7 @@ FeatureList::FeatureList(){
     //set default values
     highlightedFeatures = vector<MapFeature*>();
     highlightedStreetID = -2;
+    
 }
 
 void FeatureList::clear()
@@ -67,6 +72,12 @@ void FeatureList::clear()
     }
     layerMap.clear();
     highlightedFeatures = {};
+    numberOfFeatures = 0;
+}
+
+bool getDrawPriority(MapFeature* a, MapFeature* b) //helper function to determine what features should be drawn first
+{
+    return a->layer < b->layer;
 }
 
 void FeatureList::highlightFeature(MapFeature* feature, bool unhighlightOthers)
@@ -101,6 +112,8 @@ void FeatureList::addFeature(MapFeature* feature)
         layerMap.insert({feature->layer,featureLayer});
     }
     layerMap[feature->layer]->push_back(feature); //add feature to corrosponding layer
+    spatialIndexer.insert({feature->bounds.center(),feature->bounds,feature,feature->layer});
+    numberOfFeatures++;
 }
 
 
@@ -176,11 +189,7 @@ ezgl::rectangle boundingRectangle(const vector<ezgl::point2d>* points)
     return boundingRect; //return created rectangle as bounding rectangle
 }
 
-bool intersecting(ezgl::rectangle rectA, ezgl::rectangle rectB)
-{
-    bool outside = rectA.left() > rectB.right() || rectA.right() < rectB.left() || rectA.top() < rectB.bottom() || rectA.bottom() > rectB.top();
-    return !outside;
-}
+
 
 pair<int,int> getRenderCell(double originX, double originY, double cellSize, ezgl::point2d position)
 {
@@ -320,10 +329,7 @@ void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d directi
    });
 }
 
-ezgl::point2d midpoint(ezgl::point2d A, ezgl::point2d B)
-{
-    return {0.5*(A.x + B.x), 0.5*(A.y + B.y)};
-}
+
 
 string getKnownIntersectionName(IntersectionIdx index)
 {

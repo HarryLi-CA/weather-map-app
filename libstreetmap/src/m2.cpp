@@ -35,6 +35,7 @@
 #include <ctime>
 #include <thread>
 #include <chrono>
+#include "pointMath.h"
 
 using namespace std;
 
@@ -70,13 +71,14 @@ double initialWidth = -1;
 double initialHeight = -1;
 //define rendering constants
 const double kOnewayIndicatorSize = 6.0; //size from center to vertex of indicator triangle
-const int kMinimumPixelsToDraw = 100; //minimum pixels a feature should take up on the screen to be drawn that cycle
+const int kMinimumPixelsToDraw = 15; //minimum pixels a feature should take up on the screen to be drawn that cycle
 const double kMinimumMajorRoadLength = 5000; //minimum length for a road to be considered a major road
-const double kRenderCellSize = 300; //size of each render cell
+const double kRenderCellSize = 10; //size of each render cell
 const int kMaximumRenderCells = 50000; //maximum number of render cells before switching to direct rendering
 const double kMaximumBuildingScaling = 2; //maximum number of meters per pixel to start drawing buildings
-const bool enableCellRendering = true; //enable cell rendering method (possibly buggy)
+bool enableCellRendering = true; //enable cell rendering method (possibly buggy)
 const double kRoadWidth = 7.5; //width of roads
+const double kRoadBorderWidth = 0.5; //width of road borders
 const double TILERATIO = 0.000005805;
 LatLonBounds currentScope; // scope of city map
 vector<MapTileData> mapTiles;
@@ -170,7 +172,28 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
             }
             for(int i = 0; i < feature->points->size() - 1; i++)
             {
+               ezgl::point2d subpointFrom = (*feature->points)[i];
+               ezgl::point2d subpointTo = (*feature->points)[i];
+               ezgl::point2d subpointDirection = {subpointTo.x-subpointFrom.x,subpointTo.y-subpointFrom.y};
+               //normalize direction
+               double subpointDirMagnitude = sqrt(subpointDirection.x*subpointDirection.x + subpointDirection.y*subpointDirection.y);
+               subpointDirection = {subpointDirection.x/subpointDirMagnitude, subpointDirection.y/subpointDirMagnitude};
+               ezgl::point2d leftOffset = {-subpointDirection.y*lineWidth*lineWidthScale/2,subpointDirection.x*lineWidth*lineWidthScale/2};
+               ezgl::point2d rightOffset = {-leftOffset.y, -leftOffset.x};
                g->draw_line((*feature->points)[i],(*feature->points)[i+1]);
+               //draw border
+               g->set_color({0,0,0});
+               g->set_line_width(10);
+               g->draw_line((*feature->points)[i]+rightOffset,(*feature->points)[i+1]+rightOffset);
+               g->draw_line((*feature->points)[i]+leftOffset,(*feature->points)[i+1]+leftOffset);
+               g->set_line_width(lineWidth*lineWidthScale);
+               g->set_color(feature->color);
+               if(highlightedStreet)
+               {
+                  g->set_color(kColorHighlight);
+               }
+
+               
             }
             //get direction of road
             ezgl::point2d from = (*feature->points)[0]; //first position in the street
@@ -260,6 +283,7 @@ void draw_main_canvas(ezgl::renderer *g)
    }
    isDrawing = 1;
    //rect value to draw to screen
+   std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
    ezgl::rectangle rect(initial_world.bottom_left(),initial_world.top_right());
    g->set_color(kColorDefaultGround);
    g->fill_rectangle(rect);
@@ -296,16 +320,26 @@ void draw_main_canvas(ezgl::renderer *g)
    g->format_font("Arial",ezgl::font_slant::normal,ezgl::font_weight::normal);
    bool useCellRendering = false;
    vector<pair<int, int>> cells;
+   cout << worldToScreenScale << endl;
+
    if(enableCellRendering){
-      //get cells currently on screen
-      cells = getCurrentRenderCells(&camera,kRenderCellSize,minPoints);
-      //if number of cells is low, use cell rendering method
-      useCellRendering = cells.size() <= kMaximumRenderCells; //use render cells to cull features
-      cout << cells.size() << endl;
+      useCellRendering = true;
    }
    
    if(useCellRendering){
-      vector<MapFeature*> cellFeatures = getFeaturesFromCells(cells, cellMap);
+      vector<MapFeature*> cellFeatures;
+      vector<Quad<MapFeature>*> quads;
+
+      mapFeatures.spatialIndexer.getQuadsInRange(cameraRect,&quads);
+
+      for(auto quad = quads.begin(); quad != quads.end(); quad++)
+      {
+         for(auto feature = (*quad)->data.begin(); feature != (*quad)->data.end(); feature++)
+         {
+            cellFeatures.push_back(feature->first);
+         }
+      }
+      std::sort(cellFeatures.begin(),cellFeatures.end(),getDrawPriority);
       for(int i = 0; i < cellFeatures.size(); i++)
       {
          MapFeature* feature = cellFeatures[i];
@@ -368,7 +402,13 @@ void draw_main_canvas(ezgl::renderer *g)
    {
       g->draw_text(label->position, label->text, label->feature->bounds.width(), label->feature->bounds.height());
    }
-   cout << "finished drawing features"<<endl;
+
+   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+   double period = 0.000000001*std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
+   double fps = 1.0/period;
+   g->set_font_size(20);
+   g->draw_text(cameraRect.center(), to_string(useCellRendering) + ": " + to_string(fps));
+   
    if(isDrawing > 1){
       isDrawing = false;
       draw_main_canvas(g);
@@ -464,6 +504,10 @@ void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, dou
 
 void loadFeatures()
 {
+   
+   
+
+
    double minimumLatitude = DBL_MAX; //smallest latitude in city
    double minimumLongitude = DBL_MAX; //smallest longitude in city
    double maximumLatitude = -DBL_MAX; //largest latitude in city
@@ -478,6 +522,8 @@ void loadFeatures()
    minPoints = LatLon(minimumLatitude, minimumLongitude); //consolidate minimum latitude and longitude in latlon object
    maxPoints = LatLon(maximumLatitude, maximumLongitude); //consolodate maximum latitude and longitude in latlon object
    setLatLonBounds(minPoints, maxPoints); //set constant for calculations in renderHelper
+
+   mapFeatures.spatialIndexer = QuadTree<MapFeature>(ezgl::rectangle(LatLonToPoint2D(minPoints),LatLonToPoint2D(maxPoints)),kRenderCellSize);
 
    numberOfStreets = getNumStreets();
 
@@ -682,10 +728,6 @@ void loadFeatures()
       }
    }
 
-   if(enableCellRendering){
-      mapRenderCells(kRenderCellSize, minPoints, mapFeatures, cellMap);
-   }
-
    //download weather map data
    currentScope.min = minPoints;
    currentScope.max = maxPoints;
@@ -701,6 +743,8 @@ void loadFeatures()
       ),
       currentTime
    );
+
+   cout << "F = " << mapFeatures.numberOfFeatures << endl;
 }
 
 void unloadFeatures()

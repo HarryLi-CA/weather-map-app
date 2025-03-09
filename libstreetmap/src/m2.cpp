@@ -112,8 +112,9 @@ pair<string,pair<WeatherLayer,ezgl::application*>> filterNames[6] = { {"SnowBtn"
                                                                      {"TemperatureBtn",{TEMPERATURE,nullptr}},
                                                                      {"PrecipitationBtn",{PRECIPITATION,nullptr}},
                                                                      {"CloudsBtn",{CLOUDS,nullptr}},
-                                                                     {"HumidityBtn",{HUMIDITY,nullptr}},
-                                                                     {"WindBtn",{WIND,nullptr}}};
+                                                                     //{"HumidityBtn",{HUMIDITY,nullptr}},
+                                                                     {"WindBtn",{WIND,nullptr}},
+                                                                     {"ClearBtn",{NOFILTER,nullptr}}};
 
 WeatherLayer currWeatherLayer = NOFILTER;  
 std::time_t currentTime = std::time(nullptr);                            
@@ -756,6 +757,16 @@ void drawMap() {
 }
 
 void initial_setup(ezgl::application *application, bool /*new_window*/){
+
+   //Initialize CSS
+   GtkCssProvider* css = gtk_css_provider_new();
+   gtk_css_provider_load_from_path(css, "libstreetmap/src/style.css", NULL); //Replace the filepath string with your .css filepath
+
+   GdkDisplay *display = gdk_display_get_default();
+   GdkScreen *screen = gdk_display_get_default_screen(display);
+   gtk_style_context_add_provider_for_screen(screen, GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+   
+   g_object_unref(css);
 
    //initializing search button for two streets to intersection search
    GObject* searchBtn = application->get_object("searchBtn");

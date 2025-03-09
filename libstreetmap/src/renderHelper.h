@@ -2,6 +2,9 @@
 #include "ezgl/canvas.hpp"
 #include "StreetsDatabaseAPI.h"
 #include <map>
+#include "ezgl/point.hpp"
+#include "ezgl/rectangle.hpp"
+#include "QuadTree.h"
 
 using namespace std;
 
@@ -45,8 +48,10 @@ class MapFeature {
 class FeatureList {
     public:
     map<int, vector<MapFeature*>*> layerMap; //map to store layers
+    QuadTree<MapFeature> spatialIndexer;
     vector<MapFeature*> highlightedFeatures; //currently highlighted feature
     StreetIdx highlightedStreetID; //currently highlighted street (-2 by default)
+    int numberOfFeatures = 0;
     FeatureList();
     void addFeature(MapFeature* feature); //adds feature to the map at the corresponding layer
     void highlightFeature(MapFeature* feature, bool unhighlightOthers); //highlights feature and unhighlights currently highlighted features
@@ -60,6 +65,8 @@ typedef struct staticname_t {
     MapFeature* feature; //map feature this text object is connected to
 
 }StaticName;
+
+bool getDrawPriority(MapFeature* a, MapFeature* b); //helper function to determine which map feature should be rendered first
 
 void setLatLonBounds(LatLon latlonMin, LatLon latlonMax); //setup constants for latlon to cartesian conversions using minimum and maximum latlon bounds
 
@@ -75,7 +82,6 @@ double lengthToLayerInterpolate(double length); //helper function to determine t
 
 bool insideRectangle(ezgl::rectangle rect, vector<ezgl::point2d>* points); //helper function to determine if a shape formed by a list of points are all outside rect
 ezgl::rectangle boundingRectangle(const vector<ezgl::point2d>* points); //helper function to create rectangle that perfectly contains set of points
-bool intersecting(ezgl::rectangle rectA, ezgl::rectangle rectB); //helper function to check if 2 rectangles are intersecting
 
 vector<pair<int,int>> getCurrentRenderCells(ezgl::camera* camera, double cellSize, LatLon bottomLeft); //helper function to get current render cell based on cellSize and camera position
 pair<int,int> getRenderCell(double originX, double originY, double cellSize, ezgl::point2d position); //returns render cell at a position
@@ -88,7 +94,6 @@ void mapRenderCells(double renderCellSize, LatLon bottomLeft, FeatureList& mapFe
 
 void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter); //draws triangle around a center point
 
-ezgl::point2d midpoint(ezgl::point2d A, ezgl::point2d B); //helper function to return midpoint between 2 point2d objects
 
 
 string getKnownIntersectionName(IntersectionIdx index); //helper function to get an intersection name while removing "<unknown> &" from the name

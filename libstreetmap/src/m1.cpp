@@ -21,6 +21,7 @@
  
 #include <iostream>
 #include "m1.h"
+#include "m2.h"
 #include "loading_utils.h"
 #include "nodeIDHelper.h"
 #include "StreetsDatabaseAPI.h"
@@ -168,6 +169,8 @@ void closeMap() {
     clearIdHelper(); // marks OSMID hashtable for reset
     closeStreetDatabase();
     closeOSMDatabase();
+    //clear map
+    unloadFeatures();
 }
 
 double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){

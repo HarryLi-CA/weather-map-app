@@ -56,7 +56,9 @@ LatLon getLatLonFromGlobalCoords(pair<double,double> coords, double mapWidth){
 
 
 
-vector<MapTileData> getMapTilesFromBounds (LatLonBounds currentScope, int pixelLength, int pixelHeight){
+vector<MapTileData> getMapTilesFromBounds (LatLonBounds currentScope, int pixelLength, int pixelHeight, WeatherLayer wL){
+    if(wL == NOFILTER)
+        return{};
     int optimalTilesWide = pixelLength / TILEWIDTH + 1; // minimum tiles for max resolution 
     int optimalTilesHigh = pixelHeight / TILEWIDTH + 1;
     
@@ -91,7 +93,7 @@ vector<MapTileData> getMapTilesFromBounds (LatLonBounds currentScope, int pixelL
             LatLonBounds tileBounds;
                 tileBounds.min = getLatLonFromGlobalCoords(make_pair(i,j),zoom);
                 tileBounds.max = getLatLonFromGlobalCoords(make_pair(i+1,j+1),zoom);
-            MapTileData m; m.x = i; m.y = j; m.z = z; m.tileBounds = tileBounds;
+            MapTileData m; m.x = i; m.y = j; m.z = z; m.tileBounds = tileBounds; m.wL = wL;
             m.url = "libstreetmap/imgs/" + to_string(m.z) + "_" + to_string(m.x) + "_" + to_string(m.y) + ".png";
             out.push_back(m);
         }
@@ -180,12 +182,9 @@ void downloadImgFromURL(string outputURL, string imgUrl){
     ofs.close();
 }
 
-vector<MapTileData> downloadWeatherMaps(WeatherLayer wL, LatLonBounds currentScope, int pixelHeight, int pixelLength, int date){
+void downloadWeatherMaps(WeatherLayer wL, vector<MapTileData>& mapTiles, int date){
     if (wL == NOFILTER)
-        return {};
-    
-
-    vector<MapTileData> mapTiles = getMapTilesFromBounds (currentScope, pixelHeight, pixelLength);
+        return;
 
     res = curl_global_init(CURL_GLOBAL_ALL);
 
@@ -195,16 +194,17 @@ vector<MapTileData> downloadWeatherMaps(WeatherLayer wL, LatLonBounds currentSco
         MapTileData curMapTile = mapTiles[i];
         string url = getMapAPIURLFromParameters(wL, curMapTile,date);
         if(url == ""){
-            return {};
+            return;
         }
+        cout<<"loading map tile: "<<url<<endl;
 
         downloadingThreads.push_back(thread(downloadImgFromURL, curMapTile.url, url));
     }
     for(int i = 0; i < mapTiles.size(); i++){
         downloadingThreads[i].join();
+        mapTiles[i].isLoaded = true;
         cout<<"loaded map tile: "<<mapTiles[i].url<<endl;
     }
-    return mapTiles;
 }
 
 string weatherJson = "";

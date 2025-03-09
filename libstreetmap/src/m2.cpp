@@ -33,6 +33,8 @@
 #include "ezgl/camera.hpp"
 #include <set>
 #include <ctime>
+#include <thread>
+#include <chrono>
 
 using namespace std;
 
@@ -114,7 +116,8 @@ pair<string,pair<WeatherLayer,ezgl::application*>> filterNames[6] = { {"SnowBtn"
                                                                      {"ClearBtn",{NOFILTER,nullptr}}};
 
 WeatherLayer currWeatherLayer = NOFILTER;  
-std::time_t currentTime = std::time(nullptr);                            
+std::time_t currentTime = std::time(nullptr);
+int isDrawing = 0;                            
 
 // void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
 // {
@@ -251,6 +254,11 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
 
 void draw_main_canvas(ezgl::renderer *g)
 {
+   if(isDrawing){
+      isDrawing++;
+      return;
+   }
+   isDrawing = 1;
    //rect value to draw to screen
    ezgl::rectangle rect(initial_world.bottom_left(),initial_world.top_right());
    g->set_color(kColorDefaultGround);
@@ -328,11 +336,12 @@ void draw_main_canvas(ezgl::renderer *g)
 
    //draw weather overlay
    //getMapTilesFromBounds();
-   if(mapTiles.size()>0){
+   if(mapTiles.size()>0 && currWeatherLayer != NOFILTER){
    double tileSize = LonToX(mapTiles[0].tileBounds.max.longitude()) - LonToX(mapTiles[0].tileBounds.min.longitude());
    double zoom = getScaleFactor();
    for (size_t i = 0; i < mapTiles.size(); i++)
    {
+      if(mapTiles[i].isLoaded && mapTiles[i].wL ==currWeatherLayer ){
       const char* surfURL = mapTiles[i].url.c_str();
       ezgl::surface* currentSurface = g->load_png(surfURL);
       ezgl::point2d minPoint2d= LatLonToPoint2D(mapTiles[i].tileBounds.min);
@@ -346,6 +355,7 @@ void draw_main_canvas(ezgl::renderer *g)
 
       g->draw_surface(currentSurface, {(minPoint2d.x+maxPoint2d.x)/2,(minPoint2d.y+maxPoint2d.y)/2},scalingFactor);
       g->free_surface(currentSurface);
+      }
    }
    }
    
@@ -358,6 +368,12 @@ void draw_main_canvas(ezgl::renderer *g)
    {
       g->draw_text(label->position, label->text, label->feature->bounds.width(), label->feature->bounds.height());
    }
+   cout << "finished drawing features"<<endl;
+   if(isDrawing > 1){
+      isDrawing = false;
+      draw_main_canvas(g);
+   }
+   isDrawing = false;
 }
 
 double getScaleFactor()
@@ -674,7 +690,9 @@ void loadFeatures()
    currentScope.min = minPoints;
    currentScope.max = maxPoints;
    //Load weather map
-   mapTiles = downloadWeatherMaps(NOFILTER, currentScope, 1920, 1080, time(nullptr));
+   currWeatherLayer = NOFILTER;
+   mapTiles = getMapTilesFromBounds (currentScope, 1920, 1080, NOFILTER);
+   downloadWeatherMaps(NOFILTER, mapTiles, time(nullptr));
    
    currentWeather = getWeatherData(
       LatLon(
@@ -921,18 +939,28 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
    resetCanvasParameters(application);
 }
 
-void changeFilter_cbk(GtkWidget */*widget*/, pair<WeatherLayer,ezgl::application*> * filterInfo){
-
+void threadedChangeFilter_cbk(pair<WeatherLayer,ezgl::application*> filterInfo){
    //update current weather filter
-   mapTiles = downloadWeatherMaps(filterInfo->first, currentScope, 1920, 1080, currentTime);
-   ezgl::application* application = filterInfo->second;
-   currWeatherLayer = filterInfo->first;
+   if(filterInfo.first != NOFILTER){
+      mapTiles = getMapTilesFromBounds(currentScope, 1920, 1080, filterInfo.first);
+      downloadWeatherMaps((filterInfo.first), mapTiles, currentTime);
+   }
+   else{
+      mapTiles = {};
+   }
+   ezgl::application* application = filterInfo.second;
+   currWeatherLayer = filterInfo.first;
 
    application->refresh_drawing();
 }
 
+void changeFilter_cbk(GtkWidget */*widget*/, pair<WeatherLayer,ezgl::application*> * filterInfo){
+   thread t1(threadedChangeFilter_cbk, *filterInfo);
+   t1.detach();
+}
+
 void changeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* application){
-   
+
    //range from 0 days to 10 days in increments of 1/3 days
    double selectedRange = gtk_range_get_value(sliderRange);
 
@@ -945,10 +973,13 @@ void changeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* applicatio
    GtkLabel* selectedTimeLabel = GTK_LABEL(application->get_object("selectedTimeLabel"));
    gtk_label_set_text(selectedTimeLabel,selectedTimeText.c_str());
 
+   cout << "test2"<<endl;
    //refresh value
-   mapTiles = downloadWeatherMaps(currWeatherLayer, currentScope, 1920, 1080, currentTime);
-   application->refresh_drawing();
+   pair<WeatherLayer , ezgl::application*> cbkPair;
+   cbkPair = make_pair(NOFILTER,application);
+   threadedChangeFilter_cbk(cbkPair);
 
+   cout << "test3"<<endl;
    //Display sunrise onto ui
    std::time_t sunriseTimeFull = currentWeather.sunrise;
    string sunriseTime = asctime(std::localtime(&sunriseTimeFull));

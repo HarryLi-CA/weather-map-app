@@ -32,6 +32,8 @@ struct MapTileData {
     int z;
     LatLonBounds tileBounds;
     string url;
+    bool isLoaded = false;
+    WeatherLayer wL = NOFILTER;
 };
 
 //sunset sunrise in epoch timestamps
@@ -47,13 +49,13 @@ pair<double,double> getGlobalCoordsFromLatLon(LatLon l, double mapWidth);
 LatLon getLatLonFromGlobalCoords(pair<double,double> coords, double mapWidth);
 
 //Get map tiles based on current screen
-vector<MapTileData> getMapTilesFromBounds (LatLonBounds currentScope, int pixelHeight, int pixelLength);
+vector<MapTileData> getMapTilesFromBounds (LatLonBounds currentScope, int pixelLength, int pixelHeight, WeatherLayer wL);
 
 //Converts tile and weather to specific api url
 string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData, int date);
 
 // download weather maps for current city
-vector<MapTileData> downloadWeatherMaps(WeatherLayer wL, LatLonBounds currentScope, int pixelHeight, int pixelLength, int date);
+void downloadWeatherMaps(WeatherLayer wL, vector<MapTileData>& mapTiles, int date);
 
 // helps download imgs via threads
 void downloadImgFromURL(string outputURL, string imgUrl);

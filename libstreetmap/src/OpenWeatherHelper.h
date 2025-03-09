@@ -55,6 +55,9 @@ string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData, int dat
 // download weather maps for current city
 vector<MapTileData> downloadWeatherMaps(WeatherLayer wL, LatLonBounds currentScope, int pixelHeight, int pixelLength, int date);
 
+// helps download imgs via threads
+void downloadImgFromURL(string outputURL, string imgUrl);
+
 //helper for libcurl receiving weather data
 size_t write_weather_data(void *buffer, size_t nmemb);
 

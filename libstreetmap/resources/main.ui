@@ -420,7 +420,7 @@
                   <object class="GtkLabel" id="SunriseLabel">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="label" translatable="yes">Today's Sunrise:</property>
+                    <property name="label" translatable="yes">Sunrise at:</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
@@ -442,7 +442,7 @@
                   <object class="GtkLabel" id="SunsetLabel">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="label" translatable="yes">Today's Sunset:</property>
+                    <property name="label" translatable="yes">Sunset at:</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
@@ -847,6 +847,9 @@
             <property name="position">1</property>
           </packing>
         </child>
+        <style>
+          <class name="dark"/>
+        </style>
       </object>
     </child>
   </object>

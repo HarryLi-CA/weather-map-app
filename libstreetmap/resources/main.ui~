@@ -125,24 +125,6 @@
                     <property name="margin-bottom">8</property>
                     <property name="spacing">6</property>
                     <child>
-                      <object class="GtkButton" id="HumidityBtn">
-                        <property name="label" translatable="yes">🔥️</property>
-                        <property name="visible">True</property>
-                        <property name="can-focus">True</property>
-                        <property name="receives-default">True</property>
-                        <property name="relief">none</property>
-                        <style>
-                          <class name="filter"/>
-                        </style>
-                      </object>
-                      <packing>
-                        <property name="expand">False</property>
-                        <property name="fill">True</property>
-                        <property name="pack-type">end</property>
-                        <property name="position">0</property>
-                      </packing>
-                    </child>
-                    <child>
                       <object class="GtkButton" id="SnowBtn">
                         <property name="label" translatable="yes">❄️</property>
                         <property name="name">Clouds</property>
@@ -438,7 +420,7 @@
                   <object class="GtkLabel" id="SunriseLabel">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="label" translatable="yes">Today's Sunrise:</property>
+                    <property name="label" translatable="yes">Sunrise at:</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
@@ -460,7 +442,7 @@
                   <object class="GtkLabel" id="SunsetLabel">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="label" translatable="yes">Today's Sunset:</property>
+                    <property name="label" translatable="yes">Sunset at:</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
@@ -865,6 +847,9 @@
             <property name="position">1</property>
           </packing>
         </child>
+        <style>
+          <class name="dark"/>
+        </style>
       </object>
     </child>
   </object>

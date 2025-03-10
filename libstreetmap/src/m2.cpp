@@ -1036,10 +1036,20 @@ void changeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* applicatio
    cout << "test2"<<endl;
    //refresh value
    pair<WeatherLayer , ezgl::application*> cbkPair;
-   cbkPair = make_pair(NOFILTER,application);
+   cbkPair = make_pair(currWeatherLayer,application);
    threadedChangeFilter_cbk(cbkPair);
 
    cout << "test3"<<endl;
+
+
+   currentWeather = getWeatherData(
+      LatLon(
+         (currentScope.max.latitude() + currentScope.min.latitude())/2,
+         (currentScope.max.longitude() + currentScope.min.longitude())/2
+      ),
+      currentTime
+   );
+
    //Display sunrise onto ui
    std::time_t sunriseTimeFull = currentWeather.sunrise;
    string sunriseTime = asctime(std::localtime(&sunriseTimeFull));

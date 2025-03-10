@@ -121,7 +121,8 @@ pair<string,pair<WeatherLayer,ezgl::application*>> filterNames[6] = { {"SnowBtn"
 
 WeatherLayer currWeatherLayer = NOFILTER;  
 std::time_t currentTime = std::time(nullptr);
-int isDrawing = 0;                            
+int isDrawing = 0;
+int isChangingTime = 0;                            
 
 // void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
 // {
@@ -371,7 +372,6 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
    //getMapTilesFromBounds();
    if(mapTiles.size()>0 && currWeatherLayer != NOFILTER){
    double tileSize = LonToX(mapTiles[0].tileBounds.max.longitude()) - LonToX(mapTiles[0].tileBounds.min.longitude());
-   double zoom = getScaleFactor();
    for (size_t i = 0; i < mapTiles.size(); i++)
    {
       if(mapTiles[i].isLoaded && mapTiles[i].wL ==currWeatherLayer ){
@@ -380,7 +380,6 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
       ezgl::point2d minPoint2d= LatLonToPoint2D(mapTiles[i].tileBounds.min);
       ezgl::point2d maxPoint2d= LatLonToPoint2D(mapTiles[i].tileBounds.max);
 
-      //cout<< "ratio: " << 1/(tileSize/zoom) <<endl;TILESIZE
       double metersPerPixel = tileSize/TILEWIDTH;
       double screenMperP = screenLength/pixelLength;
       double targetLength = tileSize/screenMperP;
@@ -1019,14 +1018,7 @@ void changeFilter_cbk(GtkWidget */*widget*/, pair<WeatherLayer,ezgl::application
    t1.detach();
 }
 
-void changeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* application){
-
-   //range from 0 days to 10 days in increments of 1/3 days
-   double selectedRange = gtk_range_get_value(sliderRange);
-
-   //current time plus number of 1/3 days times epoch time of 1/3 days
-   currentTime = std::time(nullptr) + selectedRange*28800*100;
-
+void threadedChangeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* application){
    //change date and time on ui
    string selectedTimeText = asctime(std::localtime(&currentTime));
    selectedTimeText = selectedTimeText.substr(0,16);
@@ -1063,4 +1055,23 @@ void changeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* applicatio
    sunsetTime = sunsetTime.substr(11, 5);
    GtkLabel* sunsetLabel = GTK_LABEL(application->get_object("SunsetTimeLabel"));
    gtk_label_set_text(sunsetLabel,sunsetTime.c_str());
+   if(isChangingTime > 1){
+      isChangingTime = 1;
+      threadedChangeCurrentTime_cbk(sliderRange, application);
+   }
+   isChangingTime = 0;
+}
+
+void changeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* application){
+   //range from 0 days to 10 days in increments of 1/3 days
+   double selectedRange = gtk_range_get_value(sliderRange);
+
+   //current time plus number of 1/3 days times epoch time of 1/3 days
+   currentTime = std::time(nullptr) + selectedRange*28800*100;
+   isChangingTime++;
+   
+   if(isChangingTime <= 1){
+   thread t1(threadedChangeCurrentTime_cbk, sliderRange, application);
+   t1.detach();
+   }
 }

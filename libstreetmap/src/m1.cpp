@@ -154,12 +154,14 @@ void closeMap() {
     auto twoStreetIntersectionIt = twoStreetsToIntersections.begin();
     while(twoStreetIntersectionIt != twoStreetsToIntersections.end()){
         delete twoStreetIntersectionIt->second;
+        twoStreetIntersectionIt->second = nullptr;
         twoStreetIntersectionIt++;
     }
 
     for(StreetIdx streetIndex = 0; streetIndex < numStreets; streetIndex++)
     {
         delete streetToIntersectionsHelper[streetIndex];
+        streetToIntersectionsHelper[streetIndex] = nullptr;
     }
 
     twoStreetsToIntersections.clear();

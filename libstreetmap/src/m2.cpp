@@ -122,7 +122,8 @@ volatile WeatherLayer currWeatherLayer = NOFILTER;
 std::time_t currentTime = std::time(nullptr);
 volatile int isDrawing = 0;
 volatile int isChangingTime = 0;
-volatile int isLoading = 0;                             
+volatile int isLoading = 0;            
+bool hasUIOpened = false;                 
 
 // void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
 // {
@@ -274,7 +275,9 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
 }
 
 void thread_safe_draw_main_canvas(ezgl::renderer *g){
+   //cout << "drawing to main canvas" <<endl;
    //rect value to draw to screen
+   mapFeatures.spatialIndexer.isBeingRead ++;
    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
    ezgl::rectangle rect(initial_world.bottom_left(),initial_world.top_right());
    g->set_color(kColorDefaultGround);
@@ -312,7 +315,7 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
    g->format_font("Arial",ezgl::font_slant::normal,ezgl::font_weight::normal);
    bool useCellRendering = false;
    vector<pair<int, int>> cells;
-   cout << worldToScreenScale << endl;
+   //cout << worldToScreenScale << endl;
 
    if(kEnableSpatialIndexing && worldToScreenScale < kSpatialIndexingThreshold){
       useCellRendering = true;
@@ -345,14 +348,28 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
    }
    else //if number of cells is too high, directly render each element
    {
+      //cout << "not cell rendering"<<endl;
       auto layer = mapFeatures.layerMap.begin();
       while(layer != mapFeatures.layerMap.end())
       {
+         if(layer->second == nullptr){
+            cout << "Error drawing layer: "<<layer->first;
+            break;
+         }
          vector<MapFeature*> cellFeatures = *(layer->second);
          for(int i = 0; i < cellFeatures.size(); i++)
          {
             MapFeature* feature = cellFeatures[i];
+            if(feature == nullptr || g == nullptr)
+            {
+               cout<<"Error with feature: " << i<<endl << " from layer " << layer->first;
+               break;
+            }
             //run bounding box checks
+            if(feature->points == nullptr || feature->points->size() <= 0 ){
+               cout<<"ERROR points are null: " << i <<endl;
+               continue;
+            }
             if(feature->drawType == POINT && !cameraRect.contains((*feature->points)[0])){continue;} //check if point is inside world rect
             if(feature->drawType != POINT && !intersecting(cameraRect,feature->bounds)){continue;} //check if bounds for camera and feaure are intersecting
             g->set_color({0, 0, 0, 255});
@@ -362,6 +379,7 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
          layer++;
       }
    }
+   //cout<< "finished basic drawing"<<endl;
 
    //draw weather overlay
    //getMapTilesFromBounds();
@@ -384,7 +402,7 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
       }
    }
    }
-
+   //cout<< "finished all drawing"<<endl;
 
    //set text display settings
 
@@ -403,19 +421,18 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
    
    if(isDrawing > 1){
       isDrawing = 1;
-      thread_safe_draw_main_canvas(g);
+      //thread_safe_draw_main_canvas(g);
    }
+   mapFeatures.spatialIndexer.isBeingRead --;
 }
 
 void draw_main_canvas(ezgl::renderer *g)
 {
-   if(isDrawing>0){
-      isDrawing=2;
+   isDrawing++;
+   if(isDrawing>1){
       return;
    }
-   isDrawing = 1;
    thread_safe_draw_main_canvas(g);
-
    isDrawing = 0;
 }
 
@@ -506,165 +523,7 @@ void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, dou
 }
 
 void threadedLoadFeatures(){
-   
-
-   vector<string> featureNames;
-   
-   for(FeatureIdx featureIndex = 0; featureIndex < getNumFeatures(); featureIndex++)
-   {
-      vector<ezgl::point2d>* points = new vector<ezgl::point2d>; //create array to store cartesian points
-      //loop through all latlon points in feature
-      bool closed = (getFeaturePoint(featureIndex, 0) == getFeaturePoint(featureIndex, getNumFeaturePoints(featureIndex) - 1));
-
-      for(int pointIndex = 0; pointIndex < getNumFeaturePoints(featureIndex); pointIndex++)
-      {
-         LatLon featurePoint = getFeaturePoint(featureIndex, pointIndex); //get latlon point
-         points->push_back(LatLonToPoint2D(featurePoint)); //convert latlon point to cartesion point and add to vector
-      }
-      //if feature is invalid, deallocate space and skip
-      if(points->size() <= 1)
-      {
-         delete points;
-         continue;
-      }
-
-      int layer = -2; //layer of feature (default is -2)
-      double maximumScaling = DBL_MAX;
-      ezgl::color featureColor = kColorBuilding; //colour of feature (default is building) 
-      FeatureType featureType = getFeatureType(featureIndex); //get feature type
-      //change colour and layer based on feature type
-      switch(featureType)
-      {
-         case UNKNOWN:{
-            featureColor = {217, 217, 217, 255};
-            layer = -10;
-            break;
-         }
-         case PARK:{
-            featureColor = kColorScrub;
-            layer = -7;
-            break;
-         }
-         case BEACH:{
-            featureColor = kColorBeach;
-            layer = -6;
-            break;
-         }
-         case LAKE:{
-            featureColor = kColorWater;
-            layer = -9;
-            break;
-         }
-         case RIVER:{
-            featureColor = kColorWater;
-            layer = -3;
-            break;
-         }
-         case ISLAND:{
-            featureColor = kColorIsland;
-            layer = -8;
-            break;
-         }
-         case BUILDING:{
-            featureColor = kColorBuilding;
-            layer = 2;
-            maximumScaling = kMaximumBuildingScaling; //set maximum distance for buildings to start drawing
-            break;
-         }
-         case GREENSPACE:{
-            featureColor = kColorWood;
-            layer = -5;
-            break;
-         }
-         case GOLFCOURSE:{
-            featureColor = kColorBeach;
-            layer = -4;
-            break;
-         }
-         case STREAM:{
-            featureColor = kColorWater;
-            layer = -2;
-            break;
-         }
-         case GLACIER:{
-            featureColor = kColorBeach; 
-            layer = -6;
-         }
-         default: {
-            break;
-         }
-      }
-      
-      //default draw type is a polygon
-      DrawType drawType = POLYGON;
-      //if feature is not closed, then it is a line
-      if(!closed){drawType = LINE;}
-
-      
-
-      MapFeature* mapFeature = new MapFeature(layer,points,featureColor,drawType,MapFeatureType::FEATURE,(int)featureIndex); //create map feature object
-      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw); //add map feature object to array
-      //set default values
-      mapFeature->maximumScaling = maximumScaling;
-      //add text label for feature name
-      string featureName = getFeatureName(featureIndex);
-      if(featureName[0] != '<') //dont print text that is not meant to be displayed (denoted by being wrapped in '<>')
-      {
-         //check for duplicates
-         bool duplicate = vectorContains<string>(featureNames, featureName); //whether the name is a duplicate, checked by seeing if name is in list of names already displayed
-         if(!duplicate || featureType == BUILDING) //buildings often have the same name, so duplicates can be allowed for those features
-         {
-            //if no duplicate is found, add label
-            staticLabels.push_back({featureName,mapFeature->bounds.center(),mapFeature}); //create static text structure and add to array for rendering
-            mapFeature->major = true; //if the feature has a name, it is a point of interest
-            featureNames.push_back(featureName); //detect duplicate
-         }
-      }
-   }
-
-   //download weather map data
-   currentScope.min = minPoints;
-   currentScope.max = maxPoints;
-   //Load weather map
-   currWeatherLayer = NOFILTER;
-   mapTiles = getMapTilesFromBounds (currentScope, 1920, 1080, NOFILTER);
-   downloadWeatherMaps(NOFILTER, mapTiles, time(nullptr));
-   
-   currentWeather = getWeatherData(
-      LatLon(
-         (currentScope.max.latitude() + currentScope.min.latitude())/2,
-         (currentScope.max.longitude() + currentScope.min.longitude())/2
-      ),
-      currentTime
-   );
-   mainCanvas->redraw();
-   cout << "F = " << mapFeatures.numberOfFeatures << endl;
-   cout << "LLOD = " << mapFeatures.numerOfLowLODFeatures << endl;
-
-   if(isLoading > 1){
-      isLoading = 1;
-      threadedLoadFeatures();
-   }
-   isLoading=0;
-}
-
-void loadFeatures()
-{
-   //threadedLoadFeatures
-   double minimumLatitude = DBL_MAX; //smallest latitude in city
-   double minimumLongitude = DBL_MAX; //smallest longitude in city
-   double maximumLatitude = -DBL_MAX; //largest latitude in city
-   double maximumLongitude = -DBL_MAX; //largest longitude in city
-   //go through all features to find largest and smallest latlon points
-   for(IntersectionIdx i = 0; i < getNumIntersections(); i++)
-   {
-      LatLon point = getIntersectionPosition(i); //get position of map feature
-      updateMaximumLatLon(minimumLatitude,minimumLongitude,maximumLatitude,maximumLongitude,point); //compare/replace max and min to current values
-   }
-
-   minPoints = LatLon(minimumLatitude, minimumLongitude); //consolidate minimum latitude and longitude in latlon object
-   maxPoints = LatLon(maximumLatitude, maximumLongitude); //consolodate maximum latitude and longitude in latlon object
-   setLatLonBounds(minPoints, maxPoints); //set constant for calculations in renderHelper
+   cout<<"thread start"<<endl;
 
    mapFeatures.spatialIndexer = QuadTree<MapFeature>(ezgl::rectangle(LatLonToPoint2D(minPoints),LatLonToPoint2D(maxPoints)),kRenderCellSize);
 
@@ -761,6 +620,178 @@ void loadFeatures()
 
       mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw); //add feature to feature list
    } 
+
+   if(hasUIOpened)
+      mainCanvas->redraw();
+
+   vector<string> featureNames;
+   
+   for(FeatureIdx featureIndex = 0; featureIndex < getNumFeatures(); featureIndex++)
+   {
+      vector<ezgl::point2d>* points = new vector<ezgl::point2d>; //create array to store cartesian points
+      //loop through all latlon points in feature
+      bool closed = (getFeaturePoint(featureIndex, 0) == getFeaturePoint(featureIndex, getNumFeaturePoints(featureIndex) - 1));
+
+      for(int pointIndex = 0; pointIndex < getNumFeaturePoints(featureIndex); pointIndex++)
+      {
+         LatLon featurePoint = getFeaturePoint(featureIndex, pointIndex); //get latlon point
+         points->push_back(LatLonToPoint2D(featurePoint)); //convert latlon point to cartesion point and add to vector
+      }
+      //if feature is invalid, deallocate space and skip
+      if(points->size() <= 1)
+      {
+         delete points;
+         points = nullptr;
+         continue;
+      }
+
+      int layer = -2; //layer of feature (default is -2)
+      double maximumScaling = DBL_MAX;
+      ezgl::color featureColor = kColorBuilding; //colour of feature (default is building) 
+      FeatureType featureType = getFeatureType(featureIndex); //get feature type
+      //change colour and layer based on feature type
+      switch(featureType)
+      {
+         case UNKNOWN:{
+            featureColor = {217, 217, 217, 255};
+            layer = -10;
+            break;
+         }
+         case PARK:{
+            featureColor = kColorScrub;
+            layer = -7;
+            break;
+         }
+         case BEACH:{
+            featureColor = kColorBeach;
+            layer = -6;
+            break;
+         }
+         case LAKE:{
+            featureColor = kColorWater;
+            layer = -9;
+            break;
+         }
+         case RIVER:{
+            featureColor = kColorWater;
+            layer = -3;
+            break;
+         }
+         case ISLAND:{
+            featureColor = kColorIsland;
+            layer = -8;
+            break;
+         }
+         case BUILDING:{
+            featureColor = kColorBuilding;
+            layer = 2;
+            maximumScaling = kMaximumBuildingScaling; //set maximum distance for buildings to start drawing
+            break;
+         }
+         case GREENSPACE:{
+            featureColor = kColorWood;
+            layer = -5;
+            break;
+         }
+         case GOLFCOURSE:{
+            featureColor = kColorBeach;
+            layer = -4;
+            break;
+         }
+         case STREAM:{
+            featureColor = kColorWater;
+            layer = -2;
+            break;
+         }
+         case GLACIER:{
+            featureColor = kColorBeach; 
+            layer = -6;
+         }
+         default: {
+            break;
+         }
+      }
+      
+      //default draw type is a polygon
+      DrawType drawType = POLYGON;
+      //if feature is not closed, then it is a line
+      if(!closed){drawType = LINE;}
+
+      MapFeature* mapFeature = new MapFeature(layer,points,featureColor,drawType,MapFeatureType::FEATURE,(int)featureIndex); //create map feature object
+      //set default values
+      mapFeature->maximumScaling = maximumScaling;
+      //add text label for feature name
+      string featureName = getFeatureName(featureIndex);
+      if(featureName[0] != '<') //dont print text that is not meant to be displayed (denoted by being wrapped in '<>')
+      {
+         //check for duplicates
+         bool duplicate = vectorContains<string>(featureNames, featureName); //whether the name is a duplicate, checked by seeing if name is in list of names already displayed
+         if(!duplicate || featureType == BUILDING) //buildings often have the same name, so duplicates can be allowed for those features
+         {
+            //if no duplicate is found, add label
+            staticLabels.push_back({featureName,mapFeature->bounds.center(),mapFeature}); //create static text structure and add to array for rendering
+            mapFeature->major = true; //if the feature has a name, it is a point of interest
+            featureNames.push_back(featureName); //detect duplicate
+            
+            // if(hasUIOpened)
+            //    mainCanvas->redraw();
+         }
+      }
+      while (mapFeatures.spatialIndexer.isBeingRead)
+      {
+         //cout<<"skip"<<endl;
+      }
+      //cout<<"continued"<<endl;
+      
+      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw); //add map feature object to array
+      //std::this_thread::sleep_for(0.001ms);
+   }
+   //download weather map data
+   currentScope.min = minPoints;
+   currentScope.max = maxPoints;
+   //Load weather map
+   currWeatherLayer = NOFILTER;
+   mapTiles = getMapTilesFromBounds (currentScope, 1920, 1080, NOFILTER);
+   downloadWeatherMaps(NOFILTER, mapTiles, time(nullptr));
+   
+   currentWeather = getWeatherData(
+      LatLon(
+         (currentScope.max.latitude() + currentScope.min.latitude())/2,
+         (currentScope.max.longitude() + currentScope.min.longitude())/2
+      ),
+      currentTime
+   );
+   if(hasUIOpened)
+      mainCanvas->redraw();
+   cout << "F = " << mapFeatures.numberOfFeatures << endl;
+   cout << "LLOD = " << mapFeatures.numerOfLowLODFeatures << endl;
+
+   if(isLoading > 1){
+      isLoading = 1;
+      threadedLoadFeatures();
+   }
+   isLoading=0;
+   cout << "finished loading"<<endl;
+}
+
+void loadFeatures()
+{
+   //threadedLoadFeatures
+   double minimumLatitude = DBL_MAX; //smallest latitude in city
+   double minimumLongitude = DBL_MAX; //smallest longitude in city
+   double maximumLatitude = -DBL_MAX; //largest latitude in city
+   double maximumLongitude = -DBL_MAX; //largest longitude in city
+   //go through all features to find largest and smallest latlon points
+   for(IntersectionIdx i = 0; i < getNumIntersections(); i++)
+   {
+      LatLon point = getIntersectionPosition(i); //get position of map feature
+      updateMaximumLatLon(minimumLatitude,minimumLongitude,maximumLatitude,maximumLongitude,point); //compare/replace max and min to current values
+   }
+
+   minPoints = LatLon(minimumLatitude, minimumLongitude); //consolidate minimum latitude and longitude in latlon object
+   maxPoints = LatLon(maximumLatitude, maximumLongitude); //consolodate maximum latitude and longitude in latlon object
+   setLatLonBounds(minPoints, maxPoints); //set constant for calculations in renderHelper
+
    isLoading++;
    if(isLoading <= 1){
       thread t1(threadedLoadFeatures);
@@ -776,7 +807,9 @@ void unloadFeatures()
    while (isLoading > 0)
    {
    }
-   
+   //delete mainCanvas;
+   //mainCanvas = nullptr;
+
    mapFeatures.clear(); //delete all elements in the map
    staticLabels.clear(); //delete all static labels
 }
@@ -788,6 +821,7 @@ void drawMap() {
    // and your main() function in main/src/main.cpp.
    // The unit tests always call loadMap() before calling this function
    // and call closeMap() after this function returns.
+   cout << "Drawing Map" << endl;
    ezgl::application::settings settings; //initialize settings
    settings.main_ui_resource = "libstreetmap/resources/main.ui"; //load ui data
    settings.window_identifier = "MainWindow"; //setup window
@@ -797,11 +831,11 @@ void drawMap() {
    mainCanvas = application.add_canvas("MainCanvas", draw_main_canvas, initial_world);
    //create window
    application.run(initial_setup,on_mouse_click,nullptr,nullptr);
-
 }
 
 void initial_setup(ezgl::application *application, bool /*new_window*/){
 
+   hasUIOpened = false;
    //Initialize CSS
    GtkCssProvider* css = gtk_css_provider_new();
    gtk_css_provider_load_from_path(css, "libstreetmap/src/style.css", NULL); //Replace the filepath string with your .css filepath
@@ -863,6 +897,7 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    selectedTimeText = selectedTimeText.substr(0,16);
    GtkLabel* selectedTimeLabel = GTK_LABEL(application->get_object("selectedTimeLabel"));
    gtk_label_set_text(selectedTimeLabel,selectedTimeText.c_str());
+   hasUIOpened = true;
 }
 
 void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){

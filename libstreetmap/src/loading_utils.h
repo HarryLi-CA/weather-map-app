@@ -26,9 +26,25 @@ void delete2DVectorPointers(vector<vector<P>*>& toDeleteFrom)
     for(int vectorIndex = 0; vectorIndex < toDeleteFrom.size(); vectorIndex++)
     {
         delete toDeleteFrom[vectorIndex]; //delete vector
+        toDeleteFrom[vectorIndex] = nullptr;
     }
     toDeleteFrom.clear(); //remove allocated space in vector
 }
+
+
+// Delete all pointers in a vector
+template <typename P>
+void deleteVectorPointers(vector<P*>& toDeleteFrom)
+{
+    //loop through every pointer in vector
+    for(int vectorIndex = 0; vectorIndex < toDeleteFrom.size(); vectorIndex++)
+    {
+        delete toDeleteFrom[vectorIndex]; //delete vector
+        toDeleteFrom[vectorIndex] = nullptr;
+    }
+    toDeleteFrom.clear(); //remove allocated space in vector
+}
+
 void loadStreetSegmentPoint(vector<vector<LatLon>*>& streetSegmentPoints, StreetSegmentIdx streetSegmentIndex);
 
 //Finds intersections asscociated to a street and stores them in a vector

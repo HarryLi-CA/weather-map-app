@@ -31,6 +31,7 @@ class MapFeature {
     MapFeatureType featureType; //type of feature
     int dataIndex; //index to recover information (either street segment or feature)
     double maximumScaling; //maximum meters per pixel for the feature to start drawing
+    double thresholdArea; //calculated bounding area of the feature at the cell rendering threshold screen-to-world ratio
     StreetIdx streetID; //corrosponding streetID of a map feature (only applicable for street segments, -1 by default)
     bool wasRendered; //cached value to store whether the feature was rendered this frame
     ezgl::color color; //color to draw the feature in
@@ -40,6 +41,7 @@ class MapFeature {
     bool directional; //is the road strictly unidirectional (only applicable to roads)
     int longestPointSegmentIndex; //index before the longest segment of a curved line (only applicable to roads)
     double longestSegmentLength; //length of the longest segment of a turn segment (only applicable to roads)
+    double calculateArea(); //returns bounding area of map feature
     MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _color, DrawType _drawType, MapFeatureType _featureType, int _index);
     ~MapFeature();
 };
@@ -52,8 +54,9 @@ class FeatureList {
     vector<MapFeature*> highlightedFeatures; //currently highlighted feature
     StreetIdx highlightedStreetID; //currently highlighted street (-2 by default)
     int numberOfFeatures = 0;
+    int numerOfLowLODFeatures = 0;
     FeatureList();
-    void addFeature(MapFeature* feature); //adds feature to the map at the corresponding layer
+    void addFeature(MapFeature* feature, double areaThreshold); //adds feature to the map at the corresponding layer
     void highlightFeature(MapFeature* feature, bool unhighlightOthers); //highlights feature and unhighlights currently highlighted features
     void clear(); //deletes all vectors and map features in the layer map
 };

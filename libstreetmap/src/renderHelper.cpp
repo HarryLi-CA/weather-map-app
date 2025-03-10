@@ -46,12 +46,21 @@ MapFeature::MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _
     maximumScaling = DBL_MAX;
     longestPointSegmentIndex = -1;
     longestSegmentLength = 0;
+
+    //calculate area
+    thresholdArea = calculateArea();
 }
 
 MapFeature::~MapFeature()
 {
     //delete points
     delete [] points;
+}
+
+double MapFeature::calculateArea()
+{
+    double worldArea = bounds.area();
+    return worldArea;
 }
 
 FeatureList::FeatureList(){
@@ -77,7 +86,12 @@ void FeatureList::clear()
 
 bool getDrawPriority(MapFeature* a, MapFeature* b) //helper function to determine what features should be drawn first
 {
-    return a->layer < b->layer;
+    bool basicPriority = a->layer < b->layer; //higher layers should be drawn last
+    if(a->layer == b->layer)
+    {
+        basicPriority = a->dataIndex < b->dataIndex; //higher data indices should be drawn last on the same layer
+    }
+    return basicPriority;
 }
 
 void FeatureList::highlightFeature(MapFeature* feature, bool unhighlightOthers)
@@ -102,17 +116,34 @@ void FeatureList::highlightFeature(MapFeature* feature, bool unhighlightOthers)
     highlightedFeatures.push_back(feature);
 }
 
-void FeatureList::addFeature(MapFeature* feature)
+void FeatureList::addFeature(MapFeature* feature, double areaThreshold)
 {
-    //check if layer exists
-    if(layerMap.count(feature->layer) == 0)
+    bool lowLOD = feature->major || (feature->drawType == DrawType::POLYGON && feature->thresholdArea > areaThreshold) || feature->drawType == DrawType::POINT; //should feature be rendered at high distances
+    //if object is large
+    //low LOD features should be added to manual layer system
+    if(lowLOD)
     {
-        //if not, create layer and add it to map
-        vector<MapFeature*>* featureLayer = new vector<MapFeature*>; 
-        layerMap.insert({feature->layer,featureLayer});
+        //check if layer exists
+        if(layerMap.count(feature->layer) == 0)
+        {
+            //if not, create layer and add it to map
+            vector<MapFeature*>* featureLayer = new vector<MapFeature*>; 
+            layerMap.insert({feature->layer,featureLayer});
+        }
+        layerMap[feature->layer]->push_back(feature); //add feature to corrosponding layer
+        numerOfLowLODFeatures++;
     }
-    layerMap[feature->layer]->push_back(feature); //add feature to corrosponding layer
-    spatialIndexer.insert({feature->bounds.center(),feature->bounds,feature,feature->layer});
+    //add every point to spatial indexing
+    if(lowLOD || feature->drawType == DrawType::LINE) //large objects and lines should be added in multiple times to prevent clipping
+    {
+        spatialIndexer.insertBounds({feature->bounds.center(),feature->bounds,feature,feature->layer});
+    }
+    else
+    {
+        spatialIndexer.insert({feature->bounds.center(),feature->bounds,feature,feature->layer});
+    }
+    
+    
     numberOfFeatures++;
 }
 

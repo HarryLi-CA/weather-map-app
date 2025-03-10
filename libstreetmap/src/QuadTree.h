@@ -43,6 +43,11 @@ template <typename DataType> class QuadTree {
         insert(root, node); //insert node from root
     }
 
+    void insertBounds(QuadNode<DataType> node) //override function to insert node from root using bounds
+    {
+        insertBounds(root, node); //insert node from root
+    }
+
     void subdivide(Quad<DataType>* quad) //splits quad into 4 equally size quads and adds them as children
     {
         ezgl::rectangle topLeftBounds = {quad->bounds.top_left(),quad->bounds.center()}; //bound of top-left quad
@@ -92,9 +97,38 @@ template <typename DataType> class QuadTree {
         }
         
     }
+    void insertBounds(Quad<DataType>* quad, QuadNode<DataType> node) //insert node into leaf quad that intersects with the node's bounds
+    {
+        if(!intersecting(quad->bounds,node.bounds)){return;} //if bounds are not in quad, stop function
+        //check if the quad is small enough to be a leaf quad
+        if(quad->bounds.area() <= unitArea)
+        {
+            size++;
+            //cout << 100*size/(double)1153728 << "%" << endl;
+            quad->data.push_back({node.data, node.sortingIndex});
+            return;
+        }
+        //if quad is not small enough, it cannot be a leaf quad
+        if(quad->bounds.area() > unitArea)
+        {
+            //check if quad has no children
+            if(isLeaf(quad))
+            {
+                subdivide(quad); //add children to quad
+            } 
+            
+            //attempt insertion into each sub-quad
+            insertBounds(quad->topLeft, node);
+            insertBounds(quad->topRight, node);
+            insertBounds(quad->bottomLeft, node);
+            insertBounds(quad->bottomRight, node);
+        }
+        
+    }
 
     void getInRange(ezgl::rectangle searchBounds, int layer, vector<DataType*>* totalData) //helper function to get all elements in a rectangular bound from the root
     {
+        cout << "searching with root size " << root->bounds.area() << endl;
         getInRange(root,searchBounds,layer,totalData);
     }
 

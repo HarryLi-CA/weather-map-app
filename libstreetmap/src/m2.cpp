@@ -64,7 +64,7 @@ const ezgl::color kColorBasicRoad = {180, 180, 180, 255};
 const ezgl::color kColorOnewayRoad = {219, 118, 118, 255};
 const uint_fast8_t kColorOnewayIndicatorBrightness = 255;
 const ezgl::color kColorMajorRoad = {0, 0, 200, 255};
-const ezgl::color kColorOnewayMajorRoad = {148,0,211, 255};
+const ezgl::color kColorOnewayMajorRoad = {247,181,0, 255};
 const ezgl::color kColorStreetName = {255, 255, 255, 255};
 //scaling values for window resizing
 double initialWidth = -1;
@@ -73,13 +73,15 @@ double initialHeight = -1;
 const double kOnewayIndicatorSize = 6.0; //size from center to vertex of indicator triangle
 const int kMinimumPixelsToDraw = 15; //minimum pixels a feature should take up on the screen to be drawn that cycle
 const double kMinimumMajorRoadLength = 5000; //minimum length for a road to be considered a major road
-const double kRenderCellSize = 10; //size of each render cell
+const double kRenderCellSize = 500; //size of each render cell
 const int kMaximumRenderCells = 50000; //maximum number of render cells before switching to direct rendering
 const double kMaximumBuildingScaling = 2; //maximum number of meters per pixel to start drawing buildings
-bool enableCellRendering = true; //enable cell rendering method (possibly buggy)
+const bool kEnableSpatialIndexing = true; //enable cell rendering method (possibly buggy)
 const double kRoadWidth = 7.5; //width of roads
 const double kRoadBorderWidth = 0.5; //width of road borders
 const double TILERATIO = 0.000005805;
+const double kSpatialIndexingThreshold = 10; //maximum screen-to-world ratio before quad tree rendering is enabled
+const double kCameraBoundsExtension = 0; //
 LatLonBounds currentScope; // scope of city map
 vector<MapTileData> mapTiles;
 WeatherData currentWeather; // weather including sunset and sunrise in epoch time
@@ -292,8 +294,8 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
    auto& camera = mainCanvas->get_camera();
    ezgl::rectangle cameraRect = camera.get_world();  
 
-   double rectWidth = cameraRect.width()/(camera.get_screen().width()/mainCanvas->width()); //caculate world width of canvas
-   double rectHeight = cameraRect.height()/(camera.get_screen().height()/mainCanvas->height()); //calculate world height of canvas
+   double rectWidth = cameraRect.width()/(camera.get_screen().width()/mainCanvas->width()) + kCameraBoundsExtension; //caculate world width of canvas
+   double rectHeight = cameraRect.height()/(camera.get_screen().height()/mainCanvas->height()) + kCameraBoundsExtension; //calculate world height of canvas
    cameraRect = ezgl::rectangle(
       {cameraRect.center_x() - rectWidth/2.0, cameraRect.center_y() - rectHeight/2.0},
       {cameraRect.center_x() + rectWidth/2.0, cameraRect.center_y() + rectHeight/2.0}
@@ -316,7 +318,7 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
    vector<pair<int, int>> cells;
    cout << worldToScreenScale << endl;
 
-   if(enableCellRendering){
+   if(kEnableSpatialIndexing && worldToScreenScale < kSpatialIndexingThreshold){
       useCellRendering = true;
    }
 
@@ -330,6 +332,7 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
       {
          for(auto feature = (*quad)->data.begin(); feature != (*quad)->data.end(); feature++)
          {
+            feature->first->wasRendered = false;
             cellFeatures.push_back(feature->first);
          }
       }
@@ -337,9 +340,11 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
       for(int i = 0; i < cellFeatures.size(); i++)
       {
          MapFeature* feature = cellFeatures[i];
+         if(feature->wasRendered){continue;} //skip duplicate renders
          g->set_color({0, 0, 0, 255});
          g->set_line_width(lineWidth);
          drawFeature(feature,g,lineWidth,scaling,worldToScreenScale,camera);
+         feature->wasRendered = true;
       }
    }
    else //if number of cells is too high, directly render each element
@@ -401,7 +406,7 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
    double period = 0.000000001*std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
    double fps = 1.0/period;
    g->set_font_size(20);
-   g->draw_text(cameraRect.center(), to_string(useCellRendering) + ": " + to_string(fps));
+   g->draw_text(lerp(cameraRect.top_left(), cameraRect.bottom_right(), 0.8), to_string(useCellRendering) + ": " + to_string(fps));
    
    if(isDrawing > 1){
       isDrawing = 1;
@@ -546,7 +551,7 @@ void loadFeatures()
       ezgl::point2d translatedPoint = LatLonToPoint2D(getIntersectionPosition(intersectionIndex)); //get intersection coor
       points->push_back(translatedPoint); //add singular point to point list
       MapFeature* mapFeature = new MapFeature(10,points,kColorHighlight,POINT,MapFeatureType::INTERSECTION,(int)intersectionIndex); //add intersection as map feature
-      mapFeatures.addFeature(mapFeature);
+      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw);
       intersectionFeatures.push_back(mapFeature); //relate feature to corrosponding intersection index
    }
 
@@ -581,6 +586,7 @@ void loadFeatures()
          }
       }
       auto segmentInfo = getStreetSegmentInfo(streetSegmentIndex); //street segment info
+      int roadLayer = 1;
    
       ezgl::color roadColor = kColorBasicRoad; //colour of feature (default is building) 
 
@@ -588,10 +594,11 @@ void loadFeatures()
       if(segmentInfo.oneWay)
       {
          roadColor = kColorOnewayRoad;
+         roadLayer = 2;
       }
       
-      MapFeature* mapFeature = new MapFeature(1,points,roadColor,LINE,MapFeatureType::ROAD,(int)streetSegmentIndex);  //create map featur object
-      mapFeatures.addFeature(mapFeature); //add feature to feature list
+      MapFeature* mapFeature = new MapFeature(roadLayer,points,roadColor,LINE,MapFeatureType::ROAD,(int)streetSegmentIndex);  //create map featur object
+      
       intersectionFeatures.push_back(mapFeature); //relate feature to corresponding intersection index
       //add longest street data
       mapFeature->longestPointSegmentIndex = longestSegmentIndex;
@@ -609,14 +616,17 @@ void loadFeatures()
          bool majorRoad = segmentInfo.speedLimit > 18; //if road is long, it is a major road
          if(majorRoad)
          {
-            mapFeature->major = majorRoad;
+            mapFeature->major = true;
             mapFeature->color = kColorMajorRoad;
+            mapFeature->layer = 3;
             if(segmentInfo.oneWay)
             {
                mapFeature->color = kColorOnewayMajorRoad;
             }
          }
       }
+
+      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw); //add feature to feature list
    } 
 
    vector<string> featureNames;
@@ -714,7 +724,7 @@ void loadFeatures()
       
 
       MapFeature* mapFeature = new MapFeature(layer,points,featureColor,drawType,MapFeatureType::FEATURE,(int)featureIndex); //create map feature object
-      mapFeatures.addFeature(mapFeature); //add map feature object to array
+      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw); //add map feature object to array
       //set default values
       mapFeature->maximumScaling = maximumScaling;
       //add text label for feature name
@@ -750,6 +760,7 @@ void loadFeatures()
    );
 
    cout << "F = " << mapFeatures.numberOfFeatures << endl;
+   cout << "LLOD = " << mapFeatures.numerOfLowLODFeatures << endl;
 }
 
 void unloadFeatures()

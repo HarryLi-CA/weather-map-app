@@ -380,7 +380,6 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
       ezgl::point2d minPoint2d= LatLonToPoint2D(mapTiles[i].tileBounds.min);
       ezgl::point2d maxPoint2d= LatLonToPoint2D(mapTiles[i].tileBounds.max);
 
-      double metersPerPixel = tileSize/TILEWIDTH;
       double screenMperP = screenLength/pixelLength;
       double targetLength = tileSize/screenMperP;
       double scalingFactor = targetLength/TILEWIDTH;

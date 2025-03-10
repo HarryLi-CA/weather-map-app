@@ -160,7 +160,7 @@ template <typename DataType> class QuadTree {
     void getInRange(Quad<DataType>* quad, ezgl::rectangle searchBounds, int sortingIndex, vector<DataType*>* totalData)
     {
         //check if quad is not in range
-        if(!intersecting(searchBounds,quad->bounds)){return;} //if quad is not in the specified range, do not process it
+        if(quad==nullptr || !intersecting(searchBounds,quad->bounds)){return;} //if quad is not in the specified range, do not process it
         //check if quad is a leaf quad (has no children)
         if(isLeaf(quad))
         {

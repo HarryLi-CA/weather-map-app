@@ -119,10 +119,11 @@ pair<string,pair<WeatherLayer,ezgl::application*>> filterNames[6] = { {"SnowBtn"
                                                                      {"WindBtn",{WIND,nullptr}},
                                                                      {"ClearBtn",{NOFILTER,nullptr}}};
 
-WeatherLayer currWeatherLayer = NOFILTER;  
+volatile WeatherLayer currWeatherLayer = NOFILTER;  
 std::time_t currentTime = std::time(nullptr);
-int isDrawing = 0;
-int isChangingTime = 0;                            
+volatile int isDrawing = 0;
+volatile int isChangingTime = 0;
+volatile int isLoading = 0;                             
 
 // void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
 // {
@@ -510,122 +511,8 @@ void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, dou
    }
 }
 
-void loadFeatures()
-{
+void threadedLoadFeatures(){
    
-   
-
-
-   double minimumLatitude = DBL_MAX; //smallest latitude in city
-   double minimumLongitude = DBL_MAX; //smallest longitude in city
-   double maximumLatitude = -DBL_MAX; //largest latitude in city
-   double maximumLongitude = -DBL_MAX; //largest longitude in city
-   //go through all features to find largest and smallest latlon points
-   for(IntersectionIdx i = 0; i < getNumIntersections(); i++)
-   {
-      LatLon point = getIntersectionPosition(i); //get position of map feature
-      updateMaximumLatLon(minimumLatitude,minimumLongitude,maximumLatitude,maximumLongitude,point); //compare/replace max and min to current values
-   }
-
-   minPoints = LatLon(minimumLatitude, minimumLongitude); //consolidate minimum latitude and longitude in latlon object
-   maxPoints = LatLon(maximumLatitude, maximumLongitude); //consolodate maximum latitude and longitude in latlon object
-   setLatLonBounds(minPoints, maxPoints); //set constant for calculations in renderHelper
-
-   mapFeatures.spatialIndexer = QuadTree<MapFeature>(ezgl::rectangle(LatLonToPoint2D(minPoints),LatLonToPoint2D(maxPoints)),kRenderCellSize);
-
-   numberOfStreets = getNumStreets();
-
-   //Cache street lengths
-   for(StreetIdx streetIndex = 1; streetIndex < numberOfStreets; streetIndex++)
-   {
-      double streetLength = findStreetLength(streetIndex); //get length of street
-      streetLengthCache.push_back(streetLength); //cache street length
-   }
-   
-   //Add intersection features
-   for(IntersectionIdx intersectionIndex = 0; intersectionIndex < getNumIntersections(); intersectionIndex++)
-   {
-      vector<ezgl::point2d>* points = new vector<ezgl::point2d>; //create vector to add points
-      ezgl::point2d translatedPoint = LatLonToPoint2D(getIntersectionPosition(intersectionIndex)); //get intersection coor
-      points->push_back(translatedPoint); //add singular point to point list
-      MapFeature* mapFeature = new MapFeature(10,points,kColorHighlight,POINT,MapFeatureType::INTERSECTION,(int)intersectionIndex); //add intersection as map feature
-      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw);
-      intersectionFeatures.push_back(mapFeature); //relate feature to corrosponding intersection index
-   }
-
-   //cout << "loading segments: " << streetSegmentPoints.size() << endl;
-   for(StreetSegmentIdx streetSegmentIndex = 0; streetSegmentIndex < getNumStreetSegments(); streetSegmentIndex++)
-   {
-      vector<LatLon> curvePoints = *getStreetSegmentPoints(streetSegmentIndex); //get cached curve points for street segment
-      vector<ezgl::point2d>* points = new vector<ezgl::point2d>;
-
-      int longestSegmentIndex = 0; //index of point before longest subsegment of street segment  
-      double longestLength = 0;
-      
-      int curvePointCount = curvePoints.size();
-      for(int pointIndex = 0; pointIndex < curvePointCount; pointIndex++)
-      {
-         LatLon curvePoint = curvePoints[pointIndex];
-         ezgl::point2d translatedPoint = LatLonToPoint2D(curvePoint);
-         points->push_back(translatedPoint);
-
-         if(pointIndex < curvePointCount - 1)
-         {
-            //calculate distance between points
-            double xDistance = translatedPoint.x - LatLonToPoint2D(curvePoints[pointIndex+1]).x;
-            double yDistance = translatedPoint.y - LatLonToPoint2D(curvePoints[pointIndex+1]).y;
-
-            double distance = sqrt(xDistance*xDistance + yDistance*yDistance);
-            if(distance > longestLength) //check if this segment is the longest so far
-            {
-               longestLength = distance;
-               longestSegmentIndex = pointIndex;
-            }
-         }
-      }
-      auto segmentInfo = getStreetSegmentInfo(streetSegmentIndex); //street segment info
-      int roadLayer = 1;
-   
-      ezgl::color roadColor = kColorBasicRoad; //colour of feature (default is building) 
-
-      //if road is oneway, indicate it using segment info
-      if(segmentInfo.oneWay)
-      {
-         roadColor = kColorOnewayRoad;
-         roadLayer = 2;
-      }
-      
-      MapFeature* mapFeature = new MapFeature(roadLayer,points,roadColor,LINE,MapFeatureType::ROAD,(int)streetSegmentIndex);  //create map featur object
-      
-      intersectionFeatures.push_back(mapFeature); //relate feature to corresponding intersection index
-      //add longest street data
-      mapFeature->longestPointSegmentIndex = longestSegmentIndex;
-      mapFeature->longestSegmentLength = longestLength;
-      //set street id
-      StreetIdx streetID = segmentInfo.streetID; //get street ID
-      mapFeature->streetID = streetID; //set street id of feature to calculated street id
-
-      //post initialization settings for one way streets
-      mapFeature->directional = segmentInfo.oneWay;
-
-      //check if street is a major street
-      if(streetID > 0) //street ID 0 can never be a major road as it is the default ID for minor roads
-      {  
-         bool majorRoad = segmentInfo.speedLimit > 18; //if road is long, it is a major road
-         if(majorRoad)
-         {
-            mapFeature->major = true;
-            mapFeature->color = kColorMajorRoad;
-            mapFeature->layer = 3;
-            if(segmentInfo.oneWay)
-            {
-               mapFeature->color = kColorOnewayMajorRoad;
-            }
-         }
-      }
-
-      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw); //add feature to feature list
-   } 
 
    vector<string> featureNames;
    
@@ -756,13 +643,145 @@ void loadFeatures()
       ),
       currentTime
    );
-
+   mainCanvas->redraw();
    cout << "F = " << mapFeatures.numberOfFeatures << endl;
    cout << "LLOD = " << mapFeatures.numerOfLowLODFeatures << endl;
+
+   if(isLoading > 1){
+      isLoading = 1;
+      threadedLoadFeatures();
+   }
+   isLoading=0;
+}
+
+void loadFeatures()
+{
+   //threadedLoadFeatures
+   double minimumLatitude = DBL_MAX; //smallest latitude in city
+   double minimumLongitude = DBL_MAX; //smallest longitude in city
+   double maximumLatitude = -DBL_MAX; //largest latitude in city
+   double maximumLongitude = -DBL_MAX; //largest longitude in city
+   //go through all features to find largest and smallest latlon points
+   for(IntersectionIdx i = 0; i < getNumIntersections(); i++)
+   {
+      LatLon point = getIntersectionPosition(i); //get position of map feature
+      updateMaximumLatLon(minimumLatitude,minimumLongitude,maximumLatitude,maximumLongitude,point); //compare/replace max and min to current values
+   }
+
+   minPoints = LatLon(minimumLatitude, minimumLongitude); //consolidate minimum latitude and longitude in latlon object
+   maxPoints = LatLon(maximumLatitude, maximumLongitude); //consolodate maximum latitude and longitude in latlon object
+   setLatLonBounds(minPoints, maxPoints); //set constant for calculations in renderHelper
+
+   mapFeatures.spatialIndexer = QuadTree<MapFeature>(ezgl::rectangle(LatLonToPoint2D(minPoints),LatLonToPoint2D(maxPoints)),kRenderCellSize);
+
+   numberOfStreets = getNumStreets();
+
+   //Cache street lengths
+   for(StreetIdx streetIndex = 1; streetIndex < numberOfStreets; streetIndex++)
+   {
+      double streetLength = findStreetLength(streetIndex); //get length of street
+      streetLengthCache.push_back(streetLength); //cache street length
+   }
+   
+   //Add intersection features
+   for(IntersectionIdx intersectionIndex = 0; intersectionIndex < getNumIntersections(); intersectionIndex++)
+   {
+      vector<ezgl::point2d>* points = new vector<ezgl::point2d>; //create vector to add points
+      ezgl::point2d translatedPoint = LatLonToPoint2D(getIntersectionPosition(intersectionIndex)); //get intersection coor
+      points->push_back(translatedPoint); //add singular point to point list
+      MapFeature* mapFeature = new MapFeature(10,points,kColorHighlight,POINT,MapFeatureType::INTERSECTION,(int)intersectionIndex); //add intersection as map feature
+      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw);
+      intersectionFeatures.push_back(mapFeature); //relate feature to corrosponding intersection index
+   }
+
+   //cout << "loading segments: " << streetSegmentPoints.size() << endl;
+   for(StreetSegmentIdx streetSegmentIndex = 0; streetSegmentIndex < getNumStreetSegments(); streetSegmentIndex++)
+   {
+      vector<LatLon> curvePoints = *getStreetSegmentPoints(streetSegmentIndex); //get cached curve points for street segment
+      vector<ezgl::point2d>* points = new vector<ezgl::point2d>;
+
+      int longestSegmentIndex = 0; //index of point before longest subsegment of street segment  
+      double longestLength = 0;
+      
+      int curvePointCount = curvePoints.size();
+      for(int pointIndex = 0; pointIndex < curvePointCount; pointIndex++)
+      {
+         LatLon curvePoint = curvePoints[pointIndex];
+         ezgl::point2d translatedPoint = LatLonToPoint2D(curvePoint);
+         points->push_back(translatedPoint);
+
+         if(pointIndex < curvePointCount - 1)
+         {
+            //calculate distance between points
+            double xDistance = translatedPoint.x - LatLonToPoint2D(curvePoints[pointIndex+1]).x;
+            double yDistance = translatedPoint.y - LatLonToPoint2D(curvePoints[pointIndex+1]).y;
+
+            double distance = sqrt(xDistance*xDistance + yDistance*yDistance);
+            if(distance > longestLength) //check if this segment is the longest so far
+            {
+               longestLength = distance;
+               longestSegmentIndex = pointIndex;
+            }
+         }
+      }
+      auto segmentInfo = getStreetSegmentInfo(streetSegmentIndex); //street segment info
+      int roadLayer = 1;
+   
+      ezgl::color roadColor = kColorBasicRoad; //colour of feature (default is building) 
+
+      //if road is oneway, indicate it using segment info
+      if(segmentInfo.oneWay)
+      {
+         roadColor = kColorOnewayRoad;
+         roadLayer = 2;
+      }
+      
+      MapFeature* mapFeature = new MapFeature(roadLayer,points,roadColor,LINE,MapFeatureType::ROAD,(int)streetSegmentIndex);  //create map featur object
+      
+      intersectionFeatures.push_back(mapFeature); //relate feature to corresponding intersection index
+      //add longest street data
+      mapFeature->longestPointSegmentIndex = longestSegmentIndex;
+      mapFeature->longestSegmentLength = longestLength;
+      //set street id
+      StreetIdx streetID = segmentInfo.streetID; //get street ID
+      mapFeature->streetID = streetID; //set street id of feature to calculated street id
+
+      //post initialization settings for one way streets
+      mapFeature->directional = segmentInfo.oneWay;
+
+      //check if street is a major street
+      if(streetID > 0) //street ID 0 can never be a major road as it is the default ID for minor roads
+      {  
+         bool majorRoad = segmentInfo.speedLimit > 18; //if road is long, it is a major road
+         if(majorRoad)
+         {
+            mapFeature->major = true;
+            mapFeature->color = kColorMajorRoad;
+            mapFeature->layer = 3;
+            if(segmentInfo.oneWay)
+            {
+               mapFeature->color = kColorOnewayMajorRoad;
+            }
+         }
+      }
+
+      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw); //add feature to feature list
+   } 
+   isLoading++;
+   if(isLoading <= 1){
+      thread t1(threadedLoadFeatures);
+      t1.detach();
+   }
+
+   
 }
 
 void unloadFeatures()
 {
+   while (isLoading > 0)
+   {
+   }
+   
    mapFeatures.clear(); //delete all elements in the map
    cellMap.clear(); //delete all elements in cell map
    staticLabels.clear(); //delete all static labels
@@ -1024,13 +1043,10 @@ void threadedChangeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* ap
    GtkLabel* selectedTimeLabel = GTK_LABEL(application->get_object("selectedTimeLabel"));
    gtk_label_set_text(selectedTimeLabel,selectedTimeText.c_str());
 
-   cout << "test2"<<endl;
    //refresh value
    pair<WeatherLayer , ezgl::application*> cbkPair;
    cbkPair = make_pair(currWeatherLayer,application);
    threadedChangeFilter_cbk(cbkPair);
-
-   cout << "test3"<<endl;
 
 
    currentWeather = getWeatherData(

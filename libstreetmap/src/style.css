@@ -12,9 +12,14 @@
     background-color: #333333;
     border-radius: 100%;
     font-size: large;
+    animation-duration: 0.1s;
+    transition-duration: 0.15s;
+    border: none;
 }
 
 .uiBtn {
     background-color: #333333;
     color: #ffffff;
+    transition-duration: 0.15s;
 }
+

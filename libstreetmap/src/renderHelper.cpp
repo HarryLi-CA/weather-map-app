@@ -80,6 +80,8 @@ void FeatureList::clear()
         layer++;
     }
     layerMap.clear();
+    spatialIndexer.clear();
+    cout << "done clearing spatial indexer" << endl;
     highlightedFeatures = {};
     numberOfFeatures = 0;
 }

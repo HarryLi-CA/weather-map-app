@@ -47,7 +47,6 @@ LatLon maxPoints; //top right LatLon position
 vector<StaticName> staticLabels; //list of static text objects to draw
 vector<MapFeature*> intersectionFeatures; //vector that takes in intersection index and return correpsonding map feature
 vector<StreetIdx> streetLengthCache; //stored value of all loaded street lengths;
-map<pair<int, int>, vector<MapFeature*>*> cellMap; //map of all render cells to list of features
 int numberOfStreets = 0; //save number of streets for fast access
 //default colour constants for general objects
 const ezgl::color kColorDefaultGround = {235, 235, 235, 255}; 
@@ -176,27 +175,22 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
             }
             for(int i = 0; i < feature->points->size() - 1; i++)
             {
-               ezgl::point2d subpointFrom = (*feature->points)[i];
-               ezgl::point2d subpointTo = (*feature->points)[i];
-               ezgl::point2d subpointDirection = {subpointTo.x-subpointFrom.x,subpointTo.y-subpointFrom.y};
-               //normalize direction
-               double subpointDirMagnitude = sqrt(subpointDirection.x*subpointDirection.x + subpointDirection.y*subpointDirection.y);
-               subpointDirection = {subpointDirection.x/subpointDirMagnitude, subpointDirection.y/subpointDirMagnitude};
-               ezgl::point2d leftOffset = {-subpointDirection.y*lineWidth*lineWidthScale/2,subpointDirection.x*lineWidth*lineWidthScale/2};
-               ezgl::point2d rightOffset = {-leftOffset.y, -leftOffset.x};
-               g->draw_line((*feature->points)[i],(*feature->points)[i+1]);
-               //draw border
-               g->set_color({0,0,0});
-               g->set_line_width(10);
-               g->draw_line((*feature->points)[i]+rightOffset,(*feature->points)[i+1]+rightOffset);
-               g->draw_line((*feature->points)[i]+leftOffset,(*feature->points)[i+1]+leftOffset);
-               g->set_line_width(lineWidth*lineWidthScale);
-               g->set_color(feature->color);
-               if(highlightedStreet)
-               {
-                  g->set_color(kColorHighlight);
+               
+               //draw border on roads
+               if(feature->featureType == MapFeatureType::ROAD){
+                  g->set_color({0.8*feature->color.red,0.8*feature->color.green,0.8*feature->color.blue,255});
+                  g->set_line_width(lineWidth*lineWidthScale + 3);
+                  g->set_line_cap(ezgl::line_cap::butt);
+                  g->draw_line((*feature->points)[i],(*feature->points)[i+1]);
+                  g->set_line_width(lineWidth*lineWidthScale);
+                  g->set_color(feature->color);
+                  if(highlightedStreet)
+                  {
+                     g->set_color(kColorHighlight);
+                  }
+                  g->set_line_cap(ezgl::line_cap::round);
                }
-
+               g->draw_line((*feature->points)[i],(*feature->points)[i+1]);
                
             }
             //get direction of road
@@ -404,8 +398,8 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
    double period = 0.000000001*std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
    double fps = 1.0/period;
-   g->set_font_size(20);
-   g->draw_text(lerp(cameraRect.top_left(), cameraRect.bottom_right(), 0.8), to_string(useCellRendering) + ": " + to_string(fps));
+   g->set_font_size(10);
+   g->draw_text(lerp(cameraRect.top_right(), cameraRect.bottom_left(), 0.05), "FPS: " + to_string((int)fps));
    
    if(isDrawing > 1){
       isDrawing = 1;
@@ -778,12 +772,12 @@ void loadFeatures()
 
 void unloadFeatures()
 {
+   cout << "unloading" << endl;
    while (isLoading > 0)
    {
    }
    
    mapFeatures.clear(); //delete all elements in the map
-   cellMap.clear(); //delete all elements in cell map
    staticLabels.clear(); //delete all static labels
 }
 
@@ -971,7 +965,7 @@ void resetCanvasParameters(ezgl::application* app) //helper function to reset th
 }
 
 void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInfo){
-   
+   cout << "open map cbk" << endl;
    string nextMapPath = mapInfo->first;
    ezgl::application* application = mapInfo->second;
 

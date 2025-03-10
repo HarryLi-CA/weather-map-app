@@ -29,13 +29,42 @@ template <typename DataType> struct Quad {
 template <typename DataType> class QuadTree {
     Quad<DataType>* root; //root quad of quad tree
     double unitArea; //threshold of quad area to be considered a leaf quad
-    int size = 0; //number of quads in quad tree
+    int size = 0; //number of data elements in quad tree
+    int nodes = 1; //number of quads in quad tree
     public:
     QuadTree(){}
-    QuadTree(ezgl::rectangle bounds, double _unitArea)
+
+    void reset(ezgl::rectangle bounds) //resets tree and recreates root
     {
         Quad<DataType>* newRoot = new Quad<DataType>({bounds,{},nullptr,nullptr,nullptr,nullptr}); //create new root
         root = newRoot; //assign new root to object
+    }
+
+    void clear() //empties quad tree
+    {
+        if(root == nullptr){return;} //guard against double freeing
+        clear(root); //clear root
+        root = nullptr;
+        nodes = 0;
+        size = 0;
+        cout << "done clearing" << endl;
+    }
+
+    void clear(Quad<DataType>* quad) //deletes quad and all of its children
+    {
+        if(!isLeaf(quad))
+        {
+            clear(quad->topRight);
+            clear(quad->topLeft);
+            clear(quad->bottomRight);
+            clear(quad->bottomLeft);
+            //cout << "clearing node" << endl;
+        }
+        delete quad;
+    }
+    QuadTree(ezgl::rectangle bounds, double _unitArea)
+    {
+        reset(bounds);
         unitArea = _unitArea; //assign unit area
     }
     void insert(QuadNode<DataType> node) //override function to insert node from root
@@ -64,6 +93,7 @@ template <typename DataType> class QuadTree {
         quad->topRight = topRightQuad;
         quad->bottomLeft = bottomLeftQuad;
         quad->bottomRight = bottomRightQuad;
+        nodes += 4;
     }
     bool isLeaf(Quad<DataType>* quad) //checks if quad is a leaf quad (has no children)
     {

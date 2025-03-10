@@ -211,13 +211,15 @@ string weatherJson = "";
 
 size_t write_weather_data(void *buffer, size_t nmemb) {
     if (buffer && nmemb) {
-        weatherJson = (char *)buffer;
+        weatherJson += (char *)buffer;
     }
     return nmemb;
 }
 
 void fetchWeatherData(LatLon location){
     res = curl_global_init(CURL_GLOBAL_ALL);
+    weatherJson = "";
+    cout << "load1" <<endl;
     if (res != CURLE_OK) {
     cout << "ERROR: Unable to initialize libcurl" << endl;
     cout << curl_easy_strerror(res) << endl;
@@ -244,8 +246,14 @@ void fetchWeatherData(LatLon location){
     //curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, weatherJson); 
     res = curl_easy_perform(curlHandle);
     }
+        cout<< "at url: " << apiURL <<endl;
     if (res == CURLE_OK) {
-    } else {
+    } else if(res == 23){
+        res = CURLE_OK;
+    } 
+    else {
+        cout << weatherJson << endl;
+        cout<< "at url: " << apiURL <<endl;
     cout << "ERROR: res == " << res << endl;
     cout << curl_easy_strerror(res) << endl;
     cout << "See https://curl.haxx.se/libcurl/c/libcurl-errors.html "
@@ -262,7 +270,7 @@ WeatherData getWeatherData(LatLon location, int time){
     size_t lastIdx = weatherJson.find("\"dt\":");
     size_t curIdx = weatherJson.find("\"dt\":", lastIdx+1);
     int curDay = stoi(weatherJson.substr(curIdx+5));
-    while (curIdx != string::npos && time < curDay)
+    while (curIdx != string::npos && time > curDay)
     {
         lastIdx = curIdx;
         curIdx = weatherJson.find("\"dt\":", lastIdx+1);

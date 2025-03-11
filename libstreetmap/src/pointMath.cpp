@@ -20,3 +20,51 @@ ezgl::point2d lerp(ezgl::point2d A, ezgl::point2d B, double scale)
     scale = min(max(scale,0.0),1.0);
     return {scale*B.x + (1 - scale)*A.x, scale*B.y + (1 - scale)*A.y,};
 }
+ezgl::rectangle updateBounds(ezgl::rectangle rect, ezgl::point2d point)
+{
+    double rightX, topY, leftX, botY; //bounds of new rectangle
+    double aspectRatio = rect.width()/rect.height();
+
+    //set bounds to current rectangle bounds
+    rightX = rect.right();
+    leftX = rect.left();
+    topY = rect.top();
+    botY = rect.bottom();
+
+    //expand rectangle to fit point
+    if(rightX < point.x){rightX = point.x;}
+    if(leftX > point.x){leftX = point.x;}
+    if(topY < point.y){topY = point.y;}
+    if(botY > point.y){botY = point.y;}
+
+    double currentAsepct = (rightX - leftX)/(topY - botY);
+    double width = rightX - leftX;
+    double height = topY - botY;
+    if(currentAsepct > aspectRatio)
+    {
+        //adjust height
+        double extraHeight = width*rect.height()/rect.width() - height;
+        topY += extraHeight/2;
+        botY -= extraHeight/2;
+    }
+    if(currentAsepct < aspectRatio)
+    {
+        //adjust width
+        double extraWidth = height*rect.width()/rect.height() - width;
+        rightX += extraWidth/2;
+        leftX -= extraWidth/2;
+    }
+
+    //create new rectangle and return
+    ezgl::rectangle newRect({leftX, botY}, {rightX, topY});
+
+    return newRect;
+}
+
+ezgl::rectangle recenterRect(ezgl::rectangle rect, ezgl::point2d point)
+{
+   ezgl::point2d positionChange = point - rect.center(); //get change in position
+   //set rect bounds to current bounds + change in position
+   ezgl::rectangle newRect(rect.bottom_left() + positionChange, rect.top_right() + positionChange);
+   return newRect;
+}

@@ -910,6 +910,15 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    hasUIOpened = true;
 }
 
+void setCameraPosition(ezgl::point2d point, ezgl::camera& camera)
+{
+   ezgl::rectangle world = camera.get_world(); //get camera
+   ezgl::point2d positionChange = point - world.center(); //get change in position
+   //set camera bounds to current bounds + change in position
+   world = ezgl::rectangle(world.bottom_left() + positionChange, world.top_right() + positionChange);
+   camera.set_world(world);
+}
+
 void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
 
    //unhighlight previously searched intersections
@@ -971,20 +980,51 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    string intersectionInfo = "Searched Intersections: ";
 
    // Mark each intersection for highlighting
+   ezgl::point2d cameraMidPoint = {0, 0};
+   ezgl::rectangle camRect = application->get_canvas("MainCanvas")->get_camera().get_world();
+   int cameraPoints = 0;
+   bool firstHightlight = false; //already highlighted an intersection
    for(int i = 0; i < numOfIntersectionLists; i++){
       for(int j = 0; j < intersectionList[i].size(); j++){
-         mapFeatures.highlightFeature(intersectionFeatures[intersectionList[i][j]], false);
+         mapFeatures.highlightFeature(intersectionFeatures[intersectionList[i][j]], !firstHightlight);
+         firstHightlight = true;
 
          intersectionInfo.append(getIntersectionName(intersectionList[i][j]) + (", "));
 
+         ezgl::point2d intersectionPoint = LatLonToPoint2D(getIntersectionPosition(intersectionList[i][j]));
+         cameraMidPoint = cameraMidPoint + intersectionPoint;
+         cameraPoints++;
+
          prevSearchedIntersectionIdxs.push_back(intersectionList[i][j]);
-         mapFeatures.highlightFeature(intersectionFeatures[intersectionList[i][j]], true);
       }
+   }
+
+   if(cameraPoints > 0)
+   {
+      cameraMidPoint = {cameraMidPoint.x/cameraPoints, cameraMidPoint.y/cameraPoints};
+      camRect = recenterRect(camRect,cameraMidPoint);
+   } 
+
+   for(int i = 0; i < numOfIntersectionLists; i++){
+      for(int j = 0; j < intersectionList[i].size(); j++){
+         ezgl::point2d intersectionPoint = LatLonToPoint2D(getIntersectionPosition(intersectionList[i][j]));
+         camRect = updateBounds(camRect, intersectionPoint);
+      }
+   }
+
+   //set camera position to average of all positions
+   if(cameraPoints > 0)
+   {
+      cameraMidPoint = {cameraMidPoint.x/cameraPoints, cameraMidPoint.y/cameraPoints};
+      ezgl::camera& cam = application->get_canvas("MainCanvas")->get_camera();
+      // setCameraPosition(cameraMidPoint, cam);
+      cam.set_world(camRect);
    }
 
    intersectionInfo.pop_back();
    intersectionInfo.pop_back();
    application->update_message(intersectionInfo);
+   
    application->refresh_drawing();
 }
 

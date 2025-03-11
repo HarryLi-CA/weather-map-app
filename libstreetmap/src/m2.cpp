@@ -387,7 +387,7 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
    double tileSize = LonToX(mapTiles[0].tileBounds.max.longitude()) - LonToX(mapTiles[0].tileBounds.min.longitude());
    for (size_t i = 0; i < mapTiles.size(); i++)
    {
-      if(mapTiles[i].isLoaded && mapTiles[i].wL ==currWeatherLayer ){
+      if(mapTiles[i].isLoaded){
       const char* surfURL = mapTiles[i].url.c_str();
       ezgl::surface* currentSurface = g->load_png(surfURL);
       ezgl::point2d minPoint2d= LatLonToPoint2D(mapTiles[i].tileBounds.min);

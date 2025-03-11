@@ -30,6 +30,8 @@ struct MapTileData {
     int x;
     int y;
     int z;
+    double opacity = 0.5;
+    string palette = "";
     LatLonBounds tileBounds;
     string url;
     bool isLoaded = false;
@@ -42,6 +44,11 @@ struct WeatherData {
     int sunset;
 };
 
+struct WeatherPalette{
+    int value = 0;
+    string color = "";
+};
+
 // Get global coordiantes of mercator projection from latitude and longitude
 pair<double,double> getGlobalCoordsFromLatLon(LatLon l, double mapWidth);
 
@@ -51,8 +58,11 @@ LatLon getLatLonFromGlobalCoords(pair<double,double> coords, double mapWidth);
 //Get map tiles based on current screen
 vector<MapTileData> getMapTilesFromBounds (LatLonBounds currentScope, int pixelLength, int pixelHeight, WeatherLayer wL);
 
+//converts enum WeatherLayer to api string
+string convertWeatherLayerToString(WeatherLayer wL);
+
 //Converts tile and weather to specific api url
-string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData, int date);
+string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData, int date, double opacity = 0.5, string pallete = "");
 
 // download weather maps for current city
 void downloadWeatherMaps(WeatherLayer wL, vector<MapTileData>& mapTiles, int date);

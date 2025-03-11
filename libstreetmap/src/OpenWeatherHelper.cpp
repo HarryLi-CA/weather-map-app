@@ -88,50 +88,98 @@ vector<MapTileData> getMapTilesFromBounds (LatLonBounds currentScope, int pixelL
     // cout << maxGlobalCoords.first << " " << maxGlobalCoords.second << endl;
 
     vector<MapTileData> out;
+    vector<double> weightedOpacities = {0.4,0,0,0,0.8,0.8};
+    vector<string> palletes = 
+    {
+        "0:00000000;0.023150:ffffffff",
+        "",
+        "",
+        "",
+        "80:00000000;100:ffffffff",
+        "0:00000000;200:ffffffff",
+    };
+
     for(int i = (int)minGlobalCoords.first; i <= (int)maxGlobalCoords.first; i++){ 
         for(int j = (int)minGlobalCoords.second; j <= (int)maxGlobalCoords.second; j++){
             LatLonBounds tileBounds;
                 tileBounds.min = getLatLonFromGlobalCoords(make_pair(i,j),zoom);
                 tileBounds.max = getLatLonFromGlobalCoords(make_pair(i+1,j+1),zoom);
-            MapTileData m; m.x = i; m.y = j; m.z = z; m.tileBounds = tileBounds; m.wL = wL;
-            m.url = "libstreetmap/imgs/" + to_string(m.z) + "_" + to_string(m.x) + "_" + to_string(m.y) + ".png";
-            out.push_back(m);
+            if(wL == WEIGHTED){
+                for(int k = 0; k < weightedOpacities.size(); k++){
+                    if(weightedOpacities[k] > 0){
+                        MapTileData m; 
+                        m.x = i; m.y = j; m.z = z; m.tileBounds = tileBounds; m.wL = (WeatherLayer)(k+1);
+                        m.opacity = weightedOpacities[k]; m.palette = palletes[k];
+                        m.url = "libstreetmap/imgs/" + to_string(m.z) + "_" + to_string(m.x) + "_" + to_string(m.y);
+                        m.url += "_" + to_string(m.wL);
+                        m.url += ".png";
+                        out.push_back(m);
+                    }
+                }
+            }
+            else{
+                MapTileData m; 
+                m.x = i; m.y = j; m.z = z; m.tileBounds = tileBounds; m.wL = wL;
+                m.url = "libstreetmap/imgs/" + to_string(m.z) + "_" + to_string(m.x) + "_" + to_string(m.y);
+                m.url += "_" + to_string(wL);
+                m.url += ".png";
+                out.push_back(m);
+            }
         }
     }
     return out;
 }
 
-string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData, int date){
-    string baseURL = "http://maps.openweathermap.org/maps/2.0/weather/";
+string convertWeatherLayerToString(WeatherLayer wL){
     switch(wL){
         case NOFILTER:
             return "";
             break;
         case PRECIPITATION:
-            baseURL+= "PR0";
+            return "PR0";
             break;
         case SNOW:
-            baseURL+= "SD0";
+            return "SD0";
             break;
         case WIND:
-            baseURL+= "WND";
+            return "WND";
             break;
         case TEMPERATURE:
-            baseURL+= "TA2";
+            return "TA2";
             break;
         case HUMIDITY:
-            baseURL+= "HRD0";
+            return "HRD0";
             break;
         case CLOUDS:
-            baseURL+= "CL";
+            return "CL";
             break;
         default:
+            cout<< "Error weather layer not found: " <<  to_string(wL) << endl;
             throw wL;
+            return "";
             break;
     }
+}
+
+string getMapAPIURLFromParameters(WeatherLayer wL, MapTileData tileData, int date, double opacity, string pallete){
+    string baseURL = "http://maps.openweathermap.org/maps/2.0/weather/";
+    baseURL += convertWeatherLayerToString(wL);
     baseURL += '/' + to_string(tileData.z) + '/' + to_string(tileData.x) + '/' + to_string(tileData.y);
-    baseURL += "?opacity=0.5";
+    baseURL += "?opacity=" + to_string(opacity);
     baseURL += "&date=" + to_string(date);
+
+    if(pallete.size() > 0)
+        baseURL += "&palette="+ pallete;
+    // if(pallete.size() >= 2){
+    //     baseURL += "&palette=";
+    //     for (int i = 0; i < pallete.size(); i++)
+    //     {
+    //         if(i>0)
+    //             baseURL+= ';';
+    //         baseURL+= to_string(pallete[i].value) + ":" + pallete[i].color;
+    //     }
+    // }
+
     baseURL += "&appid=" + APIKey;
     return baseURL;
 }
@@ -182,28 +230,30 @@ void downloadImgFromURL(string outputURL, string imgUrl){
     ofs.close();
 }
 
+
+
 void downloadWeatherMaps(WeatherLayer wL, vector<MapTileData>& mapTiles, int date){
     if (wL == NOFILTER)
         return;
 
     res = curl_global_init(CURL_GLOBAL_ALL);
 
+    vector<pair<MapTileData,string>> urls;
     vector<thread> downloadingThreads;
+
 
     for(int i = 0; i < mapTiles.size(); i++){
         MapTileData curMapTile = mapTiles[i];
-        string url = getMapAPIURLFromParameters(wL, curMapTile,date);
+        string url = getMapAPIURLFromParameters(curMapTile.wL, curMapTile,date, curMapTile.opacity, curMapTile.palette);
         if(url == ""){
             return;
         }
-        cout<<"loading map tile: "<<url<<endl;
-
+        cout<<url<<endl;
         downloadingThreads.push_back(thread(downloadImgFromURL, curMapTile.url, url));
     }
     for(int i = 0; i < mapTiles.size(); i++){
         downloadingThreads[i].join();
         mapTiles[i].isLoaded = true;
-        cout<<"loaded map tile: "<<mapTiles[i].url<<endl;
     }
 }
 

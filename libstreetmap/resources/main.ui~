@@ -215,7 +215,7 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="HumidityBtn">
-                        <property name="label" translatable="yes">🌫️</property>
+                        <property name="label" translatable="yes">💧️</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
@@ -529,6 +529,8 @@
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
                     <property name="adjustment">TimeAdjustment</property>
+                    <property name="lower-stepper-sensitivity">off</property>
+                    <property name="upper-stepper-sensitivity">off</property>
                     <property name="show-fill-level">True</property>
                     <property name="restrict-to-fill-level">False</property>
                     <property name="fill-level">0.20999999999999999</property>

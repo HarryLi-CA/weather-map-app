@@ -117,7 +117,7 @@ pair<string,pair<WeatherLayer,ezgl::application*>> filterNames[8] = { {"SnowBtn"
                                                                      {"HumidityBtn",{HUMIDITY,nullptr}},
                                                                      {"WindBtn",{WIND,nullptr}},
                                                                      {"ClearBtn",{NOFILTER,nullptr}},
-                                                                     {"WeightedBtn",{NOFILTER,nullptr}}};
+                                                                     {"WeightedBtn",{WEIGHTED,nullptr}}};
 
 volatile WeatherLayer currWeatherLayer = NOFILTER;  
 std::time_t currentTime = std::time(nullptr);

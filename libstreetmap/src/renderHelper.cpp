@@ -8,6 +8,7 @@
 #include <map>
 #include "QuadTree.h"
 #include "pointMath.h"
+#include "loading_utils.h"
 
 using namespace std;
 
@@ -54,7 +55,8 @@ MapFeature::MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _
 MapFeature::~MapFeature()
 {
     //delete points
-    delete [] points;
+    delete  points;
+    points = nullptr;
 }
 
 double MapFeature::calculateArea()
@@ -76,7 +78,14 @@ void FeatureList::clear()
     auto layer = layerMap.begin();
     while(layer != layerMap.end())
     {
+        vector<MapFeature *> * curVector = (layer->second);
+        deleteVectorPointers(*curVector);
+
         (*layer->second).clear();
+
+        delete curVector;
+        (layer->second) = nullptr;
+
         layer++;
     }
     layerMap.clear();
@@ -117,9 +126,9 @@ void FeatureList::highlightFeature(MapFeature* feature, bool unhighlightOthers)
     //store feature so it can be unhighlighted if needed
     highlightedFeatures.push_back(feature);
 }
-
 void FeatureList::addFeature(MapFeature* feature, double areaThreshold)
 {
+    while(spatialIndexer.isBeingRead){}
     bool lowLOD = feature->major || (feature->drawType == DrawType::POLYGON && feature->thresholdArea > areaThreshold) || feature->drawType == DrawType::POINT; //should feature be rendered at high distances
     //if object is large
     //low LOD features should be added to manual layer system

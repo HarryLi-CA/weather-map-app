@@ -62,6 +62,10 @@ MapFeature::~MapFeature()
 double MapFeature::calculateArea()
 {
     double worldArea = bounds.area();
+    if(drawType == DrawType::POLYGON)
+    {
+        worldArea = findFeatureArea(dataIndex);
+    }
     return worldArea;
 }
 
@@ -100,7 +104,14 @@ bool getDrawPriority(MapFeature* a, MapFeature* b) //helper function to determin
     bool basicPriority = a->layer < b->layer; //higher layers should be drawn last
     if(a->layer == b->layer)
     {
-        basicPriority = a->dataIndex < b->dataIndex; //higher data indices should be drawn last on the same layer
+        if(a->drawType == DrawType::POLYGON && b->drawType == DrawType::POLYGON)
+        {
+            basicPriority = a->thresholdArea > b->thresholdArea; //large polygons should be drawn first
+        }
+        else
+        {
+            basicPriority = a->dataIndex < b->dataIndex; //higher data indices should be drawn last on the same layer
+        }
     }
     return basicPriority;
 }

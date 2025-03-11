@@ -69,14 +69,15 @@ const ezgl::color kColorStreetName = {255, 255, 255, 255};
 double initialWidth = -1;
 double initialHeight = -1;
 //define rendering constants
-const double kOnewayIndicatorSize = 6.0; //size from center to vertex of indicator triangle
+const double kOnewayIndicatorSize = 4.0; //size from center to vertex of indicator triangle
+const double kOnewayIndicatorSegmentLength = 10.0; //minimum size for a street subsegment to have a directional indicator
 const int kMinimumPixelsToDraw = 15; //minimum pixels a feature should take up on the screen to be drawn that cycle
 const double kMinimumMajorRoadLength = 5000; //minimum length for a road to be considered a major road
 const double kRenderCellSize = 500; //size of each render cell
 const int kMaximumRenderCells = 50000; //maximum number of render cells before switching to direct rendering
 const double kMaximumBuildingScaling = 2; //maximum number of meters per pixel to start drawing buildings
 const bool kEnableSpatialIndexing = true; //enable cell rendering method (possibly buggy)
-const double kRoadWidth = 7.5; //width of roads
+const double kRoadWidth = 5.0; //width of roads
 const double kRoadBorderWidth = 0.5; //width of road borders
 const double TILERATIO = 0.000005805;
 const double kSpatialIndexingThreshold = 10; //maximum screen-to-world ratio before quad tree rendering is enabled
@@ -195,13 +196,13 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
                
             }
             //get direction of road
-            ezgl::point2d from = (*feature->points)[0]; //first position in the street
-            ezgl::point2d to = (*feature->points)[feature->points->size() - 1]; //last position in the street
+            ezgl::point2d from = (*feature->points)[feature->points->size()/2]; //first position in the street
+            ezgl::point2d to = (*feature->points)[feature->points->size()/2 + 1]; //last position in the street
             ezgl::point2d dir = {to.x - from.x, to.y - from.y}; //direction vector for street
             
 
             //draw arrow if street is directional
-            if(feature->directional && lineWidth*lineWidthScale > kOnewayIndicatorSize)
+            if(feature->directional && lineWidth*lineWidthScale > kOnewayIndicatorSize && findStreetSegmentLength(feature->dataIndex) > kOnewayIndicatorSegmentLength)
             {
                
                double magnitude = sqrt(dir.x*dir.x + dir.y*dir.y); //magnitude of dir
@@ -548,7 +549,7 @@ void threadedLoadFeatures(){
       while (mapFeatures.spatialIndexer.isBeingRead)
       {
       }
-      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw);
+      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw*kSpatialIndexingThreshold*kSpatialIndexingThreshold);
       intersectionFeatures.push_back(mapFeature); //relate feature to corrosponding intersection index
    }
 
@@ -628,7 +629,7 @@ void threadedLoadFeatures(){
       while (mapFeatures.spatialIndexer.isBeingRead)
       {
       }
-      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw); //add feature to feature list
+      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw*kSpatialIndexingThreshold*kSpatialIndexingThreshold); //add feature to feature list
    } 
 
    if(hasUIOpened)
@@ -664,12 +665,12 @@ void threadedLoadFeatures(){
       {
          case UNKNOWN:{
             featureColor = {217, 217, 217, 255};
-            layer = -10;
+            layer = -11;
             break;
          }
          case PARK:{
             featureColor = kColorScrub;
-            layer = -7;
+            layer = -9;
             break;
          }
          case BEACH:{
@@ -679,7 +680,7 @@ void threadedLoadFeatures(){
          }
          case LAKE:{
             featureColor = kColorWater;
-            layer = -9;
+            layer = -8;
             break;
          }
          case RIVER:{
@@ -700,7 +701,7 @@ void threadedLoadFeatures(){
          }
          case GREENSPACE:{
             featureColor = kColorWood;
-            layer = -9;
+            layer = -8;
             break;
          }
          case GOLFCOURSE:{
@@ -718,7 +719,8 @@ void threadedLoadFeatures(){
             layer = -6;
          }
          default: {
-            break;
+            featureColor = kColorWater;
+            layer = -9;
          }
       }
       
@@ -751,7 +753,7 @@ void threadedLoadFeatures(){
       {
       }
       
-      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw); //add map feature object to array
+      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw*kSpatialIndexingThreshold*kSpatialIndexingThreshold); //add map feature object to array
       //std::this_thread::sleep_for(0.001ms);
    }
    //download weather map data

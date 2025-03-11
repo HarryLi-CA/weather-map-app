@@ -34,6 +34,7 @@ class MapFeature {
     double thresholdArea; //calculated bounding area of the feature at the cell rendering threshold screen-to-world ratio
     StreetIdx streetID; //corrosponding streetID of a map feature (only applicable for street segments, -1 by default)
     bool wasRendered; //cached value to store whether the feature was rendered this frame
+    bool wasOutlined; //cached value to store where the feature's outline was rendered this frame
     ezgl::color color; //color to draw the feature in
     bool highlight; //if true, the feature will be outlined (polygon) or highlighted (line)
     bool major; //significant feature that should be displayed at larger distances (i.e major road, POIs)

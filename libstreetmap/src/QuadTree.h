@@ -48,6 +48,7 @@ template <typename DataType> class QuadTree {
         root = nullptr;
         nodes = 0;
         size = 0;
+        isBeingRead = 0;
         cout << "done clearing" << endl;
     }
 

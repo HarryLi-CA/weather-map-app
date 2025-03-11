@@ -543,9 +543,17 @@ void threadedLoadFeatures(){
       ezgl::point2d translatedPoint = LatLonToPoint2D(getIntersectionPosition(intersectionIndex)); //get intersection coor
       points->push_back(translatedPoint); //add singular point to point list
       MapFeature* mapFeature = new MapFeature(10,points,kColorHighlight,POINT,MapFeatureType::INTERSECTION,(int)intersectionIndex); //add intersection as map feature
+      
+      
+      while (mapFeatures.spatialIndexer.isBeingRead)
+      {
+         cout<<"skip"<<endl;
+      }
       mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw);
       intersectionFeatures.push_back(mapFeature); //relate feature to corrosponding intersection index
    }
+
+   cout<<"finished adding intersecton features"<<endl;
 
    //cout << "loading segments: " << streetSegmentPoints.size() << endl;
    for(StreetSegmentIdx streetSegmentIndex = 0; streetSegmentIndex < getNumStreetSegments(); streetSegmentIndex++)
@@ -618,6 +626,10 @@ void threadedLoadFeatures(){
          }
       }
 
+      while (mapFeatures.spatialIndexer.isBeingRead)
+      {
+         cout<<"skip"<<endl;
+      }
       mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw); //add feature to feature list
    } 
 
@@ -739,7 +751,7 @@ void threadedLoadFeatures(){
       }
       while (mapFeatures.spatialIndexer.isBeingRead)
       {
-         //cout<<"skip"<<endl;
+         cout<<"skip"<<endl;
       }
       //cout<<"continued"<<endl;
       

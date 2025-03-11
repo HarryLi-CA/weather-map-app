@@ -111,13 +111,14 @@ pair<string,pair<string,ezgl::application*>> mapNames[19] = { {"BeijingBtn",{"/c
                                                             {"TokyoBtn",{"/cad2/ece297s/public/maps/tokyo_japan.streets.bin",nullptr}},
                                                             {"TorontoBtn",{"/cad2/ece297s/public/maps/toronto_canada.streets.bin",nullptr}}};
 //Stores the filter button id as well as the WeatherLayer it is asciated to
-pair<string,pair<WeatherLayer,ezgl::application*>> filterNames[6] = { {"SnowBtn",{SNOW,nullptr}},
+pair<string,pair<WeatherLayer,ezgl::application*>> filterNames[8] = { {"SnowBtn",{SNOW,nullptr}},
                                                                      {"TemperatureBtn",{TEMPERATURE,nullptr}},
                                                                      {"PrecipitationBtn",{PRECIPITATION,nullptr}},
                                                                      {"CloudsBtn",{CLOUDS,nullptr}},
-                                                                     //{"HumidityBtn",{HUMIDITY,nullptr}},
+                                                                     {"HumidityBtn",{HUMIDITY,nullptr}},
                                                                      {"WindBtn",{WIND,nullptr}},
-                                                                     {"ClearBtn",{NOFILTER,nullptr}}};
+                                                                     {"ClearBtn",{NOFILTER,nullptr}},
+                                                                     {"WeightedBtn",{WEIGHTED,nullptr}}};
 
 volatile WeatherLayer currWeatherLayer = NOFILTER;  
 std::time_t currentTime = std::time(nullptr);
@@ -388,7 +389,7 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
    double tileSize = LonToX(mapTiles[0].tileBounds.max.longitude()) - LonToX(mapTiles[0].tileBounds.min.longitude());
    for (size_t i = 0; i < mapTiles.size(); i++)
    {
-      if(mapTiles[i].isLoaded && mapTiles[i].wL ==currWeatherLayer ){
+      if(mapTiles[i].isLoaded){
       const char* surfURL = mapTiles[i].url.c_str();
       ezgl::surface* currentSurface = g->load_png(surfURL);
       ezgl::point2d minPoint2d= LatLonToPoint2D(mapTiles[i].tileBounds.min);
@@ -876,7 +877,7 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    }
 
    //initialize each filter button
-   for(int i = 0; i < 6; i++){
+   for(int i = 0; i < 8; i++){
       filterNames[i].second.second = application;
       GObject* filterBtn = application->get_object(filterNames[i].first.c_str());
       g_signal_connect(filterBtn,"clicked",G_CALLBACK(changeFilter_cbk),&filterNames[i].second);

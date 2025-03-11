@@ -547,15 +547,14 @@ void threadedLoadFeatures(){
       
       while (mapFeatures.spatialIndexer.isBeingRead)
       {
-         cout<<"skip"<<endl;
       }
       mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw);
       intersectionFeatures.push_back(mapFeature); //relate feature to corrosponding intersection index
    }
 
-   cout<<"finished adding intersecton features"<<endl;
+   if(hasUIOpened)
+      mainCanvas->redraw();
 
-   //cout << "loading segments: " << streetSegmentPoints.size() << endl;
    for(StreetSegmentIdx streetSegmentIndex = 0; streetSegmentIndex < getNumStreetSegments(); streetSegmentIndex++)
    {
       vector<LatLon> curvePoints = *getStreetSegmentPoints(streetSegmentIndex); //get cached curve points for street segment
@@ -628,7 +627,6 @@ void threadedLoadFeatures(){
 
       while (mapFeatures.spatialIndexer.isBeingRead)
       {
-         cout<<"skip"<<endl;
       }
       mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw); //add feature to feature list
    } 
@@ -751,9 +749,7 @@ void threadedLoadFeatures(){
       }
       while (mapFeatures.spatialIndexer.isBeingRead)
       {
-         cout<<"skip"<<endl;
       }
-      //cout<<"continued"<<endl;
       
       mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw); //add map feature object to array
       //std::this_thread::sleep_for(0.001ms);

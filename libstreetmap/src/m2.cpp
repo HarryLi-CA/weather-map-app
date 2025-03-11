@@ -297,7 +297,7 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
    );
    //check if camera dimensions are correct
 
-   //cout << 100.0/screenArea << ", " << absoluteLength << endl;
+   //cout << 100.0/screenArea << ", " << absoluteLength << Dateendl;
 
 
    map<const OSMID, string> wayRoute;
@@ -686,7 +686,7 @@ void loadFeatures()
          }
          case GREENSPACE:{
             featureColor = kColorWood;
-            layer = -5;
+            layer = -9;
             break;
          }
          case GOLFCOURSE:{

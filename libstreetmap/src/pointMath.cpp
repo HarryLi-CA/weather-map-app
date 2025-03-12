@@ -1,5 +1,6 @@
 #include "ezgl/point.hpp"
 #include "ezgl/rectangle.hpp"
+#include <math.h>
 
 
 using namespace std;
@@ -67,4 +68,9 @@ ezgl::rectangle recenterRect(ezgl::rectangle rect, ezgl::point2d point)
    //set rect bounds to current bounds + change in position
    ezgl::rectangle newRect(rect.bottom_left() + positionChange, rect.top_right() + positionChange);
    return newRect;
+}
+
+double magnitude(ezgl::point2d P)
+{
+    return sqrt(P.x*P.x + P.y*P.y); //apply formula magntidue = sqrt(x^2 + y^2) for 2-dimensional vectors
 }

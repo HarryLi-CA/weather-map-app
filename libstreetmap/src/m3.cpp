@@ -44,3 +44,8 @@ double computePathTravelTime(const double turn_penalty, const std::vector<Street
     }
     return pathTravelTime;
 }
+
+std::vector<StreetSegmentIdx> findPathBetweenIntersections(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids)
+{
+    return {};
+}

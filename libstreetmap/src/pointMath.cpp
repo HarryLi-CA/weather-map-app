@@ -74,3 +74,10 @@ double magnitude(ezgl::point2d P)
 {
     return sqrt(P.x*P.x + P.y*P.y); //apply formula magntidue = sqrt(x^2 + y^2) for 2-dimensional vectors
 }
+
+ezgl::point2d normalize(ezgl::point2d P)
+{
+    double mag = magnitude(P); //get magnitude of P
+    ezgl::point2d directionVector = {P.x/mag, P.y/mag}; //calculate direction vector parallel to P
+    return directionVector;
+}

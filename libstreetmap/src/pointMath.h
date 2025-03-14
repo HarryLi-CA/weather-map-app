@@ -7,4 +7,5 @@ ezgl::point2d lerp(ezgl::point2d A, ezgl::point2d B, double scale); //helper fun
 bool intersecting(ezgl::rectangle rectA, ezgl::rectangle rectB); //helper function to check if 2 rectangles are intersecting
 ezgl::rectangle updateBounds(ezgl::rectangle rect, ezgl::point2d point); //helper function to expand rectangle is point is outside
 ezgl::rectangle recenterRect(ezgl::rectangle rect, ezgl::point2d point); //helper function to move center of rectangle
-double magnitude(ezgl::point2d P); //helper function to find the magnitude of vector P as a ezgl point
+double magnitude(ezgl::point2d P); //helper function to find the magnitude of vector P as an ezgl point
+ezgl::point2d normalize(ezgl::point2d P); //helper function that returns direction vector parallel to vector P as an ezgl point

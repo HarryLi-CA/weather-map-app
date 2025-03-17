@@ -19,9 +19,16 @@ ECE297 Software Design and Communication Winter 2025
 * SOFTWARE.
 */
 #pragma once
+#include "ezgl/graphics.hpp"
+#include "ezgl/canvas.hpp"
+#include "ezgl/application.hpp"
+#include "m1.h"
+#include "m3.h"
+#include "renderHelper.h"
+#include "pointMath.h"
 #include "StreetsDatabaseAPI.h"
 #include <vector>
-#include <string>
+#include <random>
 // Returns the time required to travel along the path specified, in seconds.
 // The path is given as a vector of street segment ids, and this function can
 // assume the vector either forms a legal path or has size == 0. The travel
@@ -42,3 +49,18 @@ double computePathTravelTime(const double turn_penalty, const std::vector<Street
 // of street segment ids; traversing these street segments, in the returned
 // order, would take one from the start to the destination intersection.
 std::vector<StreetSegmentIdx> findPathBetweenIntersections(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids);
+
+struct PathSegment
+{
+    ezgl::point2d from;
+    ezgl::point2d to;
+    StreetSegmentIdx segmentIndex;
+};
+
+
+// draw path over roads on the map
+void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ezgl::color colour, double scaling);
+
+//generates random path for testing
+vector<PathSegment>* generateRandomPath();
+

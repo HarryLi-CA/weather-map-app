@@ -19,6 +19,7 @@
  * SOFTWARE.
  */
 
+#include "m3.h"
 #include "m2.h"
 #include "m1.h"
 #include "renderHelper.h"
@@ -125,7 +126,9 @@ std::time_t currentTime = std::time(nullptr);
 volatile int isDrawing = 0;
 volatile int isChangingTime = 0;
 volatile int isLoading = 0;            
-bool hasUIOpened = false;                 
+bool hasUIOpened = false;               
+
+vector<vector<PathSegment>*> paths;
 
 // void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
 // {
@@ -425,6 +428,13 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
       isDrawing = 1;
       //thread_safe_draw_main_canvas(g);
    }
+
+   //draw active paths
+   for(int pathsIndex = 0; pathsIndex < paths.size(); pathsIndex++)
+   {
+      drawPath(g, *paths[pathsIndex], lineWidth, {255, 0, 0, 255}, scaling);
+   }
+
    mapFeatures.spatialIndexer.isBeingRead --;
 }
 
@@ -526,6 +536,8 @@ void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, dou
 
 void threadedLoadFeatures(){
    cout<<"thread start"<<endl;
+
+   
 
    mapFeatures.spatialIndexer = QuadTree<MapFeature>(ezgl::rectangle(LatLonToPoint2D(minPoints),LatLonToPoint2D(maxPoints)),kRenderCellSize);
 
@@ -702,7 +714,7 @@ void threadedLoadFeatures(){
          }
          case GREENSPACE:{
             featureColor = kColorWood;
-            layer = -8;
+            layer = -9;
             break;
          }
          case GOLFCOURSE:{
@@ -783,6 +795,8 @@ void threadedLoadFeatures(){
    }
    isLoading=0;
    cout << "finished loading"<<endl;
+
+   
 }
 
 void loadFeatures()
@@ -802,6 +816,10 @@ void loadFeatures()
    minPoints = LatLon(minimumLatitude, minimumLongitude); //consolidate minimum latitude and longitude in latlon object
    maxPoints = LatLon(maximumLatitude, maximumLongitude); //consolodate maximum latitude and longitude in latlon object
    setLatLonBounds(minPoints, maxPoints); //set constant for calculations in renderHelper
+
+   cout << "generating path" << endl;
+   vector<PathSegment>* genPath = generateRandomPath();
+   paths.push_back(genPath);
 
    isLoading++;
    if(isLoading <= 1){

@@ -401,3 +401,39 @@ string getKnownIntersectionName(IntersectionIdx index)
    }
    return intersection;
 }
+
+ezgl::point2d getMiddleOfStreetSegment(StreetSegmentIdx segmentIndex)
+{
+    vector<LatLon> points = *getStreetSegmentPoints(segmentIndex); //curve points of street segment
+    double totalLength = findStreetSegmentLength(segmentIndex); //total length of street segment
+    double currentLength = 0; //running total length of street segment
+    for(int curveIndex = 0; curveIndex < points.size() - 1; curveIndex++)
+    {
+        //get points
+        LatLon curvePoint = points[curveIndex]; //current curve point
+        LatLon nextPoint = points[curveIndex + 1]; //next curve point
+        //add subsegment length to total segment length
+        double subsegmentLength = findDistanceBetweenTwoPoints(curvePoint, nextPoint);
+        //if this segment is the first to increase the current length to over half the total length, this segment is in the middle
+        cout << currentLength  << "+" << subsegmentLength << " / " << totalLength/2.0 << endl;
+        if(currentLength + subsegmentLength >= totalLength/2.0)
+        {
+            ezgl::point2d fromPoint = LatLonToPoint2D(curvePoint); //first point in the segment
+            ezgl::point2d toPoint = LatLonToPoint2D(nextPoint); //first point in the segment
+
+            ezgl::point2d directionVector = normalize(fromPoint - toPoint); //get direction of subsegment
+
+            double requiredDistance = totalLength/2.0 - currentLength; //get distance from
+
+            ezgl::point2d relativeMiddle = {directionVector.x*requiredDistance, directionVector.y*requiredDistance}; //get midpoint relative to from ponit
+            ezgl::point2d middlePoint = fromPoint + relativeMiddle; //get midpoint relative to world
+
+            return middlePoint; //return middlepoint
+
+        }
+        //add subsegment length to running total
+        currentLength += subsegmentLength;
+    }
+    //if no point is found, return zero
+    return {0.0, 0.0};
+}

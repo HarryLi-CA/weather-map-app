@@ -170,3 +170,4 @@ std::string getOSMNodeTagValue(OSMID osm_id, std::string key);
 IntersectionIdx findOppositeIntersection(IntersectionIdx intersection_id, StreetSegmentIdx connect_street_segment_id);
 //Helper function to return cached street segment points
 std::vector<LatLon>* getStreetSegmentPoints(StreetSegmentIdx streetSegmentIndex);
+std::vector<StreetSegmentIdx>* getIntersectionStreetSegments(IntersectionIdx intersectionIndex);

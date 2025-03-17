@@ -98,6 +98,7 @@ void mapRenderCells(double renderCellSize, LatLon bottomLeft, FeatureList& mapFe
 
 void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter); //draws triangle around a center point
 
+ezgl::point2d getMiddleOfStreetSegment(StreetSegmentIdx segmentIndex); //helper function that returns the point that lies in the middle of a street segment (curved or non-curved)
 
 
 string getKnownIntersectionName(IntersectionIdx index); //helper function to get an intersection name while removing "<unknown> &" from the name

@@ -32,6 +32,7 @@ class MapFeature {
     int dataIndex; //index to recover information (either street segment or feature)
     double maximumScaling; //maximum meters per pixel for the feature to start drawing
     double thresholdArea; //calculated bounding area of the feature at the cell rendering threshold screen-to-world ratio
+    double virtualBoundsArea;
     StreetIdx streetID; //corrosponding streetID of a map feature (only applicable for street segments, -1 by default)
     bool wasRendered; //cached value to store whether the feature was rendered this frame
     bool wasOutlined; //cached value to store where the feature's outline was rendered this frame

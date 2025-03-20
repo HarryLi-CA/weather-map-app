@@ -10,6 +10,7 @@ using namespace std;
 template <typename DataType> struct QuadNode {
     ezgl::point2d point;
     ezgl::rectangle bounds;
+    double virtualArea;
     DataType* data;
     int sortingIndex;
 };
@@ -143,7 +144,7 @@ template <typename DataType> class QuadTree {
     {
         if(quad==nullptr || !intersecting(quad->bounds,node.bounds)){return;} //if bounds are not in quad, stop function
         //check if the quad is small enough to be a leaf quad
-        if(quad->bounds.area() <= unitArea)
+        if(node.virtualArea > 4*quad->bounds.area() || quad->bounds.area() <= unitArea)
         {
             size++;
             //cout << 100*size/(double)1153728 << "%" << endl;
@@ -178,32 +179,38 @@ template <typename DataType> class QuadTree {
         isBeingRead--;
     }
 
-    void getQuadsInRange(ezgl::rectangle searchBounds, vector<Quad<DataType>*>* totalData) //helper function to get all quads in a rectangular bound from the root
+    void getQuadsInRange(ezgl::rectangle searchBounds, vector<Quad<DataType>*>* totalData, double maximumQuadArea) //helper function to get all quads in a rectangular bound from the root
     {
         isBeingRead++;
 
         if(root == nullptr || totalData == nullptr){return;}
-        getQuadsInRange(root, searchBounds, totalData);
+        getQuadsInRange(root, searchBounds, totalData, maximumQuadArea);
 
         isBeingRead--;
     }
 
-    void getQuadsInRange(Quad<DataType>* quad, ezgl::rectangle searchBounds, vector<Quad<DataType>*>* totalData) //helper function to get leaf quads in a rectangular bound
+    void getQuadsInRange(Quad<DataType>* quad, ezgl::rectangle searchBounds, vector<Quad<DataType>*>* totalData, double maximumQuadArea) //helper function to get leaf quads in a rectangular bound
     {
         //check if quad is not in range
         if(quad==nullptr || totalData==nullptr || !intersecting(searchBounds,quad->bounds)){return;} //if quad is not in the specified range, do not process it
-        //check if quad is a leaf quad (has no children)
-        if(isLeaf(quad))
+        //Check if the quad has
+        if(quad->bounds.area() >= maximumQuadArea)
         {
             totalData->push_back(quad); //add quad to running total
+            //return;
+        }
+        //check if quad is a leaf quad (has no children)
+        if(quad->bounds.area() < maximumQuadArea || isLeaf(quad))
+        {
             return;
-        }else
+        }
+        else
         {
             //check if each sub-quad (child) is in range
-            getQuadsInRange(quad->topRight,searchBounds,totalData);
-            getQuadsInRange(quad->topLeft,searchBounds,totalData);
-            getQuadsInRange(quad->bottomRight,searchBounds,totalData);
-            getQuadsInRange(quad->bottomLeft,searchBounds,totalData);
+            getQuadsInRange(quad->topRight,searchBounds,totalData,maximumQuadArea);
+            getQuadsInRange(quad->topLeft,searchBounds,totalData,maximumQuadArea);
+            getQuadsInRange(quad->bottomRight,searchBounds,totalData,maximumQuadArea);
+            getQuadsInRange(quad->bottomLeft,searchBounds,totalData,maximumQuadArea);
         }
     }
 

@@ -14,6 +14,7 @@ using namespace std;
 
 static double averageLongitude = 0;
 static double averageLatitude = 0;
+const double kBoundSizeStep = 100000; //discrete steps for bound area
 
 void setLatLonBounds(LatLon latlonMin, LatLon latlonMax)
 {
@@ -154,15 +155,20 @@ void FeatureList::addFeature(MapFeature* feature, double areaThreshold)
         }
         layerMap[feature->layer]->push_back(feature); //add feature to corrosponding layer
         numerOfLowLODFeatures++;
+        return;
     }
+
+    double boundsSize = ((int)(feature->bounds.area()/kBoundSizeStep))*kBoundSizeStep;
+    boundsSize = max(boundsSize, (double)kBoundSizeStep); //make sure area is non-zero
+    cout << boundsSize << endl;
     //add every point to spatial indexing
-    if(lowLOD || feature->drawType == DrawType::LINE) //large objects and lines should be added in multiple times to prevent clipping
+    if(feature->drawType != DrawType::POINT) //large objects and lines should be added in multiple times to prevent clipping
     {
-        spatialIndexer.insertBounds({feature->bounds.center(),feature->bounds,feature,feature->layer});
+        spatialIndexer.insertBounds({feature->bounds.center(),feature->bounds,boundsSize,feature,feature->layer});
     }
     else
     {
-        spatialIndexer.insert({feature->bounds.center(),feature->bounds,feature,feature->layer});
+        spatialIndexer.insert({feature->bounds.center(),feature->bounds,boundsSize,feature,feature->layer});
     }
     
     

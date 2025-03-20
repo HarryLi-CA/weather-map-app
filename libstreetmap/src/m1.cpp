@@ -610,3 +610,8 @@ std::vector<LatLon>* getStreetSegmentPoints(StreetSegmentIdx streetSegmentIndex)
 {
     return streetSegmentPoints[streetSegmentIndex]; //get pointer for curve point vector of street segments and return it
 }
+
+std::vector<StreetSegmentIdx>* getIntersectionStreetSegments(IntersectionIdx intersectionIndex)
+{
+    return intersectionToStreetSegments[intersectionIndex]; //get pointer for curve point vector of street segments and return it
+}

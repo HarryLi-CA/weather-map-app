@@ -19,6 +19,7 @@
  * SOFTWARE.
  */
 
+#include "m3.h"
 #include "m2.h"
 #include "m1.h"
 #include "renderHelper.h"
@@ -82,7 +83,7 @@ const bool kEnableSpatialIndexing = true; //enable cell rendering method (possib
 const double kRoadWidth = 5.0; //width of roads
 const double kRoadBorderWidth = 0.5; //width of road borders
 const double TILERATIO = 0.000005805;
-const double kSpatialIndexingThreshold = 10; //maximum screen-to-world ratio before quad tree rendering is enabled
+const double kSpatialIndexingThreshold = DBL_MAX;//10; //maximum screen-to-world ratio before quad tree rendering is enabled
 const double kCameraBoundsExtension = 0; //
 LatLonBounds currentScope; // scope of city map
 vector<MapTileData> mapTiles;
@@ -127,7 +128,9 @@ std::time_t currentTime = std::time(nullptr);
 volatile int isDrawing = 0;
 volatile int isChangingTime = 0;
 volatile int isLoading = 0;            
-bool hasUIOpened = false;                 
+bool hasUIOpened = false;               
+
+vector<vector<PathSegment>*> paths;
 
 // void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
 // {
@@ -327,9 +330,41 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
    mapFeaturesMutex.lock();
    
    if(useCellRendering){
+      
       vector<MapFeature*> cellFeatures;
       vector<Quad<MapFeature>*> quads;
-      mapFeatures.spatialIndexer.getQuadsInRange(cameraRect,&quads);
+
+      auto layer = mapFeatures.layerMap.begin();
+      while(layer != mapFeatures.layerMap.end())
+      {
+         if(layer->second == nullptr){
+            cout << "Error drawing layer: "<<layer->first;
+            break;
+         }
+         vector<MapFeature*> layerFeatures = *(layer->second);
+         for(int i = 0; i < layerFeatures.size(); i++)
+         {
+            MapFeature* feature = layerFeatures[i];
+            if(feature == nullptr || g == nullptr)
+            {
+               cout<<"Error with feature: " << i<<endl << " from layer " << layer->first;
+               break;
+            }
+            //run bounding box checks
+            if(feature->points == nullptr || feature->points->size() <= 0 ){
+               cout<<"ERROR points are null: " << i <<endl;
+               continue;
+            }
+            if(feature->drawType == POINT && !cameraRect.contains((*feature->points)[0])){continue;} //check if point is inside world rect
+            if(feature->drawType != POINT && !intersecting(cameraRect,feature->bounds)){continue;} //check if bounds for camera and feaure are intersecting
+            g->set_color({0, 0, 0, 255});
+            g->set_line_width(lineWidth);
+            drawFeature(feature,g,lineWidth,scaling,worldToScreenScale,camera);
+         }
+         layer++;
+      }
+
+      mapFeatures.spatialIndexer.getQuadsInRange(cameraRect,&quads,cameraRect.area()/pow(2,13));
 
       for(auto quad = quads.begin(); quad != quads.end(); quad++)
       {
@@ -350,39 +385,7 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
          feature->wasRendered = true;
       }
    }
-   else //if number of cells is too high, directly render each element
-   {
-      //cout << "not cell rendering"<<endl;
-      auto layer = mapFeatures.layerMap.begin();
-      while(layer != mapFeatures.layerMap.end())
-      {
-         if(layer->second == nullptr){
-            cout << "Error drawing layer: "<<layer->first;
-            break;
-         }
-         vector<MapFeature*> cellFeatures = *(layer->second);
-         for(int i = 0; i < cellFeatures.size(); i++)
-         {
-            MapFeature* feature = cellFeatures[i];
-            if(feature == nullptr || g == nullptr)
-            {
-               cout<<"Error with feature: " << i<<endl << " from layer " << layer->first;
-               break;
-            }
-            //run bounding box checks
-            if(feature->points == nullptr || feature->points->size() <= 0 ){
-               cout<<"ERROR points are null: " << i <<endl;
-               continue;
-            }
-            if(feature->drawType == POINT && !cameraRect.contains((*feature->points)[0])){continue;} //check if point is inside world rect
-            if(feature->drawType != POINT && !intersecting(cameraRect,feature->bounds)){continue;} //check if bounds for camera and feaure are intersecting
-            g->set_color({0, 0, 0, 255});
-            g->set_line_width(lineWidth);
-            drawFeature(feature,g,lineWidth,scaling,worldToScreenScale,camera);
-         }
-         layer++;
-      }
-   }
+   
    mapFeaturesMutex.unlock();
 
    //draw weather overlay
@@ -426,6 +429,13 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
       isDrawing = 1;
       thread_safe_draw_main_canvas(g);
    }
+
+   //draw active paths
+   for(int pathsIndex = 0; pathsIndex < paths.size(); pathsIndex++)
+   {
+      drawPath(g, *paths[pathsIndex], lineWidth, {255, 0, 0, 255}, scaling);
+   }
+
 }
 
 void draw_main_canvas(ezgl::renderer *g)
@@ -566,7 +576,7 @@ void threadedLoadFeatures(){
       vector<ezgl::point2d>* points = new vector<ezgl::point2d>; //create vector to add points
       ezgl::point2d translatedPoint = LatLonToPoint2D(getIntersectionPosition(intersectionIndex)); //get intersection coor
       points->push_back(translatedPoint); //add singular point to point list
-      MapFeature* mapFeature = new MapFeature(10,points,kColorHighlight,POINT,MapFeatureType::INTERSECTION,(int)intersectionIndex); //add intersection as map feature
+      MapFeature* mapFeature = new MapFeature(100,points,kColorHighlight,POINT,MapFeatureType::INTERSECTION,(int)intersectionIndex); //add intersection as map feature
       
       mapFeaturesMutex.lock();
 
@@ -621,6 +631,7 @@ void threadedLoadFeatures(){
       }
       
       MapFeature* mapFeature = new MapFeature(roadLayer,points,roadColor,LINE,MapFeatureType::ROAD,(int)streetSegmentIndex);  //create map featur object
+      mapFeature->virtualBoundsArea = 100;
       
       //add longest street data
       mapFeature->longestPointSegmentIndex = longestSegmentIndex;
@@ -723,12 +734,12 @@ void threadedLoadFeatures(){
          }
          case GREENSPACE:{
             featureColor = kColorWood;
-            layer = -8;
+            layer = -9;
             break;
          }
          case GOLFCOURSE:{
             featureColor = kColorBeach;
-            layer = -4;
+            layer = -40;
             break;
          }
          case STREAM:{
@@ -757,6 +768,7 @@ void threadedLoadFeatures(){
       }
       //set default values
       mapFeature->maximumScaling = maximumScaling;
+      mapFeature->virtualBoundsArea = mapFeature->bounds.area();
       //add text label for feature name
       string featureName = getFeatureName(featureIndex);
       if(featureIndex == 2054866){
@@ -841,6 +853,10 @@ void loadFeatures()
    minPoints = LatLon(minimumLatitude, minimumLongitude); //consolidate minimum latitude and longitude in latlon object
    maxPoints = LatLon(maximumLatitude, maximumLongitude); //consolodate maximum latitude and longitude in latlon object
    setLatLonBounds(minPoints, maxPoints); //set constant for calculations in renderHelper
+
+   cout << "generating path" << endl;
+   vector<PathSegment>* genPath = generateRandomPath();
+   paths.push_back(genPath);
 
    currentScope.min = minPoints;
    currentScope.max = maxPoints;
@@ -957,7 +973,7 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    selectedTimeText = selectedTimeText.substr(0,16);
    GtkLabel* selectedTimeLabel = GTK_LABEL(application->get_object("selectedTimeLabel"));
    gtk_label_set_text(selectedTimeLabel,selectedTimeText.c_str());
-   hasUIOpened = true;
+   hasUIOpened = true; 
 }
 
 void setCameraPosition(ezgl::point2d point, ezgl::camera& camera)

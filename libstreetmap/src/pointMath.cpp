@@ -1,6 +1,8 @@
 #include "ezgl/point.hpp"
 #include "ezgl/rectangle.hpp"
 #include <math.h>
+#include <vector>
+#include <cfloat>
 
 
 using namespace std;
@@ -73,4 +75,22 @@ ezgl::rectangle recenterRect(ezgl::rectangle rect, ezgl::point2d point)
 double magnitude(ezgl::point2d P)
 {
     return sqrt(P.x*P.x + P.y*P.y); //apply formula magntidue = sqrt(x^2 + y^2) for 2-dimensional vectors
+}
+
+ezgl::point2d normalize(ezgl::point2d P)
+{
+    double mag = magnitude(P); //get magnitude of P
+    ezgl::point2d directionVector = {P.x/mag, P.y/mag}; //calculate direction vector parallel to P
+    return directionVector;
+}
+
+double getDistanceToClosest(ezgl::point2d P, vector<ezgl::point2d>& points)
+{
+    double closestDistance = DBL_MAX;
+    for(int pointIndex = 0; pointIndex < points.size(); pointIndex++)
+    {
+        double distance = magnitude(points[pointIndex] - P);
+        closestDistance = min(distance, closestDistance);
+    }
+    return closestDistance;
 }

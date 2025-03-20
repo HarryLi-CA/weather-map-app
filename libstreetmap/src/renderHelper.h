@@ -32,6 +32,7 @@ class MapFeature {
     int dataIndex; //index to recover information (either street segment or feature)
     double maximumScaling; //maximum meters per pixel for the feature to start drawing
     double thresholdArea; //calculated bounding area of the feature at the cell rendering threshold screen-to-world ratio
+    double virtualBoundsArea;
     StreetIdx streetID; //corrosponding streetID of a map feature (only applicable for street segments, -1 by default)
     bool wasRendered; //cached value to store whether the feature was rendered this frame
     bool wasOutlined; //cached value to store where the feature's outline was rendered this frame
@@ -98,6 +99,7 @@ void mapRenderCells(double renderCellSize, LatLon bottomLeft, FeatureList& mapFe
 
 void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter); //draws triangle around a center point
 
+ezgl::point2d getMiddleOfStreetSegment(StreetSegmentIdx segmentIndex); //helper function that returns the point that lies in the middle of a street segment (curved or non-curved)
 
 
 string getKnownIntersectionName(IntersectionIdx index); //helper function to get an intersection name while removing "<unknown> &" from the name

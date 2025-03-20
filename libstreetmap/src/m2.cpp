@@ -420,7 +420,7 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
    double period = 0.000000001*std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
    double fps = 1.0/period;
    g->set_font_size(10);
-   g->draw_text(lerp(cameraRect.top_right(), cameraRect.bottom_left(), 0.05), "FPS: " + to_string((int)fps));
+   g->draw_text(lerp(cameraRect.top_right(), cameraRect.bottom_left(), 0.05), "FPS: " + to_string((int)fps) + " Zoom: " + to_string(magnitude(camera.get_world_scale_factor())));
    
    if(isDrawing > 1){
       isDrawing = 1;

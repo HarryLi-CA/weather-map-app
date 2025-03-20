@@ -32,7 +32,6 @@ template <typename DataType> class QuadTree {
     int size = 0; //number of data elements in quad tree
     int nodes = 1; //number of quads in quad tree
     public:
-    volatile int isBeingRead = 0;
     QuadTree(){}
 
     void reset(ezgl::rectangle bounds) //resets tree and recreates root
@@ -48,7 +47,6 @@ template <typename DataType> class QuadTree {
         root = nullptr;
         nodes = 0;
         size = 0;
-        isBeingRead = 0;
         cout << "done clearing" << endl;
     }
 
@@ -73,9 +71,6 @@ template <typename DataType> class QuadTree {
     }
     void insert(QuadNode<DataType> node) //override function to insert node from root
     {
-        while (isBeingRead>0)
-        {
-        }
         
 
         insert(root, node); //insert node from root
@@ -83,9 +78,6 @@ template <typename DataType> class QuadTree {
 
     void insertBounds(QuadNode<DataType> node) //override function to insert node from root using bounds
     {
-        while (isBeingRead>0)
-        {
-        }
         insertBounds(root, node); //insert node from root
     }
 
@@ -158,6 +150,8 @@ template <typename DataType> class QuadTree {
             {
                 subdivide(quad); //add children to quad
             } 
+            // if(node.data.dataIndex == 2054866)
+            //     cout<< quad->bounds.area() << endl;
             
             //attempt insertion into each sub-quad
             insertBounds(quad->topLeft, node);
@@ -169,23 +163,19 @@ template <typename DataType> class QuadTree {
 
     void getInRange(ezgl::rectangle searchBounds, int layer, vector<DataType*>* totalData) //helper function to get all elements in a rectangular bound from the root
     {
-        isBeingRead++;
 
         if(totalData == nullptr || totalData==nullptr){return;}
         cout << "searching with root size " << root->bounds.area() << endl;
         getInRange(root,searchBounds,layer,totalData);
 
-        isBeingRead--;
     }
 
     void getQuadsInRange(ezgl::rectangle searchBounds, vector<Quad<DataType>*>* totalData) //helper function to get all quads in a rectangular bound from the root
     {
-        isBeingRead++;
 
         if(root == nullptr || totalData == nullptr){return;}
         getQuadsInRange(root, searchBounds, totalData);
 
-        isBeingRead--;
     }
 
     void getQuadsInRange(Quad<DataType>* quad, ezgl::rectangle searchBounds, vector<Quad<DataType>*>* totalData) //helper function to get leaf quads in a rectangular bound

@@ -63,7 +63,7 @@ const ezgl::color kColorBeach = {242,242,184, 255};
 const ezgl::color kColorIsland = {238, 242, 213, 255};
 //default colour constants for roads
 const ezgl::color kColorBasicRoad = {180, 180, 180, 255};
-const ezgl::color kColorOnewayRoad = {219, 118, 118, 255};
+const ezgl::color kColorOnewayRoad = {180, 180, 180, 255};//{219, 118, 118, 255};
 const uint_fast8_t kColorOnewayIndicatorBrightness = 255;
 const ezgl::color kColorMajorRoad = {0, 0, 200, 255};
 const ezgl::color kColorOnewayMajorRoad = {247,181,0, 255};
@@ -151,10 +151,11 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
       {
          case POINT: {
             //only print points if they are highlighted
+            
             feature->wasRendered = true; 
             if(!feature->highlight){break;}
             feature->wasRendered = false;
-            
+            //cout << "drawing point on layer " << feature->layer << endl;
             ezgl::point2d origin = (*(feature->points))[0];
             g->set_color(feature->color);
             g->fill_arc(origin,7.0/scaling,0.0,360.0);
@@ -184,23 +185,7 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
             }
             for(int i = 0; i < feature->points->size() - 1; i++)
             {
-               
-               //draw border on roads
-               if(feature->featureType == MapFeatureType::ROAD){
-                  g->set_color({0.8*feature->color.red,0.8*feature->color.green,0.8*feature->color.blue,255});
-                  g->set_line_width(lineWidth*lineWidthScale + 3);
-                  g->set_line_cap(ezgl::line_cap::butt);
-                  g->draw_line((*feature->points)[i],(*feature->points)[i+1]);
-                  g->set_line_width(lineWidth*lineWidthScale);
-                  g->set_color(feature->color);
-                  if(highlightedStreet)
-                  {
-                     g->set_color(kColorHighlight);
-                  }
-                  g->set_line_cap(ezgl::line_cap::round);
-               }
                g->draw_line((*feature->points)[i],(*feature->points)[i+1]);
-               
             }
             //get direction of road
             ezgl::point2d from = (*feature->points)[feature->points->size()/2]; //first position in the street
@@ -282,6 +267,48 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
       g->set_text_rotation(0);
 }
 
+void drawBorder(MapFeature *feature, ezgl::renderer *g, double lineWidth, double scaling, double realWorldScaling, ezgl::camera camera)
+{  
+   switch(feature->drawType)
+      {
+         case LINE: {
+            if(feature->featureType != MapFeatureType::ROAD){return;} //only draw borders on roads
+            double lineWidthScale = 1; //scale of line width used to render line
+            feature->wasRendered = false;
+            bool highlightedStreet = mapFeatures.highlightedStreetID == feature->streetID; //check if segment is on highlighted street
+            //calculate the transparency of a street based on its length
+            ezgl::rectangle& bounds = feature->bounds;
+            ezgl::rectangle screen_rect(camera.world_to_screen(bounds.bottom_left()),camera.world_to_screen(bounds.top_right()));
+            if(!feature->major && !highlightedStreet && screen_rect.area() < kMinimumPixelsToDraw){break;} 
+            
+            g->set_color({0.8*feature->color.red,0.8*feature->color.green,0.8*feature->color.blue,255});
+            if(highlightedStreet)
+            {
+               g->set_color({0.8*kColorHighlight.red,0.8*kColorHighlight.green,0.8*kColorHighlight.blue,255});
+            }
+            //if major road, make road wider as indication 
+            if(feature->major)
+            {
+               lineWidthScale = 2;
+            }
+            g->set_line_width(lineWidth*(lineWidthScale + kRoadBorderWidth));
+            for(int i = 0; i < feature->points->size() - 1; i++)
+            {
+               //draw border on roads
+               g->draw_line((*feature->points)[i],(*feature->points)[i+1]);
+               
+            }
+            break;
+         }
+         default: {
+            break;
+         }
+      }
+
+      //reset temporary settings
+      g->set_text_rotation(0);
+}
+
 void thread_safe_draw_main_canvas(ezgl::renderer *g){
    //cout << "drawing to main canvas" <<endl;
    //rect value to draw to screen
@@ -333,37 +360,9 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
    if(useCellRendering){
       
       vector<MapFeature*> cellFeatures;
+      vector<MapFeature*> cellRoads;
+      vector<MapFeature*> cellPoints;
       vector<Quad<MapFeature>*> quads;
-
-      auto layer = mapFeatures.layerMap.begin();
-      while(layer != mapFeatures.layerMap.end())
-      {
-         if(layer->second == nullptr){
-            cout << "Error drawing layer: "<<layer->first;
-            break;
-         }
-         vector<MapFeature*> layerFeatures = *(layer->second);
-         for(int i = 0; i < layerFeatures.size(); i++)
-         {
-            MapFeature* feature = layerFeatures[i];
-            if(feature == nullptr || g == nullptr)
-            {
-               cout<<"Error with feature: " << i<<endl << " from layer " << layer->first;
-               break;
-            }
-            //run bounding box checks
-            if(feature->points == nullptr || feature->points->size() <= 0 ){
-               cout<<"ERROR points are null: " << i <<endl;
-               continue;
-            }
-            if(feature->drawType == POINT && !cameraRect.contains((*feature->points)[0])){continue;} //check if point is inside world rect
-            if(feature->drawType != POINT && !intersecting(cameraRect,feature->bounds)){continue;} //check if bounds for camera and feaure are intersecting
-            g->set_color({0, 0, 0, 255});
-            g->set_line_width(lineWidth);
-            drawFeature(feature,g,lineWidth,scaling,worldToScreenScale,camera);
-         }
-         layer++;
-      }
 
       mapFeatures.spatialIndexer.getQuadsInRange(cameraRect,&quads,cameraRect.area()/pow(2,13));
 
@@ -372,13 +371,66 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
          for(auto feature = (*quad)->data.begin(); feature != (*quad)->data.end(); feature++)
          {
             feature->first->wasRendered = false;
-            cellFeatures.push_back(feature->first);
+            //seperate points from other features
+            if(feature->first->drawType == DrawType::POINT)
+            {
+               cellPoints.push_back(feature->first);
+            }
+            //seperate roads from other features
+            else if(feature->first->featureType == MapFeatureType::ROAD)
+            {
+               cellRoads.push_back(feature->first);
+            }
+            else
+            {
+               cellFeatures.push_back(feature->first);
+            }
          }
       }
+
       std::sort(cellFeatures.begin(),cellFeatures.end(),getDrawPriority);
+      std::sort(cellRoads.begin(),cellRoads.end(),getDrawPriority);
+
+      //draw features
       for(int i = 0; i < cellFeatures.size(); i++)
       {
          MapFeature* feature = cellFeatures[i];
+         if(feature->wasRendered){continue;} //skip duplicate renders
+         g->set_color({0, 0, 0, 255});
+         g->set_line_width(lineWidth);
+         drawFeature(feature,g,lineWidth,scaling,worldToScreenScale,camera);
+         feature->wasRendered = true;
+      }
+
+      //draw borders
+      for(int i = 0; i < cellRoads.size(); i++)
+      {
+         MapFeature* feature = cellRoads[i];
+         if(feature->wasRendered){continue;} //skip duplicate renders
+         drawBorder(feature,g,lineWidth,scaling,worldToScreenScale,camera);
+         feature->wasRendered = true;
+      }
+      //reset render checking
+      for(int i = 0; i < cellRoads.size(); i++)
+      {
+         MapFeature* feature = cellRoads[i];
+         feature->wasRendered = false;
+      }
+      //draw roads
+      for(int i = 0; i < cellRoads.size(); i++)
+      {
+         MapFeature* feature = cellRoads[i];
+         if(feature->wasRendered){continue;} //skip duplicate renders
+         g->set_color({0, 0, 0, 255});
+         g->set_line_width(lineWidth);
+         drawFeature(feature,g,lineWidth,scaling,worldToScreenScale,camera);
+         feature->wasRendered = true;
+      }
+
+      //draw points
+      for(int i = 0; i < cellPoints.size(); i++)
+      {
+         MapFeature* feature = cellPoints[i];
          if(feature->wasRendered){continue;} //skip duplicate renders
          g->set_color({0, 0, 0, 255});
          g->set_line_width(lineWidth);
@@ -589,7 +641,7 @@ void threadedLoadFeatures(){
       
       mapFeaturesMutex.lock();
 
-      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw*kSpatialIndexingThreshold*kSpatialIndexingThreshold);
+      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw*kSpatialIndexingThreshold*kSpatialIndexingThreshold,initial_world.area());
       intersectionFeatures.push_back(mapFeature); //relate feature to corrosponding intersection index
 
       mapFeaturesMutex.unlock();
@@ -671,7 +723,7 @@ void threadedLoadFeatures(){
 
 
       mapFeaturesMutex.lock();
-      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw*kSpatialIndexingThreshold*kSpatialIndexingThreshold); //add feature to feature list
+      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw*kSpatialIndexingThreshold*kSpatialIndexingThreshold,initial_world.area()); //add feature to feature list
       intersectionFeatures.push_back(mapFeature); //relate feature to corresponding intersection index
       mapFeaturesMutex.unlock();
       
@@ -811,7 +863,7 @@ void threadedLoadFeatures(){
       if(featureIndex == 2054866){
          cout << "test5" <<endl;
       }
-      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw*kSpatialIndexingThreshold*kSpatialIndexingThreshold); //add map feature object to array
+      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw*kSpatialIndexingThreshold*kSpatialIndexingThreshold,initial_world.area()); //add map feature object to array
       mapFeaturesMutex.unlock();
       
       //std::this_thread::sleep_for(0.001ms);

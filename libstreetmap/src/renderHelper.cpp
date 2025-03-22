@@ -138,26 +138,26 @@ void FeatureList::highlightFeature(MapFeature* feature, bool unhighlightOthers)
     //store feature so it can be unhighlighted if needed
     highlightedFeatures.push_back(feature);
 }
-void FeatureList::addFeature(MapFeature* feature, double areaThreshold)
+void FeatureList::addFeature(MapFeature* feature, double areaThreshold, double worldArea)
 {
     bool lowLOD = feature->major || (feature->drawType == DrawType::POLYGON && feature->thresholdArea > areaThreshold) || feature->drawType == DrawType::POINT; //should feature be rendered at high distances
-    //if object is large
+    
+    //add feature to list of features
+    if(layerMap.count(feature->layer) == 0) //check if layer exists
+    {
+        //if not, create layer and add it to map
+        vector<MapFeature*>* featureLayer = new vector<MapFeature*>; 
+        layerMap.insert({feature->layer,featureLayer});
+    }
+    layerMap[feature->layer]->push_back(feature); //add feature to corrosponding layer
+
     //low LOD features should be added to manual layer system
     
     if(lowLOD)
     {
-        //check if layer exists
-        if(layerMap.count(feature->layer) == 0)
-        {
-            //if not, create layer and add it to map
-            vector<MapFeature*>* featureLayer = new vector<MapFeature*>; 
-            layerMap.insert({feature->layer,featureLayer});
-        }
-        layerMap[feature->layer]->push_back(feature); //add feature to corrosponding layer
-        numerOfLowLODFeatures++;
+        spatialIndexer.insertBounds({feature->bounds.center(),feature->bounds,worldArea/4,feature,feature->layer}); //add feature to top layer
         return;
     }
-
     double boundsSize = ((int)(feature->bounds.area()/kBoundSizeStep))*kBoundSizeStep;
     boundsSize = max(boundsSize, (double)kBoundSizeStep); //make sure area is non-zero
     cout << boundsSize << endl;
@@ -177,6 +177,7 @@ void FeatureList::addFeature(MapFeature* feature, double areaThreshold)
         spatialIndexer.insert({feature->bounds.center(),feature->bounds,boundsSize,feature,feature->layer});
     }
     
+
     
     numberOfFeatures++;
 }

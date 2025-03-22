@@ -140,10 +140,10 @@ void FeatureList::highlightFeature(MapFeature* feature, bool unhighlightOthers)
 }
 void FeatureList::addFeature(MapFeature* feature, double areaThreshold)
 {
-    while(spatialIndexer.isBeingRead){}
     bool lowLOD = feature->major || (feature->drawType == DrawType::POLYGON && feature->thresholdArea > areaThreshold) || feature->drawType == DrawType::POINT; //should feature be rendered at high distances
     //if object is large
     //low LOD features should be added to manual layer system
+    
     if(lowLOD)
     {
         //check if layer exists
@@ -164,7 +164,13 @@ void FeatureList::addFeature(MapFeature* feature, double areaThreshold)
     //add every point to spatial indexing
     if(feature->drawType != DrawType::POINT) //large objects and lines should be added in multiple times to prevent clipping
     {
+    if(feature->dataIndex == 2054866){
+        cout << "test6"  << feature->layer<<endl;
+    }
         spatialIndexer.insertBounds({feature->bounds.center(),feature->bounds,boundsSize,feature,feature->layer});
+    if(feature->dataIndex == 2054866){
+        cout << "test7"  << feature->layer<<endl;
+    }
     }
     else
     {

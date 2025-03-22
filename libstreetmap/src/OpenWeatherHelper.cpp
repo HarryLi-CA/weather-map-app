@@ -127,6 +127,7 @@ vector<MapTileData> getMapTilesFromBounds (LatLonBounds currentScope, int pixelL
             }
         }
     }
+    cout<< "total to download: " << out.size()<<endl;
     return out;
 }
 

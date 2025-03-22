@@ -215,7 +215,7 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="HumidityBtn">
-                        <property name="label" translatable="yes">💧️</property>
+                        <property name="label" translatable="yes">🌫️</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
@@ -506,7 +506,7 @@
                   <object class="GtkLabel" id="timeSliderText">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="label" translatable="yes">Change Date/Time</property>
+                    <property name="label" translatable="yes">Change Date &amp; Time</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>

@@ -33,6 +33,7 @@
 #include "ezgl/graphics.hpp"
 #include "ezgl/camera.hpp"
 #include <set>
+#include <mutex>
 #include <ctime>
 #include <thread>
 #include <chrono>
@@ -42,6 +43,7 @@ using namespace std;
 
 static ezgl::rectangle initial_world{{0, 0}, 1920, 1080}; //rendered canvas
 static FeatureList mapFeatures; //list of map features to draw
+mutex mapFeaturesMutex;
 static ezgl::canvas* mainCanvas; //application canvas
 LatLon minPoints; //bottom left LatLon position
 LatLon maxPoints; //top right LatLon position
@@ -282,7 +284,6 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
 void thread_safe_draw_main_canvas(ezgl::renderer *g){
    //cout << "drawing to main canvas" <<endl;
    //rect value to draw to screen
-   mapFeatures.spatialIndexer.isBeingRead ++;
    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
    ezgl::rectangle rect(initial_world.bottom_left(),initial_world.top_right());
    g->set_color(kColorDefaultGround);
@@ -326,6 +327,8 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
       useCellRendering = true;
    }
 
+   mapFeaturesMutex.lock();
+   
    if(useCellRendering){
       
       vector<MapFeature*> cellFeatures;
@@ -382,9 +385,8 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
          feature->wasRendered = true;
       }
    }
-   //cout << "not cell rendering"<<endl;
    
-   //cout<< "finished basic drawing"<<endl;
+   mapFeaturesMutex.unlock();
 
    //draw weather overlay
    //getMapTilesFromBounds();
@@ -407,7 +409,6 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
       }
    }
    }
-   //cout<< "finished all drawing"<<endl;
 
    //set text display settings
 
@@ -426,7 +427,7 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
    
    if(isDrawing > 1){
       isDrawing = 1;
-      //thread_safe_draw_main_canvas(g);
+      thread_safe_draw_main_canvas(g);
    }
 
    //draw active paths
@@ -435,7 +436,6 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
       drawPath(g, *paths[pathsIndex], lineWidth, getPathColour(), scaling);
    }
 
-   mapFeatures.spatialIndexer.isBeingRead --;
 }
 
 void draw_main_canvas(ezgl::renderer *g)
@@ -455,7 +455,13 @@ double getScaleFactor()
 
 void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to manage clicks on a specific MapFeature
 {
+   
+   mapFeaturesMutex.lock();
+
    mapFeatures.highlightFeature(clicked, true);
+
+   mapFeaturesMutex.unlock();
+
    if(clicked->featureType == FEATURE) //clicked on feature
    {
       LatLon currentFeaturePoint = getFeaturePoint(clicked->dataIndex, 0);
@@ -483,6 +489,8 @@ void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to
 
 void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y)
 {
+   
+   mapFeaturesMutex.lock();
    if(mapFeatures.layerMap.size() == 0){return;} //if there are no features, skip click detection
 
    map<const OSMID, string> wayRoute;
@@ -527,19 +535,31 @@ void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, dou
       }
       layer--;
    }while(layer != mapFeatures.layerMap.begin());
-
+   mapFeaturesMutex.unlock();
    if(clicked != nullptr)
    {
       clickedOnFeature(clicked, app); //run click events on the clicked feature  
    }
 }
 
+void threadedTimedRedraw(volatile bool& needRedraw){
+   while (needRedraw)
+   {
+      this_thread::sleep_for(chrono::seconds(1));
+      if(hasUIOpened)
+         mainCanvas->redraw();
+   }
+}
+
 void threadedLoadFeatures(){
    cout<<"thread start"<<endl;
 
-   
+   volatile bool needRedraw = true; volatile bool threadDone = false;
+   thread t1(threadedTimedRedraw, ref(needRedraw));
 
+   mapFeaturesMutex.lock();
    mapFeatures.spatialIndexer = QuadTree<MapFeature>(ezgl::rectangle(LatLonToPoint2D(minPoints),LatLonToPoint2D(maxPoints)),kRenderCellSize);
+   mapFeaturesMutex.unlock();
 
    numberOfStreets = getNumStreets();
 
@@ -558,12 +578,12 @@ void threadedLoadFeatures(){
       points->push_back(translatedPoint); //add singular point to point list
       MapFeature* mapFeature = new MapFeature(100,points,kColorHighlight,POINT,MapFeatureType::INTERSECTION,(int)intersectionIndex); //add intersection as map feature
       
-      
-      while (mapFeatures.spatialIndexer.isBeingRead)
-      {
-      }
+      mapFeaturesMutex.lock();
+
       mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw*kSpatialIndexingThreshold*kSpatialIndexingThreshold);
       intersectionFeatures.push_back(mapFeature); //relate feature to corrosponding intersection index
+
+      mapFeaturesMutex.unlock();
    }
 
    if(hasUIOpened)
@@ -613,7 +633,6 @@ void threadedLoadFeatures(){
       MapFeature* mapFeature = new MapFeature(roadLayer,points,roadColor,LINE,MapFeatureType::ROAD,(int)streetSegmentIndex);  //create map featur object
       mapFeature->virtualBoundsArea = 100;
       
-      intersectionFeatures.push_back(mapFeature); //relate feature to corresponding intersection index
       //add longest street data
       mapFeature->longestPointSegmentIndex = longestSegmentIndex;
       mapFeature->longestSegmentLength = longestLength;
@@ -640,14 +659,14 @@ void threadedLoadFeatures(){
          }
       }
 
-      while (mapFeatures.spatialIndexer.isBeingRead)
-      {
-      }
-      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw*kSpatialIndexingThreshold*kSpatialIndexingThreshold); //add feature to feature list
-   } 
 
-   if(hasUIOpened)
-      mainCanvas->redraw();
+
+      mapFeaturesMutex.lock();
+      mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw*kSpatialIndexingThreshold*kSpatialIndexingThreshold); //add feature to feature list
+      intersectionFeatures.push_back(mapFeature); //relate feature to corresponding intersection index
+      mapFeaturesMutex.unlock();
+      
+   }
 
    vector<string> featureNames;
    
@@ -744,17 +763,26 @@ void threadedLoadFeatures(){
       if(!closed){drawType = LINE;}
 
       MapFeature* mapFeature = new MapFeature(layer,points,featureColor,drawType,MapFeatureType::FEATURE,(int)featureIndex); //create map feature object
+      if(featureIndex == 2054866){
+         cout << "test1" <<endl;
+      }
       //set default values
       mapFeature->maximumScaling = maximumScaling;
       mapFeature->virtualBoundsArea = mapFeature->bounds.area();
       //add text label for feature name
       string featureName = getFeatureName(featureIndex);
+      if(featureIndex == 2054866){
+         cout << "test2: " << featureName << " " << featureName.size() <<endl;
+      }
       if(featureName[0] != '<') //dont print text that is not meant to be displayed (denoted by being wrapped in '<>')
       {
          //check for duplicates
          bool duplicate = vectorContains<string>(featureNames, featureName); //whether the name is a duplicate, checked by seeing if name is in list of names already displayed
          if(!duplicate || featureType == BUILDING) //buildings often have the same name, so duplicates can be allowed for those features
          {
+            if(featureIndex == 2054866){
+               cout << "test3" <<endl;
+            }
             //if no duplicate is found, add label
             staticLabels.push_back({featureName,mapFeature->bounds.center(),mapFeature}); //create static text structure and add to array for rendering
             mapFeature->major = true; //if the feature has a name, it is a point of interest
@@ -764,18 +792,21 @@ void threadedLoadFeatures(){
             //    mainCanvas->redraw();
          }
       }
-      while (mapFeatures.spatialIndexer.isBeingRead)
-      {
+
+
+
+      if(featureIndex == 2054866){
+         cout << "test4" <<endl;
       }
-      
+      mapFeaturesMutex.lock();
+      if(featureIndex == 2054866){
+         cout << "test5" <<endl;
+      }
       mapFeatures.addFeature(mapFeature, kMinimumPixelsToDraw*kSpatialIndexingThreshold*kSpatialIndexingThreshold); //add map feature object to array
+      mapFeaturesMutex.unlock();
+      
       //std::this_thread::sleep_for(0.001ms);
    }
-   //download weather map data
-   currentScope.min = minPoints;
-   currentScope.max = maxPoints;
-   //Load weather map
-   currWeatherLayer = NOFILTER;
    mapTiles = getMapTilesFromBounds (currentScope, 1920, 1080, NOFILTER);
    downloadWeatherMaps(NOFILTER, mapTiles, time(nullptr));
    
@@ -786,10 +817,15 @@ void threadedLoadFeatures(){
       ),
       currentTime
    );
+   needRedraw = false;
    if(hasUIOpened)
       mainCanvas->redraw();
+
+
+   mapFeaturesMutex.lock();
    cout << "F = " << mapFeatures.numberOfFeatures << endl;
    cout << "LLOD = " << mapFeatures.numerOfLowLODFeatures << endl;
+   mapFeaturesMutex.unlock();
 
    if(isLoading > 1){
       isLoading = 1;
@@ -797,8 +833,7 @@ void threadedLoadFeatures(){
    }
    isLoading=0;
    cout << "finished loading"<<endl;
-
-   
+   t1.join();
 }
 
 void loadFeatures()
@@ -823,6 +858,11 @@ void loadFeatures()
    vector<PathSegment>* genPath = generateRandomPath();
    paths.push_back(genPath);
 
+   currentScope.min = minPoints;
+   currentScope.max = maxPoints;
+   //Load weather map
+   currWeatherLayer = NOFILTER;
+
    isLoading++;
    if(isLoading <= 1){
       thread t1(threadedLoadFeatures);
@@ -841,7 +881,12 @@ void unloadFeatures()
    //delete mainCanvas;
    //mainCanvas = nullptr;
 
+
+   mapFeaturesMutex.lock();
    mapFeatures.clear(); //delete all elements in the map
+   mapFeaturesMutex.unlock();
+
+   mapFeaturesMutex.unlock();
    staticLabels.clear(); //delete all static labels
 }
 
@@ -1007,7 +1052,12 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    bool firstHightlight = false; //already highlighted an intersection
    for(int i = 0; i < numOfIntersectionLists; i++){
       for(int j = 0; j < intersectionList[i].size(); j++){
+
+
+         mapFeaturesMutex.lock();
          mapFeatures.highlightFeature(intersectionFeatures[intersectionList[i][j]], !firstHightlight);
+         mapFeaturesMutex.unlock();
+
          firstHightlight = true;
 
          intersectionInfo.append(getIntersectionName(intersectionList[i][j]) + (", "));

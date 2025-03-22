@@ -85,6 +85,7 @@ const double kRoadBorderWidth = 0.5; //width of road borders
 const double TILERATIO = 0.000005805;
 const double kSpatialIndexingThreshold = DBL_MAX;//10; //maximum screen-to-world ratio before quad tree rendering is enabled
 const double kCameraBoundsExtension = 0; //
+const bool enableThreading = true;
 LatLonBounds currentScope; // scope of city map
 vector<MapTileData> mapTiles;
 WeatherData currentWeather; // weather including sunset and sunrise in epoch time
@@ -425,9 +426,11 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
    g->set_font_size(10);
    g->draw_text(lerp(cameraRect.top_right(), cameraRect.bottom_left(), 0.05), "FPS: " + to_string((int)fps) + " Zoom: " + to_string(magnitude(camera.get_world_scale_factor())));
    
-   if(isDrawing > 1){
-      isDrawing = 1;
-      thread_safe_draw_main_canvas(g);
+   if(enableThreading){
+      if(isDrawing > 1){
+         isDrawing = 1;
+         thread_safe_draw_main_canvas(g);
+      }
    }
 
    //draw active paths
@@ -440,12 +443,17 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
 
 void draw_main_canvas(ezgl::renderer *g)
 {
-   isDrawing++;
-   if(isDrawing>1){
-      return;
+   if(enableThreading){
+      isDrawing++;
+      if(isDrawing>1){
+         return;
+      }
+      thread_safe_draw_main_canvas(g);
+      isDrawing = 0;
    }
-   thread_safe_draw_main_canvas(g);
-   isDrawing = 0;
+   else{
+      thread_safe_draw_main_canvas(g);
+   }
 }
 
 double getScaleFactor()
@@ -553,10 +561,11 @@ void threadedTimedRedraw(volatile bool& needRedraw){
 
 void threadedLoadFeatures(){
    cout<<"thread start"<<endl;
-
+   thread t1;
    volatile bool needRedraw = true; volatile bool threadDone = false;
-   thread t1(threadedTimedRedraw, ref(needRedraw));
-
+   if(enableThreading){
+      t1 = thread (threadedTimedRedraw, ref(needRedraw));
+   }
    mapFeaturesMutex.lock();
    mapFeatures.spatialIndexer = QuadTree<MapFeature>(ezgl::rectangle(LatLonToPoint2D(minPoints),LatLonToPoint2D(maxPoints)),kRenderCellSize);
    mapFeaturesMutex.unlock();
@@ -833,7 +842,8 @@ void threadedLoadFeatures(){
    }
    isLoading=0;
    cout << "finished loading"<<endl;
-   t1.join();
+   if(enableThreading)
+      t1.join();
 }
 
 void loadFeatures()
@@ -863,11 +873,15 @@ void loadFeatures()
    //Load weather map
    currWeatherLayer = NOFILTER;
 
-   isLoading++;
-   if(isLoading <= 1){
-      thread t1(threadedLoadFeatures);
-      t1.detach();
+   if(enableThreading){
+      isLoading++;
+      if(isLoading <= 1){
+         thread t1(threadedLoadFeatures);
+         t1.detach();
+      }
    }
+   else
+      threadedLoadFeatures();
 
    
 }
@@ -1182,8 +1196,13 @@ void threadedChangeFilter_cbk(pair<WeatherLayer,ezgl::application*> filterInfo){
 }
 
 void changeFilter_cbk(GtkWidget */*widget*/, pair<WeatherLayer,ezgl::application*> * filterInfo){
-   thread t1(threadedChangeFilter_cbk, *filterInfo);
-   t1.detach();
+   
+   if(enableThreading){
+      thread t1(threadedChangeFilter_cbk, *filterInfo);
+      t1.detach();
+   }
+   else
+    threadedChangeFilter_cbk(*filterInfo);
 }
 
 void threadedChangeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* application){
@@ -1233,10 +1252,14 @@ void changeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* applicatio
 
    //current time plus number of 1/3 days times epoch time of 1/3 days
    currentTime = std::time(nullptr) + selectedRange*28800*100;
+
+   if(enableThreading){
    isChangingTime++;
-   
    if(isChangingTime <= 1){
    thread t1(threadedChangeCurrentTime_cbk, sliderRange, application);
    t1.detach();
    }
+   }
+   else
+      threadedChangeCurrentTime_cbk(sliderRange, application);
 }

@@ -56,8 +56,8 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
     }
 
     //draw endpoint backgrounds
-    double endPointRadius = lineWidth*kPathDisplayScaling*kPathEndpointScaling;
-    double borderRadius = kPathBorderSize/(M_PI);
+    double endPointRadius = (lineWidth/scaling)*kPathDisplayScaling*kPathEndpointScaling;
+    double borderRadius = kPathBorderSize/(scaling*0.5*M_PI);
     g->fill_arc(startPoint,endPointRadius+borderRadius,0.0,360.0); //draw start point
     g->fill_arc(endPoint,endPointRadius+borderRadius,0.0,360.0); //draw end point
 
@@ -96,7 +96,7 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
         ezgl::point2d secondPoint = LatLonToPoint2D((*points)[points->size()/2 + 1]);
 
         ezgl::point2d deltaPosition = normalize(secondPoint - firstPoint); //get direction vector of path
-        ezgl::point2d middlePoint = firstPoint; //point where the arrow will be drawn
+        ezgl::point2d middlePoint = midpoint(firstPoint,secondPoint); //point where the arrow will be drawn
         double arrowDistance = getDistanceToClosest(middlePoint,arrowPositions);//get distance to closest arrow
         double arrowSize = kPathArrowAbsoluteSize;
         arrowSize = min(lineWidth, arrowSize);

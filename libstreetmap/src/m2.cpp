@@ -436,7 +436,7 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
    //draw active paths
    for(int pathsIndex = 0; pathsIndex < paths.size(); pathsIndex++)
    {
-      drawPath(g, *paths[pathsIndex], lineWidth, {255, 0, 0, 255}, scaling);
+      drawPath(g, *paths[pathsIndex], lineWidth, getPathColour(), scaling);
    }
 
 }

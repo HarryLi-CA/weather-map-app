@@ -18,19 +18,33 @@ using namespace std;
 const double kMinimumTurnAngle = M_PI/6.0; //minimum turn angle for street to be considered a turn
 const double kDefaultTurnPenalty = 10; //penalty imposed on a turning street
 const double kPathDisplayScaling = 2; //scaling factor for displaying paths
-const double kPathArrowScaling = 2; //scaling factor for displaying arrows
+const double kPathEndpointScaling = 1.5; //scaling factor for displaying path endpoints
+const double kPathArrowAbsoluteSize = 4; //scaling factor for displaying arrows
 const double kMinimumArrowDistance = 20; //minimum distance between arrows to be drawn
-const double kMinimumArrowSize = 10; //minimum size of arrow
+const double kMaxArrowSize = 0; //minimum size of arrow
+const double kArrowColourBrightness = 0.8; //how bright arrows are compared to the path colour
+const double kPathBorderBrightness = 0.8; //how bright borders are compared to the path colour
+const double kPathBorderSize = 6; //thickness of the path's borders
+const ezgl::color kPathColour = {224, 255, 133}; //colour of a given path
 
 void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ezgl::color colour, double scaling)
 {
-    g->set_line_width(lineWidth*kPathDisplayScaling);
-    g->set_color(colour);
-
+    
+    //get end points
+    ezgl::point2d startPoint = path[0].from;
+    ezgl::point2d endPoint = path[path.size() - 1].to;
     vector<ezgl::point2d> arrowPositions;
 
+
+    //set border colour
+    ezgl::color borderColour = {colour.red*kPathBorderBrightness,colour.green*kPathBorderBrightness,colour.blue*kPathBorderBrightness};
+    g->set_color(borderColour);
+
+    //draw background
+    g->set_line_width(lineWidth*kPathDisplayScaling + kPathBorderSize);
     for(int pathIndex = 0; pathIndex < path.size(); pathIndex++)
     {
+        
         PathSegment pathSeg = path[pathIndex];
         vector<LatLon>* points = getStreetSegmentPoints(pathSeg.segmentIndex);
         for(int pointIndex = 0; pointIndex < points->size() - 1; pointIndex++)
@@ -39,24 +53,62 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
             ezgl::point2d to = LatLonToPoint2D((*points)[pointIndex+1]);
             g->draw_line(from, to);
         }
+    }
+
+    //draw endpoint backgrounds
+    double endPointRadius = lineWidth*kPathDisplayScaling*kPathEndpointScaling;
+    double borderRadius = kPathBorderSize/(M_PI);
+    g->fill_arc(startPoint,endPointRadius+borderRadius,0.0,360.0); //draw start point
+    g->fill_arc(endPoint,endPointRadius+borderRadius,0.0,360.0); //draw end point
+
+    //set path colour
+    g->set_color(colour);
+
+    //draw path
+    g->set_line_width(lineWidth*kPathDisplayScaling);
+    for(int pathIndex = 0; pathIndex < path.size(); pathIndex++)
+    {
         
+        PathSegment pathSeg = path[pathIndex];
+        vector<LatLon>* points = getStreetSegmentPoints(pathSeg.segmentIndex);
+        for(int pointIndex = 0; pointIndex < points->size() - 1; pointIndex++)
+        {
+            ezgl::point2d from = LatLonToPoint2D((*points)[pointIndex]);
+            ezgl::point2d to = LatLonToPoint2D((*points)[pointIndex+1]);
+            g->draw_line(from, to);
+        }
+    }
+
+    //draw endpoints
+    g->fill_arc(startPoint,endPointRadius,0.0,360.0); //draw start point
+    g->fill_arc(endPoint,endPointRadius,0.0,360.0); //draw end point
+
+    //draw arrows
+    for(int pathIndex = 0; pathIndex < path.size(); pathIndex++)
+    {
+        PathSegment pathSeg = path[pathIndex];
+        vector<LatLon>* points = getStreetSegmentPoints(pathSeg.segmentIndex);
+        
+        //set triangle colour
+        ezgl::color arrowColour = {colour.red*kArrowColourBrightness, colour.green*kArrowColourBrightness, colour.blue*kArrowColourBrightness};
         //draw triangle
-        ezgl::point2d firstPoint = LatLonToPoint2D((*points)[0]);
-        ezgl::point2d secondPoint = LatLonToPoint2D((*points)[1]);
+        ezgl::point2d firstPoint = LatLonToPoint2D((*points)[points->size()/2]);
+        ezgl::point2d secondPoint = LatLonToPoint2D((*points)[points->size()/2 + 1]);
 
         ezgl::point2d deltaPosition = normalize(secondPoint - firstPoint); //get direction vector of path
         ezgl::point2d middlePoint = firstPoint; //point where the arrow will be drawn
-        double arrowDistance = getDistanceToClosest(middlePoint,arrowPositions);
-        double arrowSize = lineWidth*kPathArrowScaling;
-        arrowSize = max(kMinimumArrowSize/scaling, arrowSize);
+        double arrowDistance = getDistanceToClosest(middlePoint,arrowPositions);//get distance to closest arrow
+        double arrowSize = kPathArrowAbsoluteSize;
+        arrowSize = min(lineWidth, arrowSize);
 
         if(arrowDistance > kMinimumArrowDistance+2*arrowSize) //account for the size of arrows (approximate as circles) when calculating distance
         {
-            drawTriangle(g,middlePoint,deltaPosition,colour,arrowSize);
+            drawTriangle(g,middlePoint,deltaPosition,arrowColour,arrowSize);
 
             arrowPositions.push_back(middlePoint);
         }
     }
+    
 }
 
 double computePathTravelTime(const double turn_penalty, const std::vector<StreetSegmentIdx>& path)
@@ -124,4 +176,9 @@ vector<PathSegment>* generateRandomPath()
 std::vector<StreetSegmentIdx> findPathBetweenIntersections(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids)
 {
     return {};
+}
+
+ezgl::color getPathColour()
+{
+    return kPathColour;
 }

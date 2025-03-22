@@ -22,6 +22,7 @@ ECE297 Software Design and Communication Winter 2025
 #include "ezgl/graphics.hpp"
 #include "ezgl/canvas.hpp"
 #include "ezgl/application.hpp"
+#include "ezgl/color.hpp"
 #include "m1.h"
 #include "m3.h"
 #include "renderHelper.h"
@@ -64,3 +65,4 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
 //generates random path for testing
 vector<PathSegment>* generateRandomPath();
 
+ezgl::color getPathColour(); //getter function to return the current path colour

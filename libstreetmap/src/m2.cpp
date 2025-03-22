@@ -1156,6 +1156,9 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    
    gtk_widget_hide((GtkWidget*)exitBtn);
 
+   GObject* confirmRouteBtn = application->get_object("confirmRouteBtn");
+   g_signal_connect(confirmRouteBtn,"clicked",G_CALLBACK(typedRouteConfirm_cbk),application);
+
    //application->create_button("EXIT ROUTE CLICKING",4,cancelClickingMode_cbk);
 }
 
@@ -1460,4 +1463,90 @@ void exitClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application)
    g_signal_connect(exitBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
    
    gtk_widget_hide((GtkWidget*)exitBtn);
+}
+
+void typedRouteConfirm_cbk(GtkWidget */*widget*/, ezgl::application *application){
+
+   //Rewrite past routes
+
+   bool validInput = true;
+
+   string errorMsg;
+   
+   vector<vector<IntersectionIdx>> startingIntersections = findIntersectionsfromSearchbars(application,"routeStartSearchBar1","routeStartSearchBar2",errorMsg,validInput,"Starting");
+   vector<vector<IntersectionIdx>> endingIntersections = findIntersectionsfromSearchbars(application,"routeEndSearchBar1","routeEndSearchBar2",errorMsg,validInput,"Ending");
+
+   if(validInput){
+      //cout << startingIntersections[0][0] << " & " << endingIntersections[0][0];
+      cout << "apples";
+
+      GtkWidget * routeCreatorDialog = GTK_WIDGET(application->get_object("routeCreatorDialog"));
+      gtk_widget_hide(routeCreatorDialog);
+
+   }else{
+
+      //show pop up with error message
+      application->create_popup_message("Input Error",errorMsg.c_str());
+   }
+}
+
+vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::application *application, const gchar * searchbarId1, const gchar * searchbarId2, string &errorMsg, bool &validInput, string direction){
+   
+   vector<vector<IntersectionIdx>> intersectionList;
+
+   //Extracting text from search bars
+   GtkEntry* searchbar1 = GTK_ENTRY(application->get_object(searchbarId1));
+   string searchText1 = string(gtk_entry_get_text(searchbar1));
+   GtkEntry* searchbar2 = GTK_ENTRY(application->get_object(searchbarId2));
+   string searchText2 = string(gtk_entry_get_text(searchbar2));
+
+   //Obtain the streetIdx(s) of the inputted street names
+   vector<StreetIdx> street1Idxs = findStreetIdsFromPartialStreetName(searchText1);
+   vector<StreetIdx> street2Idxs = findStreetIdsFromPartialStreetName(searchText2);
+
+   if(street1Idxs.size() == 0){
+      errorMsg.append("\n      " + direction + " street 1 does not exist       \n");
+      validInput = false;
+   }
+   if(street2Idxs.size() == 0){
+      errorMsg.append("\n      " + direction + " street 2 does not exist       \n");
+      validInput = false;
+   }
+
+   //Create unique pairs of streetIdxs of the inputted streets
+   set<pair<StreetIdx,StreetIdx>> streetIdPairs;
+   for(int i = 0; i < street1Idxs.size(); ++i){
+      for(int j = 0; j < street2Idxs.size(); ++j){
+
+         //ensure no pair is made up of the same street
+         StreetIdx currStreet1 = street1Idxs[i];
+         StreetIdx currStreet2 = street2Idxs[j];
+
+         if(currStreet1 != currStreet2){
+
+            //insert pair by <lower number,higher number> to prevent duplicate sets
+            if(currStreet1 < currStreet2){
+               streetIdPairs.insert({currStreet1,currStreet2});
+
+            } else{
+               streetIdPairs.insert({currStreet2,currStreet1});
+            }
+         }
+      }
+   }
+
+   //Store the all intersections of each pair of streets
+   auto it = streetIdPairs.begin();
+   while(it != streetIdPairs.end()){
+      intersectionList.push_back(findIntersectionsOfTwoStreets(*it));
+      it++;
+   }
+   int numOfIntersectionLists = intersectionList.size();
+
+   if(numOfIntersectionLists == 0){
+      errorMsg.append("\n      " + direction + " streets do not intersect       \n");
+      validInput = false;
+   }
+
+   return intersectionList;
 }

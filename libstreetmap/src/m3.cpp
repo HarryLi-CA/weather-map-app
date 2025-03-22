@@ -6,6 +6,7 @@
 #include "renderHelper.h"
 #include "pointMath.h"
 #include "StreetsDatabaseAPI.h"
+#include "PathFinding.h"
 #include <vector>
 #include <random>
 #include <stdio.h>
@@ -175,7 +176,13 @@ vector<PathSegment>* generateRandomPath()
 
 std::vector<StreetSegmentIdx> findPathBetweenIntersections(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids)
 {
-    return {};
+    vector<Point> pointVector = calculatePathArray(turn_penalty, intersect_ids);
+    vector<StreetSegmentIdx> streetIds;
+    for (int i = 1; i < pointVector.size(); i++)
+    {
+        streetIds.push_back(pointVector[i].segId);
+    }
+    return streetIds;
 }
 
 ezgl::color getPathColour()

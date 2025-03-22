@@ -27,6 +27,7 @@ ECE297 Software Design and Communication Winter 2025
 #include "renderHelper.h"
 #include "pointMath.h"
 #include "StreetsDatabaseAPI.h"
+#include "PathFinding.h"
 #include <vector>
 #include <random>
 // Returns the time required to travel along the path specified, in seconds.

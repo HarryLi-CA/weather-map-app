@@ -123,5 +123,6 @@ vector<PathSegment>* generateRandomPath()
 
 std::vector<StreetSegmentIdx> findPathBetweenIntersections(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids)
 {
+
     return {};
 }

@@ -139,7 +139,6 @@
                     <property name="margin-start">8</property>
                     <property name="margin-end">8</property>
                     <property name="margin-bottom">8</property>
-                    <property name="spacing">6</property>
                     <child>
                       <object class="GtkButton" id="TemperatureBtn">
                         <property name="label" translatable="yes">🌡️</property>
@@ -147,6 +146,8 @@
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
+                        <property name="margin-start">4</property>
+                        <property name="margin-end">2</property>
                         <property name="relief">none</property>
                         <style>
                           <class name="filter"/>
@@ -165,6 +166,8 @@
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
+                        <property name="margin-start">2</property>
+                        <property name="margin-end">2</property>
                         <property name="relief">none</property>
                         <style>
                           <class name="filter"/>
@@ -183,6 +186,8 @@
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
+                        <property name="margin-start">2</property>
+                        <property name="margin-end">2</property>
                         <property name="relief">none</property>
                         <style>
                           <class name="filter"/>
@@ -200,6 +205,8 @@
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
+                        <property name="margin-start">2</property>
+                        <property name="margin-end">2</property>
                         <property name="relief">none</property>
                         <style>
                           <class name="filter"/>
@@ -218,6 +225,8 @@
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
+                        <property name="margin-start">2</property>
+                        <property name="margin-end">2</property>
                         <property name="relief">none</property>
                         <style>
                           <class name="filter"/>
@@ -235,6 +244,8 @@
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
+                        <property name="margin-start">2</property>
+                        <property name="margin-end">2</property>
                         <property name="relief">none</property>
                         <style>
                           <class name="filter"/>
@@ -252,6 +263,8 @@
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
+                        <property name="margin-start">2</property>
+                        <property name="margin-end">1</property>
                         <property name="relief">none</property>
                         <style>
                           <class name="uiBtn"/>
@@ -269,6 +282,8 @@
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
+                        <property name="margin-start">1</property>
+                        <property name="margin-end">1</property>
                         <property name="relief">none</property>
                         <style>
                           <class name="uiBtn"/>
@@ -282,7 +297,7 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="ZoomFitButton">
-                        <property name="label" translatable="yes"> Zoom Fit </property>
+                        <property name="label" translatable="yes">🔍️ Fit </property>
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
                         <property name="receives-default">True</property>
@@ -296,7 +311,7 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="ZoomOutButton">
-                        <property name="label" translatable="yes">Zoom Out</property>
+                        <property name="label" translatable="yes">➖️</property>
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
                         <property name="receives-default">True</property>
@@ -310,7 +325,7 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="ZoomInButton">
-                        <property name="label" translatable="yes">Zoom In</property>
+                        <property name="label" translatable="yes">➕️</property>
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
                         <property name="receives-default">True</property>
@@ -868,7 +883,7 @@
             <property name="margin-start">15</property>
             <property name="margin-end">15</property>
             <property name="row-spacing">7</property>
-            <property name="column-spacing">15</property>
+            <property name="column-spacing">8</property>
             <property name="column-homogeneous">True</property>
             <child>
               <object class="GtkLabel">
@@ -888,7 +903,8 @@
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
-                <property name="label" translatable="yes">Enter Intersection 1:</property>
+                <property name="margin-end">7</property>
+                <property name="label" translatable="yes">Enter Starting Intersection:</property>
               </object>
               <packing>
                 <property name="left-attach">0</property>
@@ -899,7 +915,8 @@
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
-                <property name="label" translatable="yes">Enter Intersection 2:</property>
+                <property name="margin-end">6</property>
+                <property name="label" translatable="yes">Enter Ending Intersection:</property>
               </object>
               <packing>
                 <property name="left-attach">0</property>
@@ -911,7 +928,7 @@
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="margin-top">5</property>
-                <property name="margin-bottom">5</property>
+                <property name="margin-bottom">7</property>
                 <property name="label" translatable="yes">Create route by typing two intersections:</property>
               </object>
               <packing>
@@ -924,8 +941,8 @@
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
-                <property name="margin-top">15</property>
-                <property name="margin-bottom">15</property>
+                <property name="margin-top">21</property>
+                <property name="margin-bottom">21</property>
                 <property name="label" translatable="yes"> ------------- OR  ------------- </property>
               </object>
               <packing>
@@ -963,6 +980,7 @@
               <object class="GtkEntry">
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
+                <property name="placeholder-text" translatable="yes">Enter FIrst Street</property>
               </object>
               <packing>
                 <property name="left-attach">1</property>
@@ -973,6 +991,7 @@
               <object class="GtkEntry">
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
+                <property name="placeholder-text" translatable="yes">Enter FIrst Street</property>
               </object>
               <packing>
                 <property name="left-attach">1</property>
@@ -985,6 +1004,7 @@
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
                 <property name="receives-default">True</property>
+                <property name="margin-top">5</property>
               </object>
               <packing>
                 <property name="left-attach">1</property>
@@ -995,6 +1015,7 @@
               <object class="GtkEntry">
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
+                <property name="placeholder-text" translatable="yes">Enter Second Street</property>
               </object>
               <packing>
                 <property name="left-attach">2</property>
@@ -1005,6 +1026,7 @@
               <object class="GtkEntry">
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
+                <property name="placeholder-text" translatable="yes">Enter Second Street</property>
               </object>
               <packing>
                 <property name="left-attach">2</property>
@@ -1030,6 +1052,9 @@
             <property name="position">1</property>
           </packing>
         </child>
+        <style>
+          <class name="dark"/>
+        </style>
       </object>
     </child>
   </object>

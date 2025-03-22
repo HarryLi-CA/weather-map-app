@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <queue>
 
+#define MAX_STREET_SPEED 200
+
 using namespace std;
 
 vector<Point> calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids){
@@ -27,13 +29,11 @@ vector<Point> calculatePathArray(const double turn_penalty, const std::pair<Inte
             return path;
         }
 
-        vector<Point> neighbours= getNeighbours(current);
+        vector<Point> neighbours= getNeighbours(current, turn_penalty);
         
         for(Point neighbour: neighbours){
             //if(closed.where((element) => element.name==neighbour.name).isEmpty){
-                double newMovementCostToNeighbour = neighbour.gCost;
-                if(neighbour.isTurn)
-                    newMovementCostToNeighbour += turn_penalty;
+                //double newMovementCostToNeighbour = neighbour.gCost;
                 /*
                 future optimization
                 vector<Point> neighbourInOpenvector = open.items.where((element) => element.name==neighbour.name).tovector();
@@ -48,7 +48,6 @@ vector<Point> calculatePathArray(const double turn_penalty, const std::pair<Inte
                 );
                 */
                 neighbour.updateFCost();
-                neighbour.parent = &current;
 
                 
                 // if(neighbourInOpenvector == null||neighbourInOpenvector.length<=0){
@@ -66,9 +65,31 @@ vector<Point> calculatePathArray(const double turn_penalty, const std::pair<Inte
     return {};
 }
 
-vector<Point> getNeighbours(Point current){
+vector<Point> getNeighbours(Point current, double turn_penalty){
+    vector<StreetSegmentIdx> streetSegs = findStreetSegmentsOfIntersection(current.id);
+    
+    vector<Point> neighbours;
+    for (int i = 0; i < streetSegs.size(); i++)
+    {
+        IntersectionIdx curIntIdx = findOppositeIntersection(current.id, streetSegs[i]);
+        Point curPoint = Point(curIntIdx, current.destCoords, &current);
+        curPoint.segId = streetSegs[i];
 
-    return {};
+        double pathTravelTime = 0;
+        if(current.parent != nullptr){
+            StreetSegmentInfo currentSegmentInfo = getStreetSegmentInfo(streetSegs[i]);
+            StreetSegmentInfo nextSegmentInfo = getStreetSegmentInfo(current.segId);
+            //if streets of segments are not the same, there is a turn
+            if(currentSegmentInfo.streetID != nextSegmentInfo.streetID)
+            {
+                pathTravelTime += turn_penalty; //apply turn penalty
+            }
+        }
+
+        curPoint.gCost = current.gCost + findStreetSegmentTravelTime(curPoint.segId);
+    }
+    
+    return neighbours;
 }
 
 // for setting destination point
@@ -83,7 +104,7 @@ Point::Point(int id, LatLon destCoords, Point* parent){
     this->coords = getIntersectionPosition(id);
     this->destCoords=  destCoords;
     this->parent = parent;
-    hCost = findDistanceBetweenTwoPoints(coords, destCoords);
+    hCost = findDistanceBetweenTwoPoints(coords, destCoords)/MAX_STREET_SPEED;
     fCost = gCost + hCost;
 }
 

@@ -8,10 +8,10 @@
 #include <queue>
 class Point{
     public:
-        int id;
+        IntersectionIdx id = -1;
+        StreetSegmentIdx segId = -1;
         Point* parent;
         double gCost = 0, hCost =0, fCost =0;
-        bool isTurn = false;
         LatLon coords, destCoords;
 
         // for setting destination point
@@ -32,4 +32,4 @@ class Point{
         }
 };
 vector<Point> calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids);
-vector<Point> getNeighbours(Point current);
+vector<Point> getNeighbours(Point current, double turn_penalty);

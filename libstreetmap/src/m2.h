@@ -38,3 +38,9 @@ void threadedChangeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* ap
 void changeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* application);
 
 void setDisplayedPath(vector<StreetSegmentIdx> segmentPath); //helper function to set the displayed path on the gui
+void cancelClickingMode_cbk(GtkWidget *widget, ezgl::application *app);
+
+void createRoute_cbk(GtkWidget */*widget*/, ezgl::application *application);
+void createRouteBack_cbk(GtkWidget */*widget*/, ezgl::application *application);
+void enterClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application);
+void exitClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application);

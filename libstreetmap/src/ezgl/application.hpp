@@ -231,7 +231,7 @@ public:
    *          fn prototype: void fn_name(GtkButton* self, ezgl::application* app);
    * The function assumes that the UI has a GtkGrid named "InnerGrid"
    */
-  void create_button(const char *button_text, int insert_row, button_callback_fn button_func);
+  void create_button(const char *button_text, int insert_col, button_callback_fn button_func);
 
   /**
    * Deletes a button by its label (displayed text)

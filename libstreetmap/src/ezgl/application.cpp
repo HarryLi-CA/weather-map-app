@@ -280,21 +280,21 @@ void application::register_default_buttons_callbacks(ezgl::application *applicat
   GObject *zoom_out_button = application->get_object("ZoomOutButton");
   g_signal_connect(zoom_out_button, "clicked", G_CALLBACK(press_zoom_out), application);
 
-  // Connect press_up function to the Up button
-  GObject *shift_up_button = application->get_object("UpButton");
-  g_signal_connect(shift_up_button, "clicked", G_CALLBACK(press_up), application);
+  // // Connect press_up function to the Up button
+  // GObject *shift_up_button = application->get_object("UpButton");
+  // g_signal_connect(shift_up_button, "clicked", G_CALLBACK(press_up), application);
 
-  // Connect press_down function to the Down button
-  GObject *shift_down_button = application->get_object("DownButton");
-  g_signal_connect(shift_down_button, "clicked", G_CALLBACK(press_down), application);
+  // // Connect press_down function to the Down button
+  // GObject *shift_down_button = application->get_object("DownButton");
+  // g_signal_connect(shift_down_button, "clicked", G_CALLBACK(press_down), application);
 
-  // Connect press_left function to the Left button
-  GObject *shift_left_button = application->get_object("LeftButton");
-  g_signal_connect(shift_left_button, "clicked", G_CALLBACK(press_left), application);
+  // // Connect press_left function to the Left button
+  // GObject *shift_left_button = application->get_object("LeftButton");
+  // g_signal_connect(shift_left_button, "clicked", G_CALLBACK(press_left), application);
 
-  // Connect press_right function to the Right button
-  GObject *shift_right_button = application->get_object("RightButton");
-  g_signal_connect(shift_right_button, "clicked", G_CALLBACK(press_right), application);
+  // // Connect press_right function to the Right button
+  // GObject *shift_right_button = application->get_object("RightButton");
+  // g_signal_connect(shift_right_button, "clicked", G_CALLBACK(press_right), application);
 
   // Connect press_proceed function to the Proceed button
   // GObject *proceed_button = application->get_object("ProceedButton");
@@ -321,7 +321,7 @@ void application::create_button(const char *button_text,
     button_callback_fn button_func)
 {
   // get the internal Gtk grid
-  GtkGrid *in_grid = (GtkGrid *)get_object("InnerGrid");
+  GtkGrid *in_grid = (GtkGrid *)get_object("MainCanvasGrid");
 
   // create the new button with the given label
   GtkWidget *new_button = gtk_button_new_with_label(button_text);
@@ -347,17 +347,14 @@ void application::create_button(const char *button_text,
 }
 
 void application::create_button(const char *button_text,
-    int insert_row,
+    int insert_col,
     button_callback_fn button_func)
 {
   // get the internal Gtk grid
-  GtkGrid *in_grid = (GtkGrid *)get_object("InnerGrid");
-
-  // add a row where we want to insert
-  gtk_grid_insert_row(in_grid, insert_row);
+  GtkGrid *in_grid = (GtkGrid *)get_object("MainCanvasGrid");
 
   // create the button
-  create_button(button_text, 0, insert_row, 3, 1, button_func);
+  create_button(button_text, 4, 0, 1, 1, button_func);
 }
 
 void application::create_label(int insert_row, const char *label_text){
@@ -597,7 +594,7 @@ GtkWidget* application::find_widget(const char* widget_name){
 bool application::destroy_button(const char *button_text_to_destroy)
 {
   // get the inner grid
-  GtkGrid *in_grid = (GtkGrid *)get_object("InnerGrid");
+  GtkGrid *in_grid = (GtkGrid *)get_object("MainCanvasGrid");
 
   // the text to delete, in c++ string form
   std::string text_to_del = std::string(button_text_to_destroy);

@@ -1139,6 +1139,24 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    //load graphics
    currentApp = application;
    loadGraphics(application->get_renderer());
+
+   //initializing button that opens pop up window with map choices
+   GObject* createRouteBtn = application->get_object("CreateRouteBtn");
+   g_signal_connect(createRouteBtn,"clicked",G_CALLBACK(createRoute_cbk),application);
+
+   //initizlizing back button on the pop up window with map choices
+   GObject* createRouteBackBtn = application->get_object("routeCreatorBackBtn");
+   g_signal_connect(createRouteBackBtn,"clicked",G_CALLBACK(createRouteBack_cbk),application);
+
+   GObject* enterClickingModeBtn = application->get_object("EnterClickingModeBtn");
+   g_signal_connect(enterClickingModeBtn,"clicked",G_CALLBACK(enterClickingMode_cbk),application);
+
+   GObject* exitBtn = application->get_object("ExitRouteModeBtn");
+   g_signal_connect(exitBtn,"clicked",G_CALLBACK(exitClickingMode_cbk),application);
+   
+   gtk_widget_hide((GtkWidget*)exitBtn);
+
+   //application->create_button("EXIT ROUTE CLICKING",4,cancelClickingMode_cbk);
 }
 
 void setCameraPosition(ezgl::point2d point, ezgl::camera& camera)
@@ -1416,4 +1434,30 @@ void changeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* applicatio
    }
    else
       threadedChangeCurrentTime_cbk(sliderRange, application);
+}
+
+void createRoute_cbk(GtkWidget */*widget*/, ezgl::application *application){
+   GtkDialog * routeCreatorDialog = GTK_DIALOG(application->get_object("routeCreatorDialog"));
+   gtk_dialog_run(routeCreatorDialog);
+}
+
+void createRouteBack_cbk(GtkWidget */*widget*/, ezgl::application *application){
+   GtkWidget * routeCreatorDialog = GTK_WIDGET(application->get_object("routeCreatorDialog"));
+   gtk_widget_hide(routeCreatorDialog);
+}
+
+void enterClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application){
+   GObject* exitBtn = application->get_object("ExitRouteModeBtn");
+   g_signal_connect(exitBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
+   gtk_widget_show((GtkWidget*)exitBtn);
+
+   GtkWidget * routeCreatorDialog = GTK_WIDGET(application->get_object("routeCreatorDialog"));
+   gtk_widget_hide(routeCreatorDialog);
+}
+
+void exitClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application){
+   GObject* exitBtn = application->get_object("ExitRouteModeBtn");
+   g_signal_connect(exitBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
+   
+   gtk_widget_hide((GtkWidget*)exitBtn);
 }

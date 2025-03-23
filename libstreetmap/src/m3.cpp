@@ -212,7 +212,7 @@ vector<PathSegment> generateRandomPath()
 std::vector<StreetSegmentIdx> findPathBetweenIntersections(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids)
 {
     cout << "Started Finding Path" << endl;
-    int startTime = time(nullptr);
+    int startTime = clock();
     vector<Point*> pointVector = calculatePathArray(turn_penalty, intersect_ids);
     vector<StreetSegmentIdx> streetIds;
     delete pointVector[0];
@@ -221,7 +221,7 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections(const double turn_pen
         streetIds.push_back(pointVector[i]->segId);
         delete pointVector[i];
     }
-    cout<<"Ended finding with: "<< time(nullptr) - startTime << endl;
+    cout<<"Ended finding with: "<< clock() - startTime << endl;
     return streetIds;
 }
 

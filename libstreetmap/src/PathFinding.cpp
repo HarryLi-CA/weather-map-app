@@ -39,7 +39,9 @@ vector<Point*> calculatePathArray(const double turn_penalty, const std::pair<Int
         vector<Point*> neighbours= getNeighbours(current, turn_penalty);
         
         for(Point* neighbour: neighbours){
-            //if(closed.where((element) => element.name==neighbour.name).isEmpty){
+            int i;
+            for(i = 0; i < closed.size() && closed[i]->segId != neighbour->segId; i++){ }
+            if(i >= closed.size()){ // closed does not contain current segment
                 //double newMovementCostToNeighbour = neighbour.gCost;
                 /*
                 future optimization
@@ -65,7 +67,7 @@ vector<Point*> calculatePathArray(const double turn_penalty, const std::pair<Int
                 //     open.items[indexOfNeighbour] = neighbour;
                 //     open.updateItem(neighbour);
                 // }
-            //}
+            }
         }
     }
     cout << "Error: Path Not Found" << endl;
@@ -79,7 +81,7 @@ vector<Point*> getNeighbours(Point* current, double turn_penalty){
     for (int i = 0; i < streetSegs.size(); i++)
     {
         StreetSegmentInfo currentSegmentInfo = osmhelp::getStreetSegmentInfo(streetSegs[i]);
-        if(!(currentSegmentInfo.oneWay && currentSegmentInfo.from == current->id)){ // check one way direction
+        if(!(currentSegmentInfo.oneWay && currentSegmentInfo.from != current->id)){ // check one way direction
             IntersectionIdx curIntIdx = findOppositeIntersection(current->id, streetSegs[i]);
             Point* curPoint = new Point(curIntIdx, current->destCoords, current);
             curPoint->segId = streetSegs[i];

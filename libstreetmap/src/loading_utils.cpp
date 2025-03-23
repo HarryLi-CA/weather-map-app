@@ -5,6 +5,7 @@
 #include <utility>
 #include <iostream>
 #include "StreetsDatabaseAPI.h"
+#include "OSMAPIHelper.h"
 
 using namespace std;
 
@@ -37,27 +38,27 @@ void cacheStreetSegmentToIntersection(vector<vector<IntersectionIdx>*>& connecte
 
 void loadStreetSegmentPoint(vector<vector<LatLon>*>& streetSegmentPoints, vector<float>& speedLimitCache, StreetSegmentIdx streetSegmentIndex)
 {
-    StreetSegmentInfo segmentInfo = getStreetSegmentInfo(streetSegmentIndex);
+    StreetSegmentInfo segmentInfo = osmhelp::getStreetSegmentInfo(streetSegmentIndex);
     vector<LatLon>* pointVector = new vector<LatLon>(); //allocate vector of segment points
     streetSegmentPoints[streetSegmentIndex] = pointVector; //add pointer of vector to loading vector
     speedLimitCache[streetSegmentIndex] = segmentInfo.speedLimit;
-    pointVector->push_back(getIntersectionPosition(segmentInfo.from)); //add position of "from" intersection
+    pointVector->push_back(osmhelp::getIntersectionPosition(segmentInfo.from)); //add position of "from" intersection
     //iterate through all intermediate curve points
     for(int curvePointIndex = 0; curvePointIndex < segmentInfo.numCurvePoints; curvePointIndex++)
     {
         pointVector->push_back(getStreetSegmentCurvePoint(streetSegmentIndex,curvePointIndex)); //add curve point to vector
     }
-    pointVector->push_back(getIntersectionPosition(segmentInfo.to)); //add position of "to" intersection as final point
+    pointVector->push_back(osmhelp::getIntersectionPosition(segmentInfo.to)); //add position of "to" intersection as final point
 }
 
 void loadStreetToStreetSegments(vector<vector<StreetSegmentIdx>*>& streetToStreetSegments){
-    int numStreets = getNumStreets();
+    int numStreets = osmhelp::getNumStreets();
     for(int i = 0; i < numStreets;i++){
         streetToStreetSegments.push_back(new vector<StreetSegmentIdx>());
     }
-    int streetSegments = getNumStreetSegments();
+    int streetSegments = osmhelp::getNumStreetSegments();
     for(StreetSegmentIdx i = 0; i < streetSegments; i++){ 
-        StreetSegmentInfo streetSegInfo = getStreetSegmentInfo(i);
+        StreetSegmentInfo streetSegInfo = osmhelp::getStreetSegmentInfo(i);
         streetToStreetSegments[streetSegInfo.streetID]->push_back(i);
     }
 }
@@ -67,7 +68,7 @@ void loadStreetToStreetSegments(vector<vector<StreetSegmentIdx>*>& streetToStree
 //A helper container streetToIntersectionsHelper that mirrors streetToIntersections is used to identify if an intersection is already contained inside the vector.
 void loadStreetIntersections(vector<vector<IntersectionIdx>*> &streetToIntersections, vector<set<IntersectionIdx>*> &streetToIntersectionsHelper, StreetSegmentIdx currStreetSeg){
     
-    StreetSegmentInfo currSegInfo = getStreetSegmentInfo(currStreetSeg);
+    StreetSegmentInfo currSegInfo = osmhelp::getStreetSegmentInfo(currStreetSeg);
     StreetIdx currStreet = currSegInfo.streetID;
 
     set<IntersectionIdx>* currStreetIntersectionSet = streetToIntersectionsHelper[currStreet];
@@ -103,8 +104,8 @@ void loadTwoStreetsIntersections(unordered_map<pair<StreetIdx,StreetIdx>,vector<
     {
         for(int streetSegIt2 = streetSegIt1 + 1; streetSegIt2 < numOfStreetSegs; ++streetSegIt2)
         {
-            StreetIdx streetAIdx = getStreetSegmentInfo(streetSegmentsOfCurrIntersection[streetSegIt1]).streetID;
-            StreetIdx streetBIdx = getStreetSegmentInfo(streetSegmentsOfCurrIntersection[streetSegIt2]).streetID;
+            StreetIdx streetAIdx = osmhelp::getStreetSegmentInfo(streetSegmentsOfCurrIntersection[streetSegIt1]).streetID;
+            StreetIdx streetBIdx = osmhelp::getStreetSegmentInfo(streetSegmentsOfCurrIntersection[streetSegIt2]).streetID;
 
             //ensure no pair is made up of the same street
             if(streetAIdx != streetBIdx)

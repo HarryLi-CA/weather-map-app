@@ -7,6 +7,7 @@
 #include "pointMath.h"
 #include "StreetsDatabaseAPI.h"
 #include "PathFinding.h"
+#include "OSMAPIHelper.h"
 #include <vector>
 #include <random>
 #include <stdio.h>
@@ -127,8 +128,8 @@ double computePathTravelTime(const double turn_penalty, const std::vector<Street
             //get next segment
             StreetSegmentIdx nextSegmentIndex = path[pathIndex+1];
             //get info for both segments
-            StreetSegmentInfo currentSegmentInfo = getStreetSegmentInfo(segmentIndex);
-            StreetSegmentInfo nextSegmentInfo = getStreetSegmentInfo(nextSegmentIndex);
+            StreetSegmentInfo currentSegmentInfo = osmhelp::getStreetSegmentInfo(segmentIndex);
+            StreetSegmentInfo nextSegmentInfo = osmhelp::getStreetSegmentInfo(nextSegmentIndex);
             //if streets of segments are not the same, there is a turn
             if(currentSegmentInfo.streetID != nextSegmentInfo.streetID)
             {
@@ -150,14 +151,14 @@ vector<PathSegment>* generateRandomPath()
     int pathSize = 100;
     for(int pathIndex = 0; pathIndex < pathSize; pathIndex++)
     {
-        StreetSegmentInfo info = getStreetSegmentInfo(current);
+        StreetSegmentInfo info = osmhelp::getStreetSegmentInfo(current);
         IntersectionIdx nextIntersection = info.to;
         StreetSegmentIdx next = current;
         vector<StreetSegmentIdx>* nextList = getIntersectionStreetSegments(nextIntersection);
         for(int i = 0; i < nextList->size(); i++)
         {
             StreetSegmentIdx nextIndex = (*nextList)[i];
-            StreetSegmentInfo nextInfo = getStreetSegmentInfo(nextIndex);
+            StreetSegmentInfo nextInfo = osmhelp::getStreetSegmentInfo(nextIndex);
             if(nextInfo.to != nextIntersection && nextIndex != current)
             {
                 next = (*nextList)[i];

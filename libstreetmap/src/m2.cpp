@@ -26,8 +26,6 @@
 #include "OpenWeatherHelper.h"
 #include <vector>
 #include <map>
-#include "StreetsDatabaseAPI.h"
-#include "OSMDatabaseAPI.h"
 #include "nodeIDHelper.h"
 #include "ezgl/application.hpp"
 #include "ezgl/graphics.hpp"
@@ -38,6 +36,7 @@
 #include <thread>
 #include <chrono>
 #include "pointMath.h"
+#include "OSMAPIHelper.h"
 
 using namespace std;
 
@@ -541,7 +540,7 @@ void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to
    }
    if(clicked->featureType == ROAD && clicked->dataIndex < getNumStreetSegments()) //clicked on street segment
    {
-      StreetSegmentInfo segmentInfo = getStreetSegmentInfo(clicked->dataIndex);
+      StreetSegmentInfo segmentInfo = osmhelp::getStreetSegmentInfo(clicked->dataIndex);
       string streetName = getStreetName(segmentInfo.streetID);
       app->update_message("Clicked Street: " + streetName);
       
@@ -623,7 +622,7 @@ void threadedTimedRedraw(volatile bool& needRedraw){
 void threadedLoadFeatures(){
    cout<<"thread start"<<endl;
    thread t1;
-   volatile bool needRedraw = true; volatile bool threadDone = false;
+   volatile bool needRedraw = true;
    if(enableThreading){
       t1 = thread (threadedTimedRedraw, ref(needRedraw));
    }
@@ -640,11 +639,12 @@ void threadedLoadFeatures(){
       streetLengthCache.push_back(streetLength); //cache street length
    }
    
+
    //Add intersection features
    for(IntersectionIdx intersectionIndex = 0; intersectionIndex < getNumIntersections(); intersectionIndex++)
    {
       vector<ezgl::point2d>* points = new vector<ezgl::point2d>; //create vector to add points
-      ezgl::point2d translatedPoint = LatLonToPoint2D(getIntersectionPosition(intersectionIndex)); //get intersection coor
+      ezgl::point2d translatedPoint = LatLonToPoint2D(osmhelp::getIntersectionPosition(intersectionIndex)); //get intersection coor
       points->push_back(translatedPoint); //add singular point to point list
       MapFeature* mapFeature = new MapFeature(100,points,kColorHighlight,POINT,MapFeatureType::INTERSECTION,(int)intersectionIndex); //add intersection as map feature
       
@@ -688,7 +688,7 @@ void threadedLoadFeatures(){
             }
          }
       }
-      auto segmentInfo = getStreetSegmentInfo(streetSegmentIndex); //street segment info
+      auto segmentInfo = osmhelp::getStreetSegmentInfo(streetSegmentIndex); //street segment info
       int roadLayer = 1;
    
       ezgl::color roadColor = kColorBasicRoad; //colour of feature (default is building) 
@@ -924,7 +924,7 @@ void loadFeatures()
    //go through all features to find largest and smallest latlon points
    for(IntersectionIdx i = 0; i < getNumIntersections(); i++)
    {
-      LatLon point = getIntersectionPosition(i); //get position of map feature
+      LatLon point = osmhelp::getIntersectionPosition(i); //get position of map feature
       updateMaximumLatLon(minimumLatitude,minimumLongitude,maximumLatitude,maximumLongitude,point); //compare/replace max and min to current values
    }
 
@@ -1147,7 +1147,7 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
 
          intersectionInfo.append(getIntersectionName(intersectionList[i][j]) + (", "));
 
-         ezgl::point2d intersectionPoint = LatLonToPoint2D(getIntersectionPosition(intersectionList[i][j]));
+         ezgl::point2d intersectionPoint = LatLonToPoint2D(osmhelp::getIntersectionPosition(intersectionList[i][j]));
          cameraMidPoint = cameraMidPoint + intersectionPoint;
          cameraPoints++;
 
@@ -1163,7 +1163,7 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
 
    for(int i = 0; i < numOfIntersectionLists; i++){
       for(int j = 0; j < intersectionList[i].size(); j++){
-         ezgl::point2d intersectionPoint = LatLonToPoint2D(getIntersectionPosition(intersectionList[i][j]));
+         ezgl::point2d intersectionPoint = LatLonToPoint2D(osmhelp::getIntersectionPosition(intersectionList[i][j]));
          camRect = updateBounds(camRect, intersectionPoint);
       }
    }

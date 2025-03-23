@@ -27,6 +27,7 @@
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
 #include "Helper.h"
+#include "OSMAPIHelper.h"
 #include <thread>
 #include <vector>
 #include <cmath>
@@ -100,9 +101,9 @@ bool loadMap(std::string map_streets_database_filename) {
         return false;
     }
 
-    numIntersections = getNumIntersections(); //load number of intersections once to avoid excessive calculations
-    numStreetSegments = getNumStreetSegments(); //load number of street segments once to avoid excessive calculations
-    numStreets = getNumStreets(); //load number of streets
+    numIntersections = osmhelp::getNumIntersections(); //load number of intersections once to avoid excessive calculations
+    numStreetSegments = osmhelp::getNumStreetSegments(); //load number of street segments once to avoid excessive calculations
+    numStreets = osmhelp::getNumStreets(); //load number of streets
 
     intersectionToStreetSegments.resize(numIntersections);
     streetSegmentsToIntersections.resize(numStreetSegments,nullptr);
@@ -150,6 +151,7 @@ void closeMap() {
     delete2DVectorPointers<IntersectionIdx>(streetToIntersections);
     delete2DVectorPointers<LatLon>(streetSegmentPoints);
     delete2DVectorPointers<IntersectionIdx>(streetToStreetSegments);
+    osmhelp::reset();
 
     auto twoStreetIntersectionIt = twoStreetsToIntersections.begin();
     while(twoStreetIntersectionIt != twoStreetsToIntersections.end()){
@@ -206,10 +208,10 @@ double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
     {
         return streetSegmentLengthCache[street_segment_id]; //if segment length is cached, return cached value
     }
-    StreetSegmentInfo streetSegInfo = getStreetSegmentInfo(street_segment_id); //get street segment info
+    StreetSegmentInfo streetSegInfo = osmhelp::getStreetSegmentInfo(street_segment_id); //get street segment info
     double streetSegmentLength = 0; //initialize total segment length to 0
     //iterate through all curve points
-    LatLon fromCurvePoint = getIntersectionPosition(streetSegInfo.from); //get first curve point
+    LatLon fromCurvePoint = osmhelp::getIntersectionPosition(streetSegInfo.from); //get first curve point
     LatLon toCurvePoint; //initialize sequential curve point
     vector<LatLon> curvePoints = *streetSegmentPoints[street_segment_id];
     for(int curvePointIndex = 0; curvePointIndex < streetSegmentPoints[street_segment_id]->size() - 1; curvePointIndex++)
@@ -257,8 +259,8 @@ double findStreetSegmentTurnAngle(StreetSegmentIdx src_street_segment_id,StreetS
         return NO_ANGLE; //return identifier for no results to indicate one of the street segment ids is invalid
     }
     //get street segment info
-    StreetSegmentInfo srcInfo = getStreetSegmentInfo(src_street_segment_id); //src street info
-    StreetSegmentInfo dstInfo = getStreetSegmentInfo(dst_street_segment_id); //dst street info
+    StreetSegmentInfo srcInfo = osmhelp::getStreetSegmentInfo(src_street_segment_id); //src street info
+    StreetSegmentInfo dstInfo = osmhelp::getStreetSegmentInfo(dst_street_segment_id); //dst street info
     //intialize common values
     IntersectionIdx intersectionID; //index of common intersection
     LatLon intersectionPoint; //latlon position of common intersetcion
@@ -277,7 +279,7 @@ double findStreetSegmentTurnAngle(StreetSegmentIdx src_street_segment_id,StreetS
     {
         return NO_ANGLE; //if segments do not share any common intersections, return an identifier for no results
     }
-    intersectionPoint = getIntersectionPosition(intersectionID); //get position of intersection
+    intersectionPoint = osmhelp::getIntersectionPosition(intersectionID); //get position of intersection
     
     LatLon srcExitPoint; //point right before intersection along src segment
     LatLon dstEnterPoint; //point right after intersection along dst segment
@@ -339,7 +341,7 @@ std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersect
     for(int connectedStreetSegmentVectorIndex = 0; connectedStreetSegmentVectorIndex < connectedStreetSegments->size(); connectedStreetSegmentVectorIndex++)
     {
         StreetSegmentIdx streetSegmentIndex = (*connectedStreetSegments)[connectedStreetSegmentVectorIndex]; //connected street segment index   
-        StreetSegmentInfo segInfo = getStreetSegmentInfo(streetSegmentIndex); //info of connected street segment
+        StreetSegmentInfo segInfo = osmhelp::getStreetSegmentInfo(streetSegmentIndex); //info of connected street segment
         
         //if the segment is a one-way road and the intersection is not the roading being driven out of, skip this iteration
         if(segInfo.oneWay && segInfo.from != intersection_id)
@@ -378,7 +380,7 @@ IntersectionIdx findClosestIntersection(LatLon my_position){
     int closestNode = -1; // return -1 if no intersections exist
     double closestDist = DBL_MAX; // initial value as maximum distance
     for(int i = 0; i < numIntersections; i++){ // loop through intersections
-        LatLon curLatLon = getIntersectionPosition(i);
+        LatLon curLatLon = osmhelp::getIntersectionPosition(i);
         double curDist = findDistanceBetweenTwoPoints(my_position, curLatLon); // find distance of current interection with point
         if(i==0 || closestDist > curDist){ // save minimum distance
             closestDist = curDist;
@@ -459,11 +461,11 @@ LatLonBounds findStreetBoundingBox (StreetIdx street_id){
     vector<LatLon> locations = {};
     
     for(StreetSegmentIdx i = 0; i < streetSegments; i++){ // loop through each street segment
-        StreetSegmentInfo streetSegInfo = getStreetSegmentInfo(i);
+        StreetSegmentInfo streetSegInfo = osmhelp::getStreetSegmentInfo(i);
         if(streetSegInfo.streetID == street_id){ //check if current segment is part of the street
             int curvesAmt = streetSegInfo.numCurvePoints;
-            locations.push_back(getIntersectionPosition(streetSegInfo.from)); // push all points to vector
-            locations.push_back(getIntersectionPosition(streetSegInfo.to));
+            locations.push_back(osmhelp::getIntersectionPosition(streetSegInfo.from)); // push all points to vector
+            locations.push_back(osmhelp::getIntersectionPosition(streetSegInfo.to));
             for(int j = 0; j < curvesAmt; j++){
                 locations.push_back(getStreetSegmentCurvePoint(i,j));
             }

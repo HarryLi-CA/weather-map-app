@@ -4,6 +4,7 @@
 #include <set>
 #include "StreetsDatabaseAPI.h"
 #include "containerStructs.h"
+#include "OSMAPIHelper.h"
 using namespace std;
 
 //Finds connected street segments to a given intersection and store them in a vector 

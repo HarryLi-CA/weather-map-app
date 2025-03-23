@@ -1,7 +1,7 @@
-
 #include "PathFinding.h"
 #include "m1.h"
 #include "m3.h"
+#include "OSMAPIHelper.h"
 #include <vector>
 #include <stdio.h>
 #include <queue>
@@ -77,8 +77,8 @@ vector<Point> getNeighbours(Point current, double turn_penalty){
 
         double pathTravelTime = 0;
         if(current.parent != nullptr){
-            StreetSegmentInfo currentSegmentInfo = getStreetSegmentInfo(streetSegs[i]);
-            StreetSegmentInfo nextSegmentInfo = getStreetSegmentInfo(current.segId);
+            StreetSegmentInfo currentSegmentInfo = osmhelp::getStreetSegmentInfo(streetSegs[i]);
+            StreetSegmentInfo nextSegmentInfo = osmhelp::getStreetSegmentInfo(current.segId);
             //if streets of segments are not the same, there is a turn
             if(currentSegmentInfo.streetID != nextSegmentInfo.streetID)
             {
@@ -95,13 +95,13 @@ vector<Point> getNeighbours(Point current, double turn_penalty){
 // for setting destination point
 Point::Point(int id){
     this->id = id;
-    this->coords = getIntersectionPosition(id);
+    this->coords = osmhelp::getIntersectionPosition(id);
 }
 
 //default constructor
 Point::Point(int id, LatLon destCoords, Point* parent){
     this->id = id;
-    this->coords = getIntersectionPosition(id);
+    this->coords = osmhelp::getIntersectionPosition(id);
     this->destCoords=  destCoords;
     this->parent = parent;
     hCost = findDistanceBetweenTwoPoints(coords, destCoords)/MAX_STREET_SPEED;

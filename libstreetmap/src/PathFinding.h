@@ -13,6 +13,7 @@ class Point{
         Point* parent;
         double gCost = 0, hCost =0, fCost =0;
         bool isPath = false;
+        bool isTraversed = false;
         LatLon coords, destCoords;
 
         // for setting destination point

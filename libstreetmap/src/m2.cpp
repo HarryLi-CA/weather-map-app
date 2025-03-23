@@ -85,7 +85,7 @@ const double kRoadBorderWidth = 0.5; //width of road borders
 const double TILERATIO = 0.000005805;
 const double kSpatialIndexingThreshold = DBL_MAX;//10; //maximum screen-to-world ratio before quad tree rendering is enabled
 const double kCameraBoundsExtension = 0; //
-const bool enableThreading = true;
+const bool enableThreading = false;
 
 //graphics
 ezgl::application* currentApp = nullptr;

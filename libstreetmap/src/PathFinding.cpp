@@ -1,12 +1,13 @@
 #include "PathFinding.h"
 #include "m1.h"
 #include "m3.h"
+#include "Heap.h"
 #include "OSMAPIHelper.h"
 #include <vector>
 #include <stdio.h>
 #include <queue>
 
-#define MAX_STREET_SPEED 60 // m/s = 216km/h
+#define MAX_STREET_SPEED 36.2 // m/s = 130km/h
 
 using namespace std;
 
@@ -15,58 +16,54 @@ vector<Point*> calculatePathArray(const double turn_penalty, const std::pair<Int
     Point* start = new Point(intersect_ids.first, destination->coords, nullptr);
     Point* current = start;
 
-    priority_queue <Point*, vector<Point*>, PointerCompare> open;
+    Heap open;
     vector<Point*> closed={destination};
+    vector<Point*> segToPoint(osmhelp::getNumStreetSegments(), nullptr);
 
     start->gCost = 0;
     start->destCoords = destination->coords;
-    open.push(start);
-    while(open.size() > 0){
-        closed.push_back(open.top()); open.pop();
+    open.add(start);
+    while(open.length() > 0){
+        closed.push_back(open.removeFirst());
         current = closed.back();
+        current->isTraversed = true;
+
         if(current->id == destination->id){
             vector<Point*> path = current->retracePath();
             for(int i = 0; i <closed.size(); i++)
                 if(!closed[i]->isPath)
                     delete closed[i];
-            while(open.size() > 0){
-                delete open.top();
-                open.pop();
-            }
+            for(int i = 0; i <open.items.size(); i++)
+                delete open.items[i];
+            open.items.clear();
+            open.currentItemCount = 0;
             return path;
         }
 
         vector<Point*> neighbours= getNeighbours(current, turn_penalty);
         
         for(Point* neighbour: neighbours){
-            int i;
-            for(i = 0; i < closed.size() && closed[i]->segId != neighbour->segId; i++){ }
-            if(i >= closed.size()){ // closed does not contain current segment
-                //double newMovementCostToNeighbour = neighbour.gCost;
-                /*
-                future optimization
-                vector<Point> neighbourInOpenvector = open.items.where((element) => element.name==neighbour.name).tovector();
+            if(segToPoint[neighbour->segId] == nullptr || !segToPoint[neighbour->segId]->isTraversed){ // closed does not contain current segment
 
-                if(neighbourInOpenvector.isEmpty || newMovementCostToNeighbour<neighbourInOpenvector[0].gCost!){
-                neighbour.gCost = newMovementCostToNeighbour;
-                neighbour.hCost = calcDistance(
-                    neighbour.coords[0],
-                    neighbour.coords[1],
-                    destination.coords[0],
-                    destination.coords[1],
-                );
-                */
-                neighbour->updateFCost();
+                Point* neighbourInOpen = segToPoint[neighbour->segId];
 
-                
-                // if(neighbourInOpenvector == null||neighbourInOpenvector.length<=0){
-                    open.push(neighbour);
-                // }
-                // else{
-                //     int indexOfNeighbour =open.items.indexOf(neighbourInOpenvector[0]);
-                //     open.items[indexOfNeighbour] = neighbour;
-                //     open.updateItem(neighbour);
-                // }
+                if(neighbourInOpen == nullptr|| neighbour->gCost < neighbourInOpen->gCost){
+                    neighbour->updateFCost();
+                    if(neighbourInOpen == nullptr){
+                        open.add(neighbour);
+                        segToPoint[neighbour->segId] = neighbour;
+                    }
+                    else{
+                        segToPoint[neighbour->segId]->gCost = neighbour->gCost;
+                        segToPoint[neighbour->segId]->parent = neighbour->parent;
+                        segToPoint[neighbour->segId]->coords = neighbour->coords;
+                        segToPoint[neighbour->segId]->id = neighbour->id;
+                        segToPoint[neighbour->segId]->updateFCost();
+                        open.updateItem(segToPoint[neighbour->segId]);
+                        delete neighbour;
+                    }
+                }
+
             }
         }
     }
@@ -122,9 +119,6 @@ Point::Point(int id, LatLon destCoords, Point* parent){
 }
 
 Point::~Point(){
-    if(parent!=nullptr){
-        parent == nullptr;
-    }
 }
 
 void Point::updateFCost(){

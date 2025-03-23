@@ -123,7 +123,7 @@ vector<PathSegment> generateFatestPath(IntersectionIdx from, IntersectionIdx to)
     //if intersection path is empty (or invalid) return empty path
     if(segmentPath.size() == 0){return path;}
 
-    for(int pathIndex = 0; pathIndex < segmentPath.size() - 1; pathIndex++)
+    for(int pathIndex = 0; pathIndex < segmentPath.size(); pathIndex++)
     {
         StreetSegmentInfo segmentInfo = getStreetSegmentInfo(segmentPath[pathIndex]);
 

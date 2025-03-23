@@ -55,17 +55,18 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections(const double turn_pen
 
 struct PathSegment
 {
+    IntersectionIdx fromIdx;
     ezgl::point2d from;
+    IntersectionIdx toIdx;
     ezgl::point2d to;
     StreetSegmentIdx segmentIndex;
+    bool reverse;
 };
 
 
 // draw path over roads on the map
 void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ezgl::color colour, double scaling);
 
-//generates random path for testing
-vector<PathSegment> generateRandomPath();
 //generate path
 vector<PathSegment> generateFatestPath(IntersectionIdx from, IntersectionIdx to);
 

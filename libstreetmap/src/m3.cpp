@@ -99,6 +99,9 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
         ezgl::point2d secondPoint = LatLonToPoint2D((*points)[points->size()/2 + 1]);
 
         ezgl::point2d deltaPosition = normalize(secondPoint - firstPoint); //get direction vector of path
+
+        if(pathSeg.reverse){deltaPosition = {-deltaPosition.x,-deltaPosition.y};} //if segment is reversed, display arrows in reverse direction
+
         ezgl::point2d middlePoint = midpoint(firstPoint,secondPoint); //point where the arrow will be drawn
         double arrowDistance = getDistanceToClosest(middlePoint,arrowPositions);//get distance to closest arrow
         double arrowSize = kPathArrowAbsoluteSize;
@@ -135,13 +138,40 @@ vector<PathSegment> getPathSegments(vector<StreetSegmentIdx>& segmentPath)
     for(int pathIndex = 0; pathIndex < segmentPath.size(); pathIndex++)
     {
         StreetSegmentInfo segmentInfo = getStreetSegmentInfo(segmentPath[pathIndex]);
+        
 
-        ezgl::point2d from = LatLonToPoint2D(getIntersectionPosition(segmentInfo.from));
-        ezgl::point2d to = LatLonToPoint2D(getIntersectionPosition(segmentInfo.to));
+        IntersectionIdx fromIntersection = segmentInfo.from;
+        IntersectionIdx toIntersection = segmentInfo.to;
+        bool reverse = false;
+
+        if(pathIndex < segmentPath.size() - 1) //check path segfment to see if segment should be evaluated in reverse
+        {
+            StreetSegmentInfo nextSegmentInfo = getStreetSegmentInfo(segmentPath[pathIndex+1]);
+            if(nextSegmentInfo.from == segmentInfo.from || nextSegmentInfo.to == segmentInfo.from)
+            {
+                fromIntersection = segmentInfo.to;
+                toIntersection = segmentInfo.from;
+                reverse = true;
+            }
+        }
+        else //if segment is the final one, check previous segment
+        {
+            cout << "checking last" << endl;
+            StreetSegmentInfo prevSegmentInfo = getStreetSegmentInfo(segmentPath[pathIndex-1]);
+            if(prevSegmentInfo.from == segmentInfo.to || prevSegmentInfo.to == segmentInfo.to)
+            {
+                fromIntersection = segmentInfo.to;
+                toIntersection = segmentInfo.from;
+                reverse = true;
+            }
+        }
+
+        ezgl::point2d from = LatLonToPoint2D(getIntersectionPosition(fromIntersection));
+        ezgl::point2d to = LatLonToPoint2D(getIntersectionPosition(toIntersection));
 
         StreetSegmentIdx commonSegment = segmentPath[pathIndex];
     
-        PathSegment pathSegment = {from,to,commonSegment};
+        PathSegment pathSegment = {fromIntersection,from,toIntersection,to,commonSegment,reverse};
         path.push_back(pathSegment);
     }
 
@@ -173,40 +203,6 @@ double computePathTravelTime(const double turn_penalty, const std::vector<Street
         }
     }
     return pathTravelTime;
-}
-
-vector<PathSegment> generateRandomPath()
-{
-
-    srand(time(NULL));
-    StreetSegmentIdx start = rand()%(getNumStreetSegments());
-    vector<PathSegment> path;
-    StreetSegmentIdx current = start;
-
-    int pathSize = 100;
-    for(int pathIndex = 0; pathIndex < pathSize; pathIndex++)
-    {
-        StreetSegmentInfo info = osmhelp::getStreetSegmentInfo(current);
-        IntersectionIdx nextIntersection = info.to;
-        StreetSegmentIdx next = current;
-        vector<StreetSegmentIdx>* nextList = getIntersectionStreetSegments(nextIntersection);
-        for(int i = 0; i < nextList->size(); i++)
-        {
-            StreetSegmentIdx nextIndex = (*nextList)[i];
-            StreetSegmentInfo nextInfo = osmhelp::getStreetSegmentInfo(nextIndex);
-            if(nextInfo.to != nextIntersection && nextIndex != current)
-            {
-                next = (*nextList)[i];
-                break;
-            }
-        }
-        vector<LatLon>* points = getStreetSegmentPoints(current);
-
-        path.push_back({LatLonToPoint2D((*points)[0]), LatLonToPoint2D((*points)[points->size() - 1]), current}); 
-        current = next;
-    }
-
-    return path;
 }
 
 std::vector<StreetSegmentIdx> findPathBetweenIntersections(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids)

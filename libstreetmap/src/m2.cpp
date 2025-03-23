@@ -86,6 +86,7 @@ const double TILERATIO = 0.000005805;
 const double kSpatialIndexingThreshold = DBL_MAX;//10; //maximum screen-to-world ratio before quad tree rendering is enabled
 const double kCameraBoundsExtension = 0; //
 const bool enableThreading = true;
+bool clickingMode = false; //whether the program is in clicking mode or not
 
 //graphics
 ezgl::application* currentApp = nullptr;
@@ -548,30 +549,9 @@ double getScaleFactor()
    return mainCanvas->get_camera().get_world_scale_factor().x;
 }
 
-void clickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::application* app) //function to manage clicks on a specific MapFeature
+
+void clickingModeClickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::application* app) //clicked on a feature while in clicking mode
 {
-   
-   mapFeaturesMutex.lock();
-
-   mapFeatures.highlightFeature(clicked, true);
-
-   mapFeaturesMutex.unlock();
-
-   if(clicked->featureType == FEATURE) //clicked on feature
-   {
-      LatLon currentFeaturePoint = getFeaturePoint(clicked->dataIndex, 0);
-      IntersectionIdx closestInter = findClosestIntersection(currentFeaturePoint);
-
-      app->update_message("Clicked POI: " + getFeatureName(clicked->dataIndex) + ", Near: " + getKnownIntersectionName(closestInter));
-
-   }
-   if(clicked->featureType == ROAD && clicked->dataIndex < getNumStreetSegments()) //clicked on street segment
-   {
-      StreetSegmentInfo segmentInfo = osmhelp::getStreetSegmentInfo(clicked->dataIndex);
-      string streetName = getStreetName(segmentInfo.streetID);
-      app->update_message("Clicked Street: " + streetName);
-      
-   }
    if(clicked->featureType == MapFeatureType::INTERSECTION && clicked->dataIndex < getNumIntersections()) //clicked on intersection
    {
       string intersection = getKnownIntersectionName(clicked->dataIndex);
@@ -610,8 +590,39 @@ void clickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::applicat
       {
          paths[0] = {};
       }
-      
+   }
+   mainCanvas->redraw();
+}
 
+void clickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::application* app) //function to manage clicks on a specific MapFeature
+{
+   
+   mapFeaturesMutex.lock();
+
+   mapFeatures.highlightFeature(clicked, true);
+
+   mapFeaturesMutex.unlock();
+
+   if(clicked->featureType == FEATURE) //clicked on feature
+   {
+      LatLon currentFeaturePoint = getFeaturePoint(clicked->dataIndex, 0);
+      IntersectionIdx closestInter = findClosestIntersection(currentFeaturePoint);
+
+      app->update_message("Clicked POI: " + getFeatureName(clicked->dataIndex) + ", Near: " + getKnownIntersectionName(closestInter));
+
+   }
+   if(clicked->featureType == ROAD && clicked->dataIndex < getNumStreetSegments()) //clicked on street segment
+   {
+      StreetSegmentInfo segmentInfo = osmhelp::getStreetSegmentInfo(clicked->dataIndex);
+      string streetName = getStreetName(segmentInfo.streetID);
+      app->update_message("Clicked Street: " + streetName);
+      
+   }
+   if(clicked->featureType == MapFeatureType::INTERSECTION && clicked->dataIndex < getNumIntersections()) //clicked on intersection
+   {
+      string intersection = getKnownIntersectionName(clicked->dataIndex);
+      app->update_message("Clicked Intersection: " + intersection);
+      prevClickedIntersection = clicked->dataIndex;
    }
    mainCanvas->redraw();
 }
@@ -619,8 +630,17 @@ void clickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::applicat
 void setDisplayedPath(vector<StreetSegmentIdx> segmentPath)
 {
    paths[0] = getPathSegments(segmentPath);
+   primarySelection = paths[0][0].fromIdx;
+   secondarySelection = paths[0][paths[0].size()-1].toIdx;
+   currentApp->get_canvas("MainCanvas")->redraw();
+}
+
+void clearPathDisplay()
+{
    primarySelection = -1;
    secondarySelection = -1;
+   paths[0] = {};
+   currentApp->get_canvas("MainCanvas")->redraw();
 }
 
 void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y)
@@ -674,7 +694,14 @@ void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, dou
    mapFeaturesMutex.unlock();
    if(clicked != nullptr)
    {
-      clickedOnFeature(clicked, event, app); //run click events on the clicked feature  
+      if(clickingMode)
+      {
+         clickingModeClickedOnFeature(clicked, event, app);
+      }
+      else
+      {
+         clickedOnFeature(clicked, event, app); //run click events on the clicked feature  
+      }
    }
 }
 
@@ -1001,6 +1028,12 @@ void unloadGraphics()
 
 void loadFeatures()
 {
+   //set paths
+   if(paths.size() == 0)
+   {
+      paths.push_back({});
+   }
+
    //threadedLoadFeatures
    double minimumLatitude = DBL_MAX; //smallest latitude in city
    double minimumLongitude = DBL_MAX; //smallest longitude in city
@@ -1016,10 +1049,6 @@ void loadFeatures()
    minPoints = LatLon(minimumLatitude, minimumLongitude); //consolidate minimum latitude and longitude in latlon object
    maxPoints = LatLon(maximumLatitude, maximumLongitude); //consolodate maximum latitude and longitude in latlon object
    setLatLonBounds(minPoints, maxPoints); //set constant for calculations in renderHelper
-
-   cout << "generating path" << endl;
-   vector<PathSegment> genPath = generateRandomPath();
-   paths.push_back(genPath);
 
    currentScope.min = minPoints;
    currentScope.max = maxPoints;
@@ -1351,6 +1380,9 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
    //Load graphics
    loadGraphics(application->get_renderer());
 
+   //Reset default values
+   clickingMode = false;
+
 
    //Display sunrise onto ui
    std::time_t sunriseTimeFull = currentWeather.sunrise;
@@ -1469,6 +1501,9 @@ void enterClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application
    g_signal_connect(exitBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
    gtk_widget_show((GtkWidget*)exitBtn);
 
+   clickingMode = true;
+   clearPathDisplay();
+
    GtkWidget * routeCreatorDialog = GTK_WIDGET(application->get_object("routeCreatorDialog"));
    gtk_widget_hide(routeCreatorDialog);
 }
@@ -1476,6 +1511,9 @@ void enterClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application
 void exitClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application){
    GObject* exitBtn = application->get_object("ExitRouteModeBtn");
    g_signal_connect(exitBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
+
+   clickingMode = false;
+   clearPathDisplay();
    
    gtk_widget_hide((GtkWidget*)exitBtn);
 }

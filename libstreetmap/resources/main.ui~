@@ -573,6 +573,7 @@
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="margin-top">10</property>
+                <property name="margin-bottom">15</property>
                 <property name="label" translatable="yes">Please select the desired starting intersection:</property>
               </object>
               <packing>
@@ -632,6 +633,7 @@
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="margin-top">10</property>
+                <property name="margin-bottom">15</property>
                 <property name="label" translatable="yes">Please select the desired ending intersection:</property>
               </object>
               <packing>
@@ -1069,7 +1071,7 @@
             </child>
             <child>
               <object class="GtkButton" id="EnterClickingModeBtn">
-                <property name="label" translatable="yes">Enter Clicking Mode</property>
+                <property name="label" translatable="yes">Enter Route Clicking Mode</property>
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
                 <property name="receives-default">True</property>

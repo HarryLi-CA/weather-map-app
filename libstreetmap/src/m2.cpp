@@ -1484,7 +1484,6 @@ void typedRouteConfirm_cbk(GtkWidget */*widget*/, ezgl::application *application
    vector<vector<IntersectionIdx>> endingIntersections = findIntersectionsfromSearchbars(application,"routeEndSearchBar1","routeEndSearchBar2",errorMsg,validInput,"Ending");
 
    if(validInput){
-      string appy = to_string(startingIntersections.size());
 
       GtkWidget * routeCreatorDialog = GTK_WIDGET(application->get_object("routeCreatorDialog"));
       gtk_widget_hide(routeCreatorDialog);
@@ -1516,13 +1515,10 @@ void typedRouteConfirm_cbk(GtkWidget */*widget*/, ezgl::application *application
             string buttonLabel = to_string(counter) + ": " + getIntersectionName(endingIntersections[i][j]);
 
             application->create_button(buttonLabel.c_str(),counter,selectIntersection_cbk,&endingIntersectionInfo[counter-1]);
-            appy.append(getIntersectionName(endingIntersections[i][j]) + (", "));
             counter++;
          }
       }
       numEndingIntersections = counter;
-
-      application->update_message(appy);
 
       GtkWidget * startingIntersectionDialog = GTK_WIDGET(application->get_object("intersectionSelectorDialog1"));
       gtk_widget_show(startingIntersectionDialog);
@@ -1640,5 +1636,14 @@ void selectIntersection_cbk(GtkWidget */*widget*/, pair<pair<int,IntersectionIdx
       endingIntersectionInfo.clear();
 
       //start intersection searching
+      //checks for same intersection
+
+      if(selectedRoute.first == selectedRoute.second){
+         application->create_popup_message("Error","\nCannot start and end at same intersection!\n");
+         return;
+      }
+
+      setDisplayedPath(findPathBetweenIntersections(10,selectedRoute));
+
    }
 }

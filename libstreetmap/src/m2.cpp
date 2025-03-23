@@ -1165,6 +1165,12 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    GObject* confirmRouteBtn = application->get_object("confirmRouteBtn");
    g_signal_connect(confirmRouteBtn,"clicked",G_CALLBACK(typedRouteConfirm_cbk),application);
 
+   GObject* helpBtn = application->get_object("HelpBtn");
+   g_signal_connect(helpBtn,"clicked",G_CALLBACK(openHelpPopUp_cbk),application);
+
+   GObject* helpBackBtn = application->get_object("HelpDialogBackbtn");
+   g_signal_connect(helpBackBtn,"clicked",G_CALLBACK(closeHelpPopUp_cbk),application);
+
    //application->create_button("EXIT ROUTE CLICKING",4,cancelClickingMode_cbk);
 }
 
@@ -1474,6 +1480,18 @@ void exitClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application)
    gtk_widget_hide((GtkWidget*)exitBtn);
 }
 
+
+void openHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application){
+   GtkWidget * HelpPopUp = GTK_WIDGET(application->get_object("HelpDialog"));
+   gtk_widget_show(HelpPopUp);
+}
+
+void closeHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application){
+
+   GtkWidget * HelpPopUp = GTK_WIDGET(application->get_object("HelpDialog"));
+   gtk_widget_hide(HelpPopUp);
+}
+
 void typedRouteConfirm_cbk(GtkWidget */*widget*/, ezgl::application *application){
 
    bool validInput = true;
@@ -1499,7 +1517,6 @@ void typedRouteConfirm_cbk(GtkWidget */*widget*/, ezgl::application *application
             string buttonLabel = to_string(counter) + ": " + getIntersectionName(startingIntersections[i][j]);
 
             application->create_button(buttonLabel.c_str(),counter,selectIntersection_cbk,&startingIntersectionInfo[counter-1]);
-            appy.append(getIntersectionName(startingIntersections[i][j]) + (", "));
             counter++;
          }
       }

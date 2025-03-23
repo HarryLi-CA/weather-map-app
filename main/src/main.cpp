@@ -88,7 +88,6 @@ int main(int argc, char** argv) {
     // //Clean-up the map data and related data structures
 
     //Clean-up the map data and related data structures
-    
     loadFeatures();
     drawMap();
     std::cout << "Closing map\n";

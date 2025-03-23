@@ -5,6 +5,7 @@
 #include "ezgl/point.hpp"
 #include "ezgl/rectangle.hpp"
 #include "QuadTree.h"
+#include <stdlib.h>
 
 using namespace std;
 
@@ -20,6 +21,23 @@ enum MapFeatureType {
     ROAD,
     FEATURE
 };
+
+
+//class used to easily load, manipulate and draw graphics
+class Graphic
+{
+    public:
+    char* filePath;
+    ezgl::surface* surface;
+    double width;
+    double height;
+
+    Graphic(char* _path);
+    void load(ezgl::renderer* g);
+    void draw(ezgl::renderer* g, double worldScale, ezgl::point2d position, ezgl::point2d offset, double imageScale); //function to draw a graphic on the screen during runtime
+    void clear();
+};
+
 
 //container for an object on a map that specifies how it will be drawn relative to other features
 class MapFeature {

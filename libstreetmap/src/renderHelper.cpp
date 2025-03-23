@@ -9,12 +9,14 @@
 #include "QuadTree.h"
 #include "pointMath.h"
 #include "loading_utils.h"
+#include <stdlib.h>
 
 using namespace std;
 
 static double averageLongitude = 0;
 static double averageLatitude = 0;
 const double kBoundSizeStep = 100000; //discrete steps for bound area
+const double kGraphicsPixelToMeters = 1.0;
 
 void setLatLonBounds(LatLon latlonMin, LatLon latlonMax)
 {
@@ -22,6 +24,29 @@ void setLatLonBounds(LatLon latlonMin, LatLon latlonMax)
     averageLongitude = (latlonMin.longitude() + latlonMax.longitude())/2.0;
 }
 
+
+Graphic::Graphic(char* _path)
+{
+    filePath = _path;
+}
+
+void Graphic::load(ezgl::renderer* g)
+{
+    surface = g->load_png(filePath);
+    width = cairo_image_surface_get_width(surface);
+    height = cairo_image_surface_get_width(surface);
+}
+
+void Graphic::draw(ezgl::renderer* g, double worldScale, ezgl::point2d position, ezgl::point2d offset, double imageScale)
+{
+    double drawScale = kGraphicsPixelToMeters/worldScale;
+    g->draw_surface(surface,{position.x + offset.x*drawScale*height*imageScale, position.y + offset.y*drawScale*height*imageScale},imageScale);
+}
+
+void clear(ezgl::renderer* g)
+{
+    
+}
 
 MapFeature::MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _color, DrawType _drawType, MapFeatureType _featureType, int _index)
 {
@@ -160,7 +185,6 @@ void FeatureList::addFeature(MapFeature* feature, double areaThreshold, double w
     }
     double boundsSize = ((int)(feature->bounds.area()/kBoundSizeStep))*kBoundSizeStep;
     boundsSize = max(boundsSize, (double)kBoundSizeStep); //make sure area is non-zero
-    cout << boundsSize << endl;
     //add every point to spatial indexing
     if(feature->drawType != DrawType::POINT) //large objects and lines should be added in multiple times to prevent clipping
     {

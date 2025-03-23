@@ -71,6 +71,7 @@ const ezgl::color kColorStreetName = {255, 255, 255, 255};
 //scaling values for window resizing
 double initialWidth = -1;
 double initialHeight = -1;
+const double kGraphicsPixelToMeters = 1;
 //define rendering constants
 const double kOnewayIndicatorSize = 4.0; //size from center to vertex of indicator triangle
 const double kOnewayIndicatorSegmentLength = 10.0; //minimum size for a street subsegment to have a directional indicator
@@ -86,6 +87,13 @@ const double TILERATIO = 0.000005805;
 const double kSpatialIndexingThreshold = DBL_MAX;//10; //maximum screen-to-world ratio before quad tree rendering is enabled
 const double kCameraBoundsExtension = 0; //
 const bool enableThreading = true;
+
+//graphics
+Graphic pinIcon("libstreetmap/resources/pin.png");
+const double kPinScale = 0.2;
+
+
+
 LatLonBounds currentScope; // scope of city map
 vector<MapTileData> mapTiles;
 WeatherData currentWeather; // weather including sunset and sunrise in epoch time
@@ -158,7 +166,8 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
             //cout << "drawing point on layer " << feature->layer << endl;
             ezgl::point2d origin = (*(feature->points))[0];
             g->set_color(feature->color);
-            g->fill_arc(origin,7.0/scaling,0.0,360.0);
+            //g->fill_arc(origin,7.0/scaling,0.0,360.0);
+            pinIcon.draw(g,scaling,origin,{0, 0.5},0.2);
             
             feature->wasRendered = true; //feature was fully rendered this cycle
             break;
@@ -898,6 +907,13 @@ void threadedLoadFeatures(){
       t1.join();
 }
 
+void loadGraphics(ezgl::renderer* g)
+{
+   cout << "loading graphics" << endl;
+   pinIcon.load(g);
+   
+}
+
 void loadFeatures()
 {
    //threadedLoadFeatures
@@ -1040,6 +1056,9 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    GtkLabel* selectedTimeLabel = GTK_LABEL(application->get_object("selectedTimeLabel"));
    gtk_label_set_text(selectedTimeLabel,selectedTimeText.c_str());
    hasUIOpened = true; 
+
+   //load graphics
+   loadGraphics(application->get_renderer());
 }
 
 void setCameraPosition(ezgl::point2d point, ezgl::camera& camera)
@@ -1212,6 +1231,8 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
 
    //Load new map info
    loadFeatures();
+   //Load graphics
+   loadGraphics(application->get_renderer());
 
 
    //Display sunrise onto ui

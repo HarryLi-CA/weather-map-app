@@ -3,12 +3,14 @@
 #include "ezgl/application.hpp"
 #include "ezgl/graphics.hpp"
 #include "ezgl/camera.hpp"
+#include "ezgl/canvas.hpp"
 #include "OpenWeatherHelper.h"
 #include "renderHelper.h"
 using namespace std;
 
 void drawMap();
 void loadFeatures(); //create feature objects to be drawn on the map
+void loadGraphics(ezgl::renderer* g);
 void unloadFeatures(); //helper function to unload all dynamically allocated data
 void resetCanvasParameters(ezgl::application* app); //helper function to reset the canvas if values are changed
 double getScaleFactor(); //returns scale factor from mainCanvas object

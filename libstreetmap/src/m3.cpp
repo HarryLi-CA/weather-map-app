@@ -57,8 +57,8 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
     }
 
     //draw endpoint backgrounds
-    double endPointRadius = ((lineWidth/scaling)/scaling)*kPathDisplayScaling*kPathEndpointScaling;
-    double borderRadius = kPathBorderSize/(scaling*0.5*scaling*0.5*M_PI);
+    double endPointRadius = (lineWidth/scaling)*kPathDisplayScaling*kPathEndpointScaling;
+    double borderRadius = kPathBorderSize/(scaling*0.5*M_PI);
     g->fill_arc(startPoint,endPointRadius+borderRadius,0.0,360.0); //draw start point
     g->fill_arc(endPoint,endPointRadius+borderRadius,0.0,360.0); //draw end point
 
@@ -150,7 +150,6 @@ vector<PathSegment>* generateRandomPath()
     int pathSize = 100;
     for(int pathIndex = 0; pathIndex < pathSize; pathIndex++)
     {
-        cout << "adding: " << current << endl;
         StreetSegmentInfo info = getStreetSegmentInfo(current);
         IntersectionIdx nextIntersection = info.to;
         StreetSegmentIdx next = current;

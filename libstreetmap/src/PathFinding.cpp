@@ -72,7 +72,7 @@ vector<Point> getNeighbours(Point current, double turn_penalty){
     for (int i = 0; i < streetSegs.size(); i++)
     {
         StreetSegmentInfo currentSegmentInfo = osmhelp::getStreetSegmentInfo(streetSegs[i]);
-        if(!(currentcurrentSegmentInfo.oneWay && currentcurrentSegmentInfo.from == current.id)){ // check one way direction
+        if(!(currentSegmentInfo.oneWay && currentSegmentInfo.from == current.id)){ // check one way direction
             IntersectionIdx curIntIdx = findOppositeIntersection(current.id, streetSegs[i]);
             Point curPoint = Point(curIntIdx, current.destCoords, &current);
             curPoint.segId = streetSegs[i];

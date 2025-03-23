@@ -22,11 +22,10 @@ vector<Point> calculatePathArray(const double turn_penalty, const std::pair<Inte
     start.destCoords = destination.coords;
     open.push(start);
     while(open.size() > 0){
-        current = &(open.top());
-        closed.push_back(*current); open.pop();
-        current = *(closed[closed.size()-1]);
+        closed.push_back(open.top()); open.pop();
+        current = &(closed.back());
         if(current->id == destination.id){
-            vector<Point> path = current.retracePath();
+            vector<Point> path = current->retracePath();
             return path;
         }
 
@@ -126,7 +125,6 @@ void Point::updateFCost(){
 
 vector<Point> Point::retracePath(){
     vector<Point> curPath;
-    while
     if(this->parent!=nullptr){
         vector<Point> curPath = this->parent->retracePath();
         curPath.push_back(*this);

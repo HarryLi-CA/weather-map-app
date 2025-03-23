@@ -66,6 +66,8 @@ using setup_callback_fn = void (*)(application *app, bool new_window);
  */
 using button_callback_fn = void (*)(GtkWidget *widget, application *app);
 
+using intersection_button_callback_fn = void (*)(GtkWidget *widget, std::pair<std::pair<int,int>,application *> * intersectionInfo);
+
 /**
  * The signature of a user-defined callback function for mouse events
  */
@@ -231,7 +233,20 @@ public:
    *          fn prototype: void fn_name(GtkButton* self, ezgl::application* app);
    * The function assumes that the UI has a GtkGrid named "InnerGrid"
    */
-  void create_button(const char *button_text, int insert_row, button_callback_fn button_func);
+  void create_button(const char *button_text, int insert_col, button_callback_fn button_func);
+
+  void create_button(const char *button_text,
+    int insert_row,
+    intersection_button_callback_fn button_func,
+    std::pair<std::pair<int, int>, ezgl::application *>* intersectionInfo);
+
+  void create_button(const char *button_text,
+    int left,
+    int top,
+    int width,
+    int height,
+    intersection_button_callback_fn button_func,
+    std::pair<std::pair<int, int>, ezgl::application *>* intersectionInfo);
 
   /**
    * Deletes a button by its label (displayed text)
@@ -242,6 +257,8 @@ public:
    * The function assumes that the UI has a GtkGrid named "InnerGrid"
    */
   bool destroy_button(const char *button_text_to_destroy);
+
+  bool destroy_button(const char *button_text_to_destroy,int direction);
 
 
   /**

@@ -20,6 +20,7 @@ double getScaleFactor(); //returns scale factor from mainCanvas object
 
 void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, double scaling, double realWorldScaling, ezgl::camera camera); //helper function to draw specific features on app canvas
 void clickedOnFeature(MapFeature* clicked, ezgl::application* app); //helper function to manage clicks on a specific MapFeature
+void clickingModeClickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::application* app); //helper function to manage clicks on a specific MapFeature while in clicking mode
 
 void initial_setup(ezgl::application *application, bool /*new_window*/);
 
@@ -38,3 +39,22 @@ void threadedChangeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* ap
 void changeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* application);
 
 void setDisplayedPath(vector<StreetSegmentIdx> segmentPath); //helper function to set the displayed path on the gui
+void clearPathDisplay(); //clears path displays
+void cancelClickingMode_cbk(GtkWidget *widget, ezgl::application *app);
+
+void createRoute_cbk(GtkWidget */*widget*/, ezgl::application *application);
+void createRouteBack_cbk(GtkWidget */*widget*/, ezgl::application *application);
+void enterClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application);
+void exitClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application);
+void typedRouteConfirm_cbk(GtkWidget */*widget*/, ezgl::application *application);
+void findIntersectionsfromSearchbars(ezgl::application *application, vector<vector<IntersectionIdx>> &intersectionList, const gchar * searchbarId1, const gchar * searchbarId2, string &errorMsg, bool &validInput, string direction);
+vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::application *application, const gchar * searchbarId1, const gchar * searchbarId2, string &errorMsg, bool &validInput, string direction);
+void selectIntersection_cbk(GtkWidget */*widget*/, pair<pair<int,IntersectionIdx>,ezgl::application *> * intersectionInfo);
+
+void openHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application);
+void closeHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application);
+
+void clickedIntersectionForRoute(IntersectionIdx clickedIntersection,ezgl::application *application);
+void closeRouteClickingDialog_cbk(GtkWidget */*widget*/, ezgl::application *application);
+void clickedStartingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo);
+void clickedEndingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo);

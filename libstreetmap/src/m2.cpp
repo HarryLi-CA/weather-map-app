@@ -85,7 +85,8 @@ const double kRoadBorderWidth = 0.5; //width of road borders
 const double TILERATIO = 0.000005805;
 const double kSpatialIndexingThreshold = DBL_MAX;//10; //maximum screen-to-world ratio before quad tree rendering is enabled
 const double kCameraBoundsExtension = 0; //
-const bool enableThreading = false;
+const bool enableThreading = true;
+bool clickingMode = false; //whether the program is in clicking mode or not
 
 //graphics
 ezgl::application* currentApp = nullptr;
@@ -147,6 +148,13 @@ vector<vector<PathSegment>> paths;
 //selected intersections
 IntersectionIdx primarySelection = -1;
 IntersectionIdx secondarySelection = -1;
+
+vector<pair<pair<int,IntersectionIdx>,ezgl::application *>> startingIntersectionInfo;
+vector<pair<pair<int,IntersectionIdx>,ezgl::application *>> endingIntersectionInfo;
+int numStartingIntersections;
+int numEndingIntersections;
+pair<IntersectionIdx,IntersectionIdx> selectedRoute;
+pair<IntersectionIdx,ezgl::application *> clickedIntersectionInfo;
 
 // void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
 // {
@@ -542,30 +550,9 @@ double getScaleFactor()
    return mainCanvas->get_camera().get_world_scale_factor().x;
 }
 
-void clickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::application* app) //function to manage clicks on a specific MapFeature
+
+void clickingModeClickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::application* app) //clicked on a feature while in clicking mode
 {
-   
-   mapFeaturesMutex.lock();
-
-   mapFeatures.highlightFeature(clicked, true);
-
-   mapFeaturesMutex.unlock();
-
-   if(clicked->featureType == FEATURE) //clicked on feature
-   {
-      LatLon currentFeaturePoint = getFeaturePoint(clicked->dataIndex, 0);
-      IntersectionIdx closestInter = findClosestIntersection(currentFeaturePoint);
-
-      app->update_message("Clicked POI: " + getFeatureName(clicked->dataIndex) + ", Near: " + getKnownIntersectionName(closestInter));
-
-   }
-   if(clicked->featureType == ROAD && clicked->dataIndex < getNumStreetSegments()) //clicked on street segment
-   {
-      StreetSegmentInfo segmentInfo = osmhelp::getStreetSegmentInfo(clicked->dataIndex);
-      string streetName = getStreetName(segmentInfo.streetID);
-      app->update_message("Clicked Street: " + streetName);
-      
-   }
    if(clicked->featureType == MapFeatureType::INTERSECTION && clicked->dataIndex < getNumIntersections()) //clicked on intersection
    {
       string intersection = getKnownIntersectionName(clicked->dataIndex);
@@ -604,8 +591,39 @@ void clickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::applicat
       {
          paths[0] = {};
       }
-      
+   }
+   mainCanvas->redraw();
+}
 
+void clickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::application* app) //function to manage clicks on a specific MapFeature
+{
+   
+   mapFeaturesMutex.lock();
+
+   mapFeatures.highlightFeature(clicked, true);
+
+   mapFeaturesMutex.unlock();
+
+   if(clicked->featureType == FEATURE) //clicked on feature
+   {
+      LatLon currentFeaturePoint = getFeaturePoint(clicked->dataIndex, 0);
+      IntersectionIdx closestInter = findClosestIntersection(currentFeaturePoint);
+
+      app->update_message("Clicked POI: " + getFeatureName(clicked->dataIndex) + ", Near: " + getKnownIntersectionName(closestInter));
+
+   }
+   if(clicked->featureType == ROAD && clicked->dataIndex < getNumStreetSegments()) //clicked on street segment
+   {
+      StreetSegmentInfo segmentInfo = osmhelp::getStreetSegmentInfo(clicked->dataIndex);
+      string streetName = getStreetName(segmentInfo.streetID);
+      app->update_message("Clicked Street: " + streetName);
+      
+   }
+   if(clicked->featureType == MapFeatureType::INTERSECTION && clicked->dataIndex < getNumIntersections()) //clicked on intersection
+   {
+      string intersection = getKnownIntersectionName(clicked->dataIndex);
+      app->update_message("Clicked Intersection: " + intersection);
+      prevClickedIntersection = clicked->dataIndex;
    }
    mainCanvas->redraw();
 }
@@ -613,8 +631,17 @@ void clickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::applicat
 void setDisplayedPath(vector<StreetSegmentIdx> segmentPath)
 {
    paths[0] = getPathSegments(segmentPath);
+   primarySelection = paths[0][0].fromIdx;
+   secondarySelection = paths[0][paths[0].size()-1].toIdx;
+   currentApp->get_canvas("MainCanvas")->redraw();
+}
+
+void clearPathDisplay()
+{
    primarySelection = -1;
    secondarySelection = -1;
+   paths[0] = {};
+   currentApp->get_canvas("MainCanvas")->redraw();
 }
 
 void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y)
@@ -668,7 +695,14 @@ void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, dou
    mapFeaturesMutex.unlock();
    if(clicked != nullptr)
    {
-      clickedOnFeature(clicked, event, app); //run click events on the clicked feature  
+      if(clickingMode)
+      {
+         clickingModeClickedOnFeature(clicked, event, app);
+      }
+      else
+      {
+         clickedOnFeature(clicked, event, app); //run click events on the clicked feature  
+      }
    }
 }
 
@@ -995,6 +1029,12 @@ void unloadGraphics()
 
 void loadFeatures()
 {
+   //set paths
+   if(paths.size() == 0)
+   {
+      paths.push_back({});
+   }
+
    //threadedLoadFeatures
    double minimumLatitude = DBL_MAX; //smallest latitude in city
    double minimumLongitude = DBL_MAX; //smallest longitude in city
@@ -1010,10 +1050,6 @@ void loadFeatures()
    minPoints = LatLon(minimumLatitude, minimumLongitude); //consolidate minimum latitude and longitude in latlon object
    maxPoints = LatLon(maximumLatitude, maximumLongitude); //consolodate maximum latitude and longitude in latlon object
    setLatLonBounds(minPoints, maxPoints); //set constant for calculations in renderHelper
-
-   cout << "generating path" << endl;
-   vector<PathSegment> genPath = generateRandomPath();
-   paths.push_back(genPath);
 
    currentScope.min = minPoints;
    currentScope.max = maxPoints;
@@ -1139,6 +1175,36 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    //load graphics
    currentApp = application;
    loadGraphics(application->get_renderer());
+
+   //initializing button that opens pop up window with map choices
+   GObject* createRouteBtn = application->get_object("CreateRouteBtn");
+   g_signal_connect(createRouteBtn,"clicked",G_CALLBACK(createRoute_cbk),application);
+
+   //initizlizing back button on the pop up window with map choices
+   GObject* createRouteBackBtn = application->get_object("routeCreatorBackBtn");
+   g_signal_connect(createRouteBackBtn,"clicked",G_CALLBACK(createRouteBack_cbk),application);
+
+   GObject* enterClickingModeBtn = application->get_object("EnterClickingModeBtn");
+   g_signal_connect(enterClickingModeBtn,"clicked",G_CALLBACK(enterClickingMode_cbk),application);
+
+   GObject* exitBtn = application->get_object("ExitRouteModeBtn");
+   g_signal_connect(exitBtn,"clicked",G_CALLBACK(exitClickingMode_cbk),application);
+   
+   gtk_widget_hide((GtkWidget*)exitBtn);
+
+   GObject* confirmRouteBtn = application->get_object("confirmRouteBtn");
+   g_signal_connect(confirmRouteBtn,"clicked",G_CALLBACK(typedRouteConfirm_cbk),application);
+
+   GObject* helpBtn = application->get_object("HelpBtn");
+   g_signal_connect(helpBtn,"clicked",G_CALLBACK(openHelpPopUp_cbk),application);
+
+   GObject* helpBackBtn = application->get_object("HelpDialogBackbtn");
+   g_signal_connect(helpBackBtn,"clicked",G_CALLBACK(closeHelpPopUp_cbk),application);
+
+   GObject* closeRouteClickingDialogBtn = application->get_object("closeRouteClickingDialogBtn");
+   g_signal_connect(closeRouteClickingDialogBtn,"clicked",G_CALLBACK(closeRouteClickingDialog_cbk),application);
+
+   //application->create_button("EXIT ROUTE CLICKING",4,cancelClickingMode_cbk);
 }
 
 void setCameraPosition(ezgl::point2d point, ezgl::camera& camera)
@@ -1215,6 +1281,9 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    ezgl::rectangle camRect = application->get_canvas("MainCanvas")->get_camera().get_world();
    int cameraPoints = 0;
    bool firstHightlight = false; //already highlighted an intersection
+
+   int counter = 0;
+
    for(int i = 0; i < numOfIntersectionLists; i++){
       for(int j = 0; j < intersectionList[i].size(); j++){
 
@@ -1314,6 +1383,9 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
    loadFeatures();
    //Load graphics
    loadGraphics(application->get_renderer());
+
+   //Reset default values
+   clickingMode = false;
 
 
    //Display sunrise onto ui
@@ -1416,4 +1488,281 @@ void changeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* applicatio
    }
    else
       threadedChangeCurrentTime_cbk(sliderRange, application);
+}
+
+void createRoute_cbk(GtkWidget */*widget*/, ezgl::application *application){
+   GtkDialog * routeCreatorDialog = GTK_DIALOG(application->get_object("routeCreatorDialog"));
+   gtk_dialog_run(routeCreatorDialog);
+}
+
+void createRouteBack_cbk(GtkWidget */*widget*/, ezgl::application *application){
+   GtkWidget * routeCreatorDialog = GTK_WIDGET(application->get_object("routeCreatorDialog"));
+   gtk_widget_hide(routeCreatorDialog);
+}
+
+void enterClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application){
+   GObject* exitBtn = application->get_object("ExitRouteModeBtn");
+   g_signal_connect(exitBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
+   gtk_widget_show((GtkWidget*)exitBtn);
+
+   clickingMode = true;
+   clearPathDisplay();
+
+   GtkWidget * routeCreatorDialog = GTK_WIDGET(application->get_object("routeCreatorDialog"));
+   gtk_widget_hide(routeCreatorDialog);
+}
+
+void exitClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application){
+   GObject* exitBtn = application->get_object("ExitRouteModeBtn");
+   g_signal_connect(exitBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
+
+   clickingMode = false;
+   clearPathDisplay();
+   
+   gtk_widget_hide((GtkWidget*)exitBtn);
+}
+
+
+void openHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application){
+   GtkWidget * HelpPopUp = GTK_WIDGET(application->get_object("HelpDialog"));
+   gtk_widget_show(HelpPopUp);
+}
+
+void closeHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application){
+
+   GtkWidget * HelpPopUp = GTK_WIDGET(application->get_object("HelpDialog"));
+   gtk_widget_hide(HelpPopUp);
+}
+
+//callback function called when user clicks "Create route" after typing in a route in the route creator
+void typedRouteConfirm_cbk(GtkWidget */*widget*/, ezgl::application *application){
+
+   bool validInput = true;
+
+   string errorMsg;
+   
+   vector<vector<IntersectionIdx>> startingIntersections = findIntersectionsfromSearchbars(application,"routeStartSearchBar1","routeStartSearchBar2",errorMsg,validInput,"Starting");
+   vector<vector<IntersectionIdx>> endingIntersections = findIntersectionsfromSearchbars(application,"routeEndSearchBar1","routeEndSearchBar2",errorMsg,validInput,"Ending");
+
+   if(validInput){
+
+      GtkWidget * routeCreatorDialog = GTK_WIDGET(application->get_object("routeCreatorDialog"));
+      gtk_widget_hide(routeCreatorDialog);
+
+      int counter = 1;
+
+      //creating buttons for the starting intersection confirmation pop-up
+      for(int i = 0; i < startingIntersections.size(); i++){
+         for(int j = 0; j < startingIntersections[i].size(); j++){
+
+            startingIntersectionInfo.push_back({{1,startingIntersections[i][j]},application});
+
+            string buttonLabel = to_string(counter) + ": " + getIntersectionName(startingIntersections[i][j]);
+
+            application->create_button(buttonLabel.c_str(),counter,selectIntersection_cbk,&startingIntersectionInfo[counter-1]);
+            counter++;
+         }
+      }
+      numStartingIntersections = counter;
+
+      counter = 1;
+      //creating buttons for the ending intersection confirmation pop-up
+      for(int i = 0; i < endingIntersections.size(); i++){
+         for(int j = 0; j < endingIntersections[i].size(); j++){
+
+            endingIntersectionInfo.push_back({{2,endingIntersections[i][j]},application});
+
+            string buttonLabel = to_string(counter) + ": " + getIntersectionName(endingIntersections[i][j]);
+
+            application->create_button(buttonLabel.c_str(),counter,selectIntersection_cbk,&endingIntersectionInfo[counter-1]);
+            counter++;
+         }
+      }
+      numEndingIntersections = counter;
+
+      GtkWidget * startingIntersectionDialog = GTK_WIDGET(application->get_object("intersectionSelectorDialog1"));
+      gtk_widget_show(startingIntersectionDialog);
+
+   }else{
+
+      //show pop up with error message
+      application->create_popup_message("Input Error",errorMsg.c_str());
+   }
+}
+
+//helper function that finds the intersections of the two streets typed into the search bars
+vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::application *application, const gchar * searchbarId1, const gchar * searchbarId2, string &errorMsg, bool &validInput, string direction){
+   
+   vector<vector<IntersectionIdx>> intersectionList;
+
+   bool validNames = true;
+
+   //Extracting text from search bars
+   GtkEntry* searchbar1 = GTK_ENTRY(application->get_object(searchbarId1));
+   string searchText1 = string(gtk_entry_get_text(searchbar1));
+   GtkEntry* searchbar2 = GTK_ENTRY(application->get_object(searchbarId2));
+   string searchText2 = string(gtk_entry_get_text(searchbar2));
+
+   //Obtain the streetIdx(s) of the inputted street names
+   vector<StreetIdx> street1Idxs = findStreetIdsFromPartialStreetName(searchText1);
+   vector<StreetIdx> street2Idxs = findStreetIdsFromPartialStreetName(searchText2);
+
+   if(street1Idxs.size() == 0){
+      errorMsg.append("\n      " + direction + " street 1 does not exist       \n");
+      validInput = false;
+      validNames = false;
+   }
+   if(street2Idxs.size() == 0){
+      errorMsg.append("\n      " + direction + " street 2 does not exist       \n");
+      validInput = false;
+      validNames = false;
+   }
+
+   //Create unique pairs of streetIdxs of the inputted streets
+   set<pair<StreetIdx,StreetIdx>> streetIdPairs;
+   for(int i = 0; i < street1Idxs.size(); ++i){
+      for(int j = 0; j < street2Idxs.size(); ++j){
+
+         //ensure no pair is made up of the same street
+         StreetIdx currStreet1 = street1Idxs[i];
+         StreetIdx currStreet2 = street2Idxs[j];
+
+         if(currStreet1 != currStreet2){
+
+            //insert pair by <lower number,higher number> to prevent duplicate sets
+            if(currStreet1 < currStreet2){
+               streetIdPairs.insert({currStreet1,currStreet2});
+
+            } else{
+               streetIdPairs.insert({currStreet2,currStreet1});
+            }
+         }
+      }
+   }
+
+   //Store the all intersections of each pair of streets
+   auto it = streetIdPairs.begin();
+   while(it != streetIdPairs.end()){
+      intersectionList.push_back(findIntersectionsOfTwoStreets(*it));
+      it++;
+   }
+   int numOfIntersectionLists = intersectionList.size();
+
+   if(numOfIntersectionLists == 0){
+      errorMsg.append("\n      " + direction + " streets do not intersect       \n");
+      validInput = false;
+   }
+
+   return intersectionList;
+}
+
+//callback function called when user selects their desired intersection from the list if they typed in their route
+void selectIntersection_cbk(GtkWidget */*widget*/, pair<pair<int,IntersectionIdx>,ezgl::application *> * intersectionInfo){
+
+   //direction will be 1 for starting, 2 for ending
+   int direction = intersectionInfo->first.first;
+   IntersectionIdx chosenIntersection = intersectionInfo->first.second;
+
+   ezgl::application *application = intersectionInfo->second;
+
+   if(direction == 1){
+      selectedRoute.first = chosenIntersection;
+
+      //close pop up 
+      GtkWidget * startingIntersectionDialog = GTK_WIDGET(application->get_object("intersectionSelectorDialog1"));
+      gtk_widget_hide(startingIntersectionDialog);
+
+      //clean buttons from pop up
+      for(int i = 0; i < numStartingIntersections-1; i++){
+         string buttonLabel = to_string(i + 1) + ": " + getIntersectionName(startingIntersectionInfo[i].first.second);
+         application->destroy_button(buttonLabel.c_str(),1);
+      }
+      startingIntersectionInfo.clear();
+      
+      //open pop up for ending
+      GtkWidget * endingIntersectionDialog = GTK_WIDGET(application->get_object("intersectionSelectorDialog2"));
+      gtk_widget_show(endingIntersectionDialog);
+      
+   } else if(direction == 2){
+      selectedRoute.second = chosenIntersection;
+      
+      //close pop up 
+      GtkWidget * endingIntersectionDialog = GTK_WIDGET(application->get_object("intersectionSelectorDialog2"));
+      gtk_widget_hide(endingIntersectionDialog);
+
+      //clean buttons from pop up
+      for(int i = 0; i < numEndingIntersections-1; i++){
+         string buttonLabel = to_string(i + 1) + ": " + getIntersectionName(endingIntersectionInfo[i].first.second);
+         application->destroy_button(buttonLabel.c_str(),2);
+      }
+      endingIntersectionInfo.clear();
+
+      //start intersection searching
+      //checks for same intersection
+
+      if(selectedRoute.first == selectedRoute.second){
+         application->create_popup_message("Error","\nCannot start and end at same intersection!\n");
+         return;
+      }
+
+      setDisplayedPath(findPathBetweenIntersections(10,selectedRoute));
+
+   }
+}
+
+//Function called when an intersection is clicked in route creating mode
+void clickedIntersectionForRoute(IntersectionIdx clickedIntersection,ezgl::application *application){
+
+   clickedIntersectionInfo.first = clickedIntersection;
+   clickedIntersectionInfo.second = application;
+
+   GObject* startOfRouteBtn = application->get_object("startOfRouteBtn");
+   g_signal_connect(startOfRouteBtn,"clicked",G_CALLBACK(clickedStartingIntersection_cbk),&clickedIntersectionInfo);
+
+   GObject* endOfRouteBtn = application->get_object("endOfRouteBtn");
+   g_signal_connect(endOfRouteBtn,"clicked",G_CALLBACK(clickedEndingIntersection_cbk),&clickedIntersectionInfo);
+
+   //open pop up since intersection is clicked
+   GtkWidget * routeClickingDialog = GTK_WIDGET(application->get_object("routeClickingDialog"));
+   gtk_widget_show(routeClickingDialog);
+}
+
+//callback function called when user clicks "cancel" button on intersection clicking pop up in route creating mode
+void closeRouteClickingDialog_cbk(GtkWidget */*widget*/, ezgl::application *application){
+
+   GtkWidget * routeClickingDialog = GTK_WIDGET(application->get_object("routeClickingDialog"));
+   gtk_widget_hide(routeClickingDialog);
+}
+
+//callback function called when user clicks "start of route" on intersection clicking pop up in route creating mode
+void clickedStartingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo){
+
+   IntersectionIdx clickedStartingIntersection = clickedIntersectionInfo->first;
+   ezgl::application * application = clickedIntersectionInfo->second;
+
+
+
+   // User chose the clicked intersection as an starting for the route, handle here
+
+
+
+   //Close pop up once button is clicked
+   GtkWidget * routeClickingDialog = GTK_WIDGET(application->get_object("routeClickingDialog"));
+   gtk_widget_hide(routeClickingDialog);
+}
+
+//callback function called when user clicks "end of route" on intersection clicking pop up in route creating mode
+void clickedEndingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo){
+
+   IntersectionIdx clickedEndingIntersection = clickedIntersectionInfo->first;
+   ezgl::application * application = clickedIntersectionInfo->second;
+
+
+
+   // User chose the clicked intersection as an ending for the route, handle here
+
+
+   //Close pop up once button is clicked
+   GtkWidget * routeClickingDialog = GTK_WIDGET(application->get_object("routeClickingDialog"));
+   gtk_widget_hide(routeClickingDialog);
 }

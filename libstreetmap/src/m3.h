@@ -69,4 +69,6 @@ vector<PathSegment> generateRandomPath();
 //generate path
 vector<PathSegment> generateFatestPath(IntersectionIdx from, IntersectionIdx to);
 
+vector<PathSegment> getPathSegments(vector<StreetSegmentIdx>& segmentPath); //converts vector of street segments to vector of path segments
+
 ezgl::color getPathColour(); //getter function to return the current path colour

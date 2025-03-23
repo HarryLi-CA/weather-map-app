@@ -454,6 +454,12 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
          feature->wasRendered = true;
       }
 
+      //draw active paths
+      for(int pathsIndex = 0; pathsIndex < paths.size(); pathsIndex++)
+      {
+         drawPath(g, paths[pathsIndex], lineWidth, getPathColour(), scaling);
+      }
+
       //draw points
       for(int i = 0; i < cellPoints.size(); i++)
       {
@@ -512,11 +518,7 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
       }
    }
 
-   //draw active paths
-   for(int pathsIndex = 0; pathsIndex < paths.size(); pathsIndex++)
-   {
-      drawPath(g, paths[pathsIndex], lineWidth, getPathColour(), scaling);
-   }
+   
 
 }
 
@@ -571,20 +573,48 @@ void clickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::applicat
       prevClickedIntersection = clicked->dataIndex;
       if(event->button == 1) //on left click
       {
-         primarySelection = clicked->dataIndex;
+         if(clicked->dataIndex == primarySelection)
+         {
+            primarySelection = -1;
+            clicked->highlight = false;
+         }
+         else
+         {
+            primarySelection = clicked->dataIndex;
+         }
       }
       if(event->button == 3) //on right click
       {
-         secondarySelection = clicked->dataIndex;
+         if(clicked->dataIndex == secondarySelection)
+         {
+            secondarySelection = -1;
+            clicked->highlight = false;
+         }
+         else
+         {
+            secondarySelection = clicked->dataIndex;
+         }
       }
 
       if(primarySelection > -1 && secondarySelection > -1)
       {
          paths[0] = generateFatestPath(primarySelection, secondarySelection);
       }
+      else
+      {
+         paths[0] = {};
+      }
+      
 
    }
    mainCanvas->redraw();
+}
+
+void setDisplayedPath(vector<StreetSegmentIdx> segmentPath)
+{
+   paths[0] = getPathSegments(segmentPath);
+   primarySelection = -1;
+   secondarySelection = -1;
 }
 
 void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y)

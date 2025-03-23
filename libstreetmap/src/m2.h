@@ -36,3 +36,5 @@ void changeFilter_cbk(GtkWidget */*widget*/, pair<WeatherLayer,ezgl::application
 
 void threadedChangeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* application);
 void changeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* application);
+
+void setDisplayedPath(vector<StreetSegmentIdx> segmentPath); //helper function to set the displayed path on the gui

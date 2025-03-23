@@ -120,6 +120,15 @@ vector<PathSegment> generateFatestPath(IntersectionIdx from, IntersectionIdx to)
 
     vector<StreetSegmentIdx> segmentPath = findPathBetweenIntersections(kDefaultTurnPenalty,{from, to});
     
+    path = getPathSegments(segmentPath);
+
+    return path;
+}
+
+vector<PathSegment> getPathSegments(vector<StreetSegmentIdx>& segmentPath)
+{
+    vector<PathSegment> path;
+    
     //if intersection path is empty (or invalid) return empty path
     if(segmentPath.size() == 0){return path;}
 

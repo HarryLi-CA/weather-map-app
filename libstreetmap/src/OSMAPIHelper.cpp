@@ -55,7 +55,7 @@ namespace osmhelp{
     }
 
     StreetSegmentInfo getStreetSegmentInfo(StreetSegmentIdx idx){
-        if(idx < getNumStreetSegments()){ //ensure vector is sized
+        if(idx >= getNumStreetSegments()){ //ensure vector is sized
             throw idx;
         }
         if(segInfo[idx].speedLimit <= 0){
@@ -67,7 +67,7 @@ namespace osmhelp{
     }
 
     LatLon getIntersectionPosition(IntersectionIdx idx){
-        if(idx < getNumIntersections()){ //ensure vector is sized
+        if(idx >= getNumIntersections()){ //ensure vector is sized
             throw idx;
         }
         if(!intersectionPos[idx].first){

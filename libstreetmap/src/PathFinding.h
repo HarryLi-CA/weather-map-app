@@ -32,11 +32,12 @@ class Point{
             return (fCost > x.fCost);
         }
 };
+
 class PointerCompare {
 public:
     template<typename T>
     bool operator()(T *a, T *b) {
-    return (*a) < (*b);
+    return (*a) > (*b);
     }
 };
 vector<Point*> calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids);

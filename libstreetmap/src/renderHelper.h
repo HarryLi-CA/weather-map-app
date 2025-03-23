@@ -33,9 +33,10 @@ class Graphic
     double height;
 
     Graphic(char* _path);
-    void load(ezgl::renderer* g);
+    void load(ezgl::renderer* g); //loads surface pointer
     void draw(ezgl::renderer* g, double worldScale, ezgl::point2d position, ezgl::point2d offset, double imageScale); //function to draw a graphic on the screen during runtime
-    void clear();
+    void draw(ezgl::renderer* g, double worldScale, ezgl::point2d position, ezgl::point2d offset, double imageScale, ezgl::color color); //function to draw a graphic on the screen during runtime
+    void deallocate(ezgl::renderer* g); //frees surface pointer
 };
 
 

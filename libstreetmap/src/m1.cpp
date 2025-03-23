@@ -175,6 +175,7 @@ void closeMap() {
     closeOSMDatabase();
     //clear map
     unloadFeatures();
+    unloadGraphics();
 }
 
 double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){

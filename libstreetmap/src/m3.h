@@ -65,6 +65,8 @@ struct PathSegment
 void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ezgl::color colour, double scaling);
 
 //generates random path for testing
-vector<PathSegment>* generateRandomPath();
+vector<PathSegment> generateRandomPath();
+//generate path
+vector<PathSegment> generateFatestPath(IntersectionIdx from, IntersectionIdx to);
 
 ezgl::color getPathColour(); //getter function to return the current path colour

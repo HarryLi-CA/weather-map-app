@@ -11,8 +11,10 @@ using namespace std;
 
 void drawMap();
 void loadFeatures(); //create feature objects to be drawn on the map
-void loadGraphics(ezgl::renderer* g);
+void loadGraphics(ezgl::renderer* g); //load images to be drawn on the map
 void unloadFeatures(); //helper function to unload all dynamically allocated data
+void unloadGraphics(ezgl::renderer* g); //unload all loaded images
+void unloadGraphics(); //unload all loaded images using the last set application
 void resetCanvasParameters(ezgl::application* app); //helper function to reset the canvas if values are changed
 double getScaleFactor(); //returns scale factor from mainCanvas object
 

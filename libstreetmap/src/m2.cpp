@@ -88,8 +88,12 @@ const double kCameraBoundsExtension = 0; //
 const bool enableThreading = true;
 
 //graphics
-Graphic pinIcon("libstreetmap/resources/pin.png");
-const double kPinScale = 0.2;
+ezgl::application* currentApp = nullptr;
+Graphic pinWhite("libstreetmap/resources/pin_white.png");
+Graphic pinBlack("libstreetmap/resources/pin_black.png");
+Graphic pinRed("libstreetmap/resources/pin_red.png");
+Graphic pinBlue("libstreetmap/resources/pin_blue.png");
+const double kPinScale = 0.1;
 
 
 
@@ -138,7 +142,11 @@ volatile int isChangingTime = 0;
 volatile int isLoading = 0;            
 bool hasUIOpened = false;               
 
-vector<vector<PathSegment>*> paths;
+//paths
+vector<vector<PathSegment>> paths;
+//selected intersections
+IntersectionIdx primarySelection = -1;
+IntersectionIdx secondarySelection = -1;
 
 // void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
 // {
@@ -160,13 +168,24 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
             //only print points if they are highlighted
             
             feature->wasRendered = true; 
-            if(!feature->highlight){break;}
+            if(!feature->highlight && !(feature->dataIndex == primarySelection) && !(feature->dataIndex == secondarySelection)){break;}
             feature->wasRendered = false;
             //cout << "drawing point on layer " << feature->layer << endl;
             ezgl::point2d origin = (*(feature->points))[0];
             g->set_color(feature->color);
             //g->fill_arc(origin,7.0/scaling,0.0,360.0);
-            pinIcon.draw(g,scaling,origin,{0, 0.5},0.2);
+            if(feature->dataIndex == primarySelection)
+            {
+               pinRed.draw(g,scaling,origin,{0, 0.5},kPinScale);
+            }
+            else if(feature->dataIndex == secondarySelection)
+            {
+               pinBlue.draw(g,scaling,origin,{0, 0.5},kPinScale);
+            }
+            else
+            {
+               pinBlack.draw(g,scaling,origin,{0, 0.5},kPinScale);
+            }
             
             feature->wasRendered = true; //feature was fully rendered this cycle
             break;
@@ -496,7 +515,7 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
    //draw active paths
    for(int pathsIndex = 0; pathsIndex < paths.size(); pathsIndex++)
    {
-      drawPath(g, *paths[pathsIndex], lineWidth, getPathColour(), scaling);
+      drawPath(g, paths[pathsIndex], lineWidth, getPathColour(), scaling);
    }
 
 }
@@ -521,7 +540,7 @@ double getScaleFactor()
    return mainCanvas->get_camera().get_world_scale_factor().x;
 }
 
-void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to manage clicks on a specific MapFeature
+void clickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::application* app) //function to manage clicks on a specific MapFeature
 {
    
    mapFeaturesMutex.lock();
@@ -550,6 +569,19 @@ void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to
       string intersection = getKnownIntersectionName(clicked->dataIndex);
       app->update_message("Clicked Intersection: " + intersection);
       prevClickedIntersection = clicked->dataIndex;
+      if(event->button == 1) //on left click
+      {
+         primarySelection = clicked->dataIndex;
+      }
+      if(event->button == 3) //on right click
+      {
+         secondarySelection = clicked->dataIndex;
+      }
+
+      if(primarySelection > -1 && secondarySelection > -1)
+      {
+         paths[0] = generateFatestPath(primarySelection, secondarySelection);
+      }
 
    }
    mainCanvas->redraw();
@@ -557,7 +589,7 @@ void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to
 
 void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y)
 {
-   
+   cout << event->button << endl;
    mapFeaturesMutex.lock();
    if(mapFeatures.layerMap.size() == 0){return;} //if there are no features, skip click detection
 
@@ -606,7 +638,7 @@ void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, dou
    mapFeaturesMutex.unlock();
    if(clicked != nullptr)
    {
-      clickedOnFeature(clicked, app); //run click events on the clicked feature  
+      clickedOnFeature(clicked, event, app); //run click events on the clicked feature  
    }
 }
 
@@ -910,9 +942,26 @@ void threadedLoadFeatures(){
 void loadGraphics(ezgl::renderer* g)
 {
    cout << "loading graphics" << endl;
-   pinIcon.load(g);
-   
+   pinWhite.load(g);
+   pinBlack.load(g);
+   pinRed.load(g);
+   pinBlue.load(g);
 }
+
+void unloadGraphics(ezgl::renderer* g)
+{
+   pinWhite.deallocate(g);
+   pinBlack.deallocate(g);
+   pinRed.deallocate(g);
+   pinBlue.deallocate(g);
+}
+
+
+void unloadGraphics()
+{
+   unloadGraphics(currentApp->get_renderer());
+}
+
 
 void loadFeatures()
 {
@@ -933,7 +982,7 @@ void loadFeatures()
    setLatLonBounds(minPoints, maxPoints); //set constant for calculations in renderHelper
 
    cout << "generating path" << endl;
-   vector<PathSegment>* genPath = generateRandomPath();
+   vector<PathSegment> genPath = generateRandomPath();
    paths.push_back(genPath);
 
    currentScope.min = minPoints;
@@ -1058,6 +1107,7 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    hasUIOpened = true; 
 
    //load graphics
+   currentApp = application;
    loadGraphics(application->get_renderer());
 }
 
@@ -1209,6 +1259,7 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
    cout << "open map cbk" << endl;
    string nextMapPath = mapInfo->first;
    ezgl::application* application = mapInfo->second;
+   currentApp = application;
 
    //Close Map Selection menu
    GtkWidget * mapSelectorDialog = GTK_WIDGET(application->get_object("mapSelectorDialog"));

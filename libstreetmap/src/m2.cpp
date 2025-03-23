@@ -154,6 +154,7 @@ vector<pair<pair<int,IntersectionIdx>,ezgl::application *>> endingIntersectionIn
 int numStartingIntersections;
 int numEndingIntersections;
 pair<IntersectionIdx,IntersectionIdx> selectedRoute;
+pair<IntersectionIdx,ezgl::application *> clickedIntersectionInfo;
 
 // void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
 // {
@@ -1200,6 +1201,9 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    GObject* helpBackBtn = application->get_object("HelpDialogBackbtn");
    g_signal_connect(helpBackBtn,"clicked",G_CALLBACK(closeHelpPopUp_cbk),application);
 
+   GObject* closeRouteClickingDialogBtn = application->get_object("closeRouteClickingDialogBtn");
+   g_signal_connect(closeRouteClickingDialogBtn,"clicked",G_CALLBACK(closeRouteClickingDialog_cbk),application);
+
    //application->create_button("EXIT ROUTE CLICKING",4,cancelClickingMode_cbk);
 }
 
@@ -1530,6 +1534,7 @@ void closeHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application){
    gtk_widget_hide(HelpPopUp);
 }
 
+//callback function called when user clicks "Create route" after typing in a route in the route creator
 void typedRouteConfirm_cbk(GtkWidget */*widget*/, ezgl::application *application){
 
    bool validInput = true;
@@ -1585,6 +1590,7 @@ void typedRouteConfirm_cbk(GtkWidget */*widget*/, ezgl::application *application
    }
 }
 
+//helper function that finds the intersections of the two streets typed into the search bars
 vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::application *application, const gchar * searchbarId1, const gchar * searchbarId2, string &errorMsg, bool &validInput, string direction){
    
    vector<vector<IntersectionIdx>> intersectionList;
@@ -1642,7 +1648,7 @@ vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::applicatio
    }
    int numOfIntersectionLists = intersectionList.size();
 
-   if(numOfIntersectionLists == 0 && validNames){
+   if(numOfIntersectionLists == 0){
       errorMsg.append("\n      " + direction + " streets do not intersect       \n");
       validInput = false;
    }
@@ -1650,6 +1656,7 @@ vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::applicatio
    return intersectionList;
 }
 
+//callback function called when user selects their desired intersection from the list if they typed in their route
 void selectIntersection_cbk(GtkWidget */*widget*/, pair<pair<int,IntersectionIdx>,ezgl::application *> * intersectionInfo){
 
    //direction will be 1 for starting, 2 for ending
@@ -1701,4 +1708,61 @@ void selectIntersection_cbk(GtkWidget */*widget*/, pair<pair<int,IntersectionIdx
       setDisplayedPath(findPathBetweenIntersections(10,selectedRoute));
 
    }
+}
+
+//Function called when an intersection is clicked in route creating mode
+void clickedIntersectionForRoute(IntersectionIdx clickedIntersection,ezgl::application *application){
+
+   clickedIntersectionInfo.first = clickedIntersection;
+   clickedIntersectionInfo.second = application;
+
+   GObject* startOfRouteBtn = application->get_object("startOfRouteBtn");
+   g_signal_connect(startOfRouteBtn,"clicked",G_CALLBACK(clickedStartingIntersection_cbk),&clickedIntersectionInfo);
+
+   GObject* endOfRouteBtn = application->get_object("endOfRouteBtn");
+   g_signal_connect(endOfRouteBtn,"clicked",G_CALLBACK(clickedEndingIntersection_cbk),&clickedIntersectionInfo);
+
+   //open pop up since intersection is clicked
+   GtkWidget * routeClickingDialog = GTK_WIDGET(application->get_object("routeClickingDialog"));
+   gtk_widget_show(routeClickingDialog);
+}
+
+//callback function called when user clicks "cancel" button on intersection clicking pop up in route creating mode
+void closeRouteClickingDialog_cbk(GtkWidget */*widget*/, ezgl::application *application){
+
+   GtkWidget * routeClickingDialog = GTK_WIDGET(application->get_object("routeClickingDialog"));
+   gtk_widget_hide(routeClickingDialog);
+}
+
+//callback function called when user clicks "start of route" on intersection clicking pop up in route creating mode
+void clickedStartingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo){
+
+   IntersectionIdx clickedStartingIntersection = clickedIntersectionInfo->first;
+   ezgl::application * application = clickedIntersectionInfo->second;
+
+
+
+   // User chose the clicked intersection as an starting for the route, handle here
+
+
+
+   //Close pop up once button is clicked
+   GtkWidget * routeClickingDialog = GTK_WIDGET(application->get_object("routeClickingDialog"));
+   gtk_widget_hide(routeClickingDialog);
+}
+
+//callback function called when user clicks "end of route" on intersection clicking pop up in route creating mode
+void clickedEndingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo){
+
+   IntersectionIdx clickedEndingIntersection = clickedIntersectionInfo->first;
+   ezgl::application * application = clickedIntersectionInfo->second;
+
+
+
+   // User chose the clicked intersection as an ending for the route, handle here
+
+
+   //Close pop up once button is clicked
+   GtkWidget * routeClickingDialog = GTK_WIDGET(application->get_object("routeClickingDialog"));
+   gtk_widget_hide(routeClickingDialog);
 }

@@ -87,7 +87,7 @@ vector<Point> getNeighbours(Point current, double turn_penalty){
                 }
             }
 
-            curPoint.gCost = current.gCost + findStreetSegmentTravelTime(curPoint.segId);
+            curPoint.gCost = current.gCost + findStreetSegmentTravelTime(curPoint.segId) + pathTravelTime;
         }
     }
     

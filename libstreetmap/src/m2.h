@@ -6,6 +6,7 @@
 #include "ezgl/canvas.hpp"
 #include "OpenWeatherHelper.h"
 #include "renderHelper.h"
+#include "OSMAPIHelper.h"
 using namespace std;
 
 void drawMap();

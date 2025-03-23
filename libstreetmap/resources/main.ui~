@@ -44,6 +44,7 @@
             <property name="margin-end">15</property>
             <property name="margin-top">5</property>
             <property name="margin-bottom">5</property>
+            <property name="orientation">vertical</property>
             <property name="row-spacing">10</property>
             <property name="column-homogeneous">True</property>
             <child>
@@ -1232,6 +1233,98 @@ The button creates a window that allows you to create a route using two differen
         <style>
           <class name="dark"/>
         </style>
+      </object>
+    </child>
+  </object>
+  <object class="GtkDialog" id="routeClickingDialog">
+    <property name="can-focus">False</property>
+    <property name="title" translatable="yes">Intersection for Routing</property>
+    <property name="type-hint">dialog</property>
+    <child internal-child="vbox">
+      <object class="GtkBox">
+        <property name="can-focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox">
+            <property name="can-focus">False</property>
+            <property name="layout-style">end</property>
+            <child>
+              <object class="GtkButton" id="closeRouteClickingDialogBtn">
+                <property name="label" translatable="yes">Cancel</property>
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <!-- n-columns=2 n-rows=2 -->
+          <object class="GtkGrid">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="margin-start">25</property>
+            <property name="margin-end">25</property>
+            <property name="margin-top">20</property>
+            <property name="margin-bottom">10</property>
+            <property name="column-spacing">15</property>
+            <property name="row-homogeneous">True</property>
+            <property name="column-homogeneous">True</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="margin-bottom">20</property>
+                <property name="label" translatable="yes">Intersection is start or end of route?</property>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">0</property>
+                <property name="width">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="startOfRouteBtn">
+                <property name="label" translatable="yes">Start of route</property>
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="endOfRouteBtn">
+                <property name="label" translatable="yes">End of route</property>
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+              </object>
+              <packing>
+                <property name="left-attach">1</property>
+                <property name="top-attach">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
       </object>
     </child>
   </object>

@@ -52,3 +52,7 @@ void selectIntersection_cbk(GtkWidget */*widget*/, pair<pair<int,IntersectionIdx
 void openHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application);
 void closeHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application);
 
+void clickedIntersectionForRoute(IntersectionIdx clickedIntersection,ezgl::application *application);
+void closeRouteClickingDialog_cbk(GtkWidget */*widget*/, ezgl::application *application);
+void clickedStartingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo);
+void clickedEndingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo);

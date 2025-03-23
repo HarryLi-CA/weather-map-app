@@ -23,6 +23,8 @@ class Point{
         Point(int id, LatLon destCoords, Point* parent);
         ~Point();
 
+        void copy(Point copyPoint);
+
         void updateFCost();
         vector<Point*> retracePath();
         bool operator <(const Point &x) const {

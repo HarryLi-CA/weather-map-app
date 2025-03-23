@@ -61,11 +61,8 @@ vector<Point*> calculatePathArray(const double turn_penalty, const std::pair<Int
                         segToPoint[neighbour->segId] = neighbour;
                     }
                     else{
-                        segToPoint[neighbour->segId]->gCost = neighbour->gCost;
-                        segToPoint[neighbour->segId]->parent = neighbour->parent;
-                        segToPoint[neighbour->segId]->coords = neighbour->coords;
-                        segToPoint[neighbour->segId]->id = neighbour->id;
-                        segToPoint[neighbour->segId]->updateFCost();
+                        //cout<<"better duplicate " << endl;
+                        segToPoint[neighbour->segId]->copy(*neighbour);
                         open.updateItem(segToPoint[neighbour->segId]);
                         delete neighbour;
                     }
@@ -126,6 +123,16 @@ Point::Point(int id, LatLon destCoords, Point* parent){
 }
 
 Point::~Point(){
+}
+
+void Point:: copy(Point copyPoint){
+    id = copyPoint.id;
+    segId = copyPoint.segId;
+    parent = copyPoint.parent;
+    gCost = copyPoint.gCost; hCost = copyPoint.hCost; fCost = copyPoint.hCost;
+    isPath = copyPoint.isPath;
+    isTraversed = copyPoint.isTraversed;
+    coords = copyPoint.coords; destCoords = copyPoint.destCoords;
 }
 
 void Point::updateFCost(){

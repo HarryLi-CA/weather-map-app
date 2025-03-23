@@ -6,14 +6,14 @@
 #include <stdio.h>
 #include <queue>
 
-#define MAX_STREET_SPEED 200
+#define MAX_STREET_SPEED 60 // m/s = 216km/h
 
 using namespace std;
 
 vector<Point> calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids){
     Point destination = Point(intersect_ids.second);
     Point start = Point(intersect_ids.first, destination.coords, nullptr);
-    Point current = start;
+    Point* current = &start;
 
     priority_queue <Point> open;
     vector<Point> closed={};
@@ -22,9 +22,10 @@ vector<Point> calculatePathArray(const double turn_penalty, const std::pair<Inte
     start.destCoords = destination.coords;
     open.push(start);
     while(open.size() > 0){
-        current = open.top(); open.pop();
-        closed.push_back(current);
-        if(current.id == destination.id){
+        current = &(open.top());
+        closed.push_back(*current); open.pop();
+        current = *(closed[closed.size()-1]);
+        if(current->id == destination.id){
             vector<Point> path = current.retracePath();
             return path;
         }
@@ -65,21 +66,21 @@ vector<Point> calculatePathArray(const double turn_penalty, const std::pair<Inte
     return {};
 }
 
-vector<Point> getNeighbours(Point current, double turn_penalty){
-    vector<StreetSegmentIdx> streetSegs = findStreetSegmentsOfIntersection(current.id);
+vector<Point> getNeighbours(Point* current, double turn_penalty){
+    vector<StreetSegmentIdx> streetSegs = findStreetSegmentsOfIntersection(current->id);
     
     vector<Point> neighbours;
     for (int i = 0; i < streetSegs.size(); i++)
     {
         StreetSegmentInfo currentSegmentInfo = osmhelp::getStreetSegmentInfo(streetSegs[i]);
-        if(!(currentSegmentInfo.oneWay && currentSegmentInfo.from == current.id)){ // check one way direction
-            IntersectionIdx curIntIdx = findOppositeIntersection(current.id, streetSegs[i]);
-            Point curPoint = Point(curIntIdx, current.destCoords, &current);
+        if(!(currentSegmentInfo.oneWay && currentSegmentInfo.from == current->id)){ // check one way direction
+            IntersectionIdx curIntIdx = findOppositeIntersection(current->id, streetSegs[i]);
+            Point curPoint = Point(curIntIdx, current->destCoords, current);
             curPoint.segId = streetSegs[i];
 
             double pathTravelTime = 0;
-            if(current.parent != nullptr){
-                StreetSegmentInfo nextSegmentInfo = osmhelp::getStreetSegmentInfo(current.segId);
+            if(current->parent != nullptr){
+                StreetSegmentInfo nextSegmentInfo = osmhelp::getStreetSegmentInfo(current->segId);
                 //if streets of segments are not the same, there is a turn
                 if(currentSegmentInfo.streetID != nextSegmentInfo.streetID)
                 {
@@ -87,7 +88,7 @@ vector<Point> getNeighbours(Point current, double turn_penalty){
                 }
             }
 
-            curPoint.gCost = current.gCost + findStreetSegmentTravelTime(curPoint.segId) + pathTravelTime;
+            curPoint.gCost = current->gCost + findStreetSegmentTravelTime(curPoint.segId) + pathTravelTime;
             neighbours.push_back(curPoint);
         }
     }
@@ -99,6 +100,7 @@ vector<Point> getNeighbours(Point current, double turn_penalty){
 Point::Point(int id){
     this->id = id;
     this->coords = osmhelp::getIntersectionPosition(id);
+    this->parent = nullptr;
 }
 
 //default constructor
@@ -123,6 +125,8 @@ void Point::updateFCost(){
 }
 
 vector<Point> Point::retracePath(){
+    vector<Point> curPath;
+    while
     if(this->parent!=nullptr){
         vector<Point> curPath = this->parent->retracePath();
         curPath.push_back(*this);

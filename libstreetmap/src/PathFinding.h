@@ -32,4 +32,4 @@ class Point{
         }
 };
 vector<Point> calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids);
-vector<Point> getNeighbours(Point current, double turn_penalty);
+vector<Point> getNeighbours(Point* current, double turn_penalty);

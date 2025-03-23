@@ -202,11 +202,13 @@ vector<PathSegment> generateRandomPath()
 
 std::vector<StreetSegmentIdx> findPathBetweenIntersections(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids)
 {
-    vector<Point> pointVector = calculatePathArray(turn_penalty, intersect_ids);
+    vector<Point*> pointVector = calculatePathArray(turn_penalty, intersect_ids);
     vector<StreetSegmentIdx> streetIds;
+    delete pointVector[0];
     for (int i = 1; i < pointVector.size(); i++)
     {
-        streetIds.push_back(pointVector[i].segId);
+        streetIds.push_back(pointVector[i]->segId);
+        delete pointVector[i];
     }
     return streetIds;
 }

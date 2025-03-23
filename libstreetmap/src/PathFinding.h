@@ -12,6 +12,7 @@ class Point{
         StreetSegmentIdx segId = -1;
         Point* parent;
         double gCost = 0, hCost =0, fCost =0;
+        bool isPath = false;
         LatLon coords, destCoords;
 
         // for setting destination point
@@ -22,7 +23,7 @@ class Point{
         ~Point();
 
         void updateFCost();
-        vector<Point> retracePath();
+        vector<Point*> retracePath();
         bool operator <(const Point &x) const {
             return (fCost < x.fCost);
         }
@@ -31,5 +32,12 @@ class Point{
             return (fCost > x.fCost);
         }
 };
-vector<Point> calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids);
-vector<Point> getNeighbours(Point* current, double turn_penalty);
+class PointerCompare {
+public:
+    template<typename T>
+    bool operator()(T *a, T *b) {
+    return (*a) < (*b);
+    }
+};
+vector<Point*> calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids);
+vector<Point*> getNeighbours(Point* current, double turn_penalty);

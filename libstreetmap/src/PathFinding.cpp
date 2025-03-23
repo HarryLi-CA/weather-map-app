@@ -10,28 +10,35 @@
 
 using namespace std;
 
-vector<Point> calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids){
-    Point destination = Point(intersect_ids.second);
-    Point start = Point(intersect_ids.first, destination.coords, nullptr);
-    Point* current = &start;
+vector<Point*> calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids){
+    Point* destination = new Point(intersect_ids.second);
+    Point* start = new Point(intersect_ids.first, destination->coords, nullptr);
+    Point* current = start;
 
-    priority_queue <Point> open;
-    vector<Point> closed={};
+    priority_queue <Point*, vector<Point*>, PointerCompare> open;
+    vector<Point*> closed={destination};
 
-    start.gCost = 0;
-    start.destCoords = destination.coords;
+    start->gCost = 0;
+    start->destCoords = destination->coords;
     open.push(start);
     while(open.size() > 0){
         closed.push_back(open.top()); open.pop();
-        current = &(closed.back());
-        if(current->id == destination.id){
-            vector<Point> path = current->retracePath();
+        current = closed.back();
+        if(current->id == destination->id){
+            vector<Point*> path = current->retracePath();
+            for(int i = 0; i <closed.size(); i++)
+                if(!closed[i]->isPath)
+                    delete closed[i];
+            while(open.size() > 0){
+                delete open.top();
+                open.pop();
+            }
             return path;
         }
 
-        vector<Point> neighbours= getNeighbours(current, turn_penalty);
+        vector<Point*> neighbours= getNeighbours(current, turn_penalty);
         
-        for(Point neighbour: neighbours){
+        for(Point* neighbour: neighbours){
             //if(closed.where((element) => element.name==neighbour.name).isEmpty){
                 //double newMovementCostToNeighbour = neighbour.gCost;
                 /*
@@ -47,7 +54,7 @@ vector<Point> calculatePathArray(const double turn_penalty, const std::pair<Inte
                     destination.coords[1],
                 );
                 */
-                neighbour.updateFCost();
+                neighbour->updateFCost();
 
                 
                 // if(neighbourInOpenvector == null||neighbourInOpenvector.length<=0){
@@ -65,17 +72,17 @@ vector<Point> calculatePathArray(const double turn_penalty, const std::pair<Inte
     return {};
 }
 
-vector<Point> getNeighbours(Point* current, double turn_penalty){
+vector<Point*> getNeighbours(Point* current, double turn_penalty){
     vector<StreetSegmentIdx> streetSegs = findStreetSegmentsOfIntersection(current->id);
     
-    vector<Point> neighbours;
+    vector<Point*> neighbours;
     for (int i = 0; i < streetSegs.size(); i++)
     {
         StreetSegmentInfo currentSegmentInfo = osmhelp::getStreetSegmentInfo(streetSegs[i]);
         if(!(currentSegmentInfo.oneWay && currentSegmentInfo.from == current->id)){ // check one way direction
             IntersectionIdx curIntIdx = findOppositeIntersection(current->id, streetSegs[i]);
-            Point curPoint = Point(curIntIdx, current->destCoords, current);
-            curPoint.segId = streetSegs[i];
+            Point* curPoint = new Point(curIntIdx, current->destCoords, current);
+            curPoint->segId = streetSegs[i];
 
             double pathTravelTime = 0;
             if(current->parent != nullptr){
@@ -87,7 +94,7 @@ vector<Point> getNeighbours(Point* current, double turn_penalty){
                 }
             }
 
-            curPoint.gCost = current->gCost + findStreetSegmentTravelTime(curPoint.segId) + pathTravelTime;
+            curPoint->gCost = current->gCost + findStreetSegmentTravelTime(curPoint->segId) + pathTravelTime;
             neighbours.push_back(curPoint);
         }
     }
@@ -114,7 +121,6 @@ Point::Point(int id, LatLon destCoords, Point* parent){
 
 Point::~Point(){
     if(parent!=nullptr){
-        delete parent;
         parent == nullptr;
     }
 }
@@ -123,14 +129,15 @@ void Point::updateFCost(){
     fCost = gCost + hCost;
 }
 
-vector<Point> Point::retracePath(){
+vector<Point*> Point::retracePath(){
     vector<Point> curPath;
+    isPath = true;
     if(this->parent!=nullptr){
-        vector<Point> curPath = this->parent->retracePath();
-        curPath.push_back(*this);
+        vector<Point*> curPath = this->parent->retracePath();
+        curPath.push_back(this);
         return curPath;
     }
     else{
-        return {*this};
+        return {this};
     }
 }

@@ -43,9 +43,9 @@ void Graphic::draw(ezgl::renderer* g, double worldScale, ezgl::point2d position,
     g->draw_surface(surface,{position.x + offset.x*drawScale*height*imageScale, position.y + offset.y*drawScale*height*imageScale},imageScale);
 }
 
-void clear(ezgl::renderer* g)
+void Graphic::deallocate(ezgl::renderer* g)
 {
-    
+    g->free_surface(surface);   
 }
 
 MapFeature::MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _color, DrawType _drawType, MapFeatureType _featureType, int _index)

@@ -911,7 +911,11 @@ void loadGraphics(ezgl::renderer* g)
 {
    cout << "loading graphics" << endl;
    pinIcon.load(g);
-   
+}
+
+void unloadGraphics(ezgl::renderer* g)
+{
+   pinIcon.deallocate(g);
 }
 
 void loadFeatures()

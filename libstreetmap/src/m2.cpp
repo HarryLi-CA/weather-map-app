@@ -89,6 +89,7 @@ const double kCameraBoundsExtension = 0; //
 const bool enableThreading = true;
 
 //graphics
+ezgl::application* currentApp = nullptr;
 Graphic pinIcon("libstreetmap/resources/pin.png");
 const double kPinScale = 0.2;
 
@@ -918,6 +919,13 @@ void unloadGraphics(ezgl::renderer* g)
    pinIcon.deallocate(g);
 }
 
+
+void unloadGraphics()
+{
+   unloadGraphics(currentApp->get_renderer());
+}
+
+
 void loadFeatures()
 {
    //threadedLoadFeatures
@@ -1062,6 +1070,7 @@ void initial_setup(ezgl::application *application, bool /*new_window*/){
    hasUIOpened = true; 
 
    //load graphics
+   currentApp = application;
    loadGraphics(application->get_renderer());
 }
 
@@ -1213,6 +1222,7 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
    cout << "open map cbk" << endl;
    string nextMapPath = mapInfo->first;
    ezgl::application* application = mapInfo->second;
+   currentApp = application;
 
    //Close Map Selection menu
    GtkWidget * mapSelectorDialog = GTK_WIDGET(application->get_object("mapSelectorDialog"));

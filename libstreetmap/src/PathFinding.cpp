@@ -71,22 +71,24 @@ vector<Point> getNeighbours(Point current, double turn_penalty){
     vector<Point> neighbours;
     for (int i = 0; i < streetSegs.size(); i++)
     {
-        IntersectionIdx curIntIdx = findOppositeIntersection(current.id, streetSegs[i]);
-        Point curPoint = Point(curIntIdx, current.destCoords, &current);
-        curPoint.segId = streetSegs[i];
+        StreetSegmentInfo currentSegmentInfo = osmhelp::getStreetSegmentInfo(streetSegs[i]);
+        if(currentSegmentInfo.from != current.id){ // check one way direction
+            IntersectionIdx curIntIdx = findOppositeIntersection(current.id, streetSegs[i]);
+            Point curPoint = Point(curIntIdx, current.destCoords, &current);
+            curPoint.segId = streetSegs[i];
 
-        double pathTravelTime = 0;
-        if(current.parent != nullptr){
-            StreetSegmentInfo currentSegmentInfo = osmhelp::getStreetSegmentInfo(streetSegs[i]);
-            StreetSegmentInfo nextSegmentInfo = osmhelp::getStreetSegmentInfo(current.segId);
-            //if streets of segments are not the same, there is a turn
-            if(currentSegmentInfo.streetID != nextSegmentInfo.streetID)
-            {
-                pathTravelTime += turn_penalty; //apply turn penalty
+            double pathTravelTime = 0;
+            if(current.parent != nullptr){
+                StreetSegmentInfo nextSegmentInfo = osmhelp::getStreetSegmentInfo(current.segId);
+                //if streets of segments are not the same, there is a turn
+                if(currentSegmentInfo.streetID != nextSegmentInfo.streetID)
+                {
+                    pathTravelTime += turn_penalty; //apply turn penalty
+                }
             }
-        }
 
-        curPoint.gCost = current.gCost + findStreetSegmentTravelTime(curPoint.segId);
+            curPoint.gCost = current.gCost + findStreetSegmentTravelTime(curPoint.segId);
+        }
     }
     
     return neighbours;

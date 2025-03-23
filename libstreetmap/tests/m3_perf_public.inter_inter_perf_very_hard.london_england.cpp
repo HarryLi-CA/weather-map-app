@@ -81,7 +81,7 @@ struct MapFixture {
 
         path = findPathBetweenIntersections(30.00000000000000000, std::make_pair(169294, 188312));
         CHECK(path_is_legal(169294, 188312, path));
-        std::cout << computePathTravelTime(0.00000000000000000, path) << endl;
+        std::cout << computePathTravelTime(30.00000000000000000, path) << endl;
         CHECK(computePathTravelTime(30.00000000000000000, path) <= 1838.30537872091076679);
 
         path = findPathBetweenIntersections(0.00000000000000000, std::make_pair(191776, 188296));
@@ -91,17 +91,17 @@ struct MapFixture {
 
         path = findPathBetweenIntersections(30.00000000000000000, std::make_pair(82224, 253338));
         CHECK(path_is_legal(82224, 253338, path));
-        std::cout << computePathTravelTime(0.00000000000000000, path) << endl;
+        std::cout << computePathTravelTime(30.00000000000000000, path) << endl;
         CHECK(computePathTravelTime(30.00000000000000000, path) <= 4001.54026260530372383);
 
         path = findPathBetweenIntersections(30.00000000000000000, std::make_pair(206580, 144650));
         CHECK(path_is_legal(206580, 144650, path));
-        std::cout << computePathTravelTime(0.00000000000000000, path) << endl;
+        std::cout << computePathTravelTime(30.00000000000000000, path) << endl;
         CHECK(computePathTravelTime(30.00000000000000000, path) <= 3333.36904487161154975);
 
         path = findPathBetweenIntersections(30.00000000000000000, std::make_pair(210690, 226041));
         CHECK(path_is_legal(210690, 226041, path));
-        std::cout << computePathTravelTime(0.00000000000000000, path) << endl;
+        std::cout << computePathTravelTime(30.00000000000000000, path) << endl;
         CHECK(computePathTravelTime(30.00000000000000000, path) <= 1077.55492343421224177);
 
         path = findPathBetweenIntersections(0.00000000000000000, std::make_pair(227758, 283142));
@@ -131,7 +131,7 @@ struct MapFixture {
 
         path = findPathBetweenIntersections(30.00000000000000000, std::make_pair(261541, 255424));
         CHECK(path_is_legal(261541, 255424, path));
-        std::cout << computePathTravelTime(0.00000000000000000, path) << endl;
+        std::cout << computePathTravelTime(30.00000000000000000, path) << endl;
         CHECK(computePathTravelTime(30.00000000000000000, path) <= 3239.97261425242959376);
 
         path = findPathBetweenIntersections(0.00000000000000000, std::make_pair(58267, 149584));
@@ -141,12 +141,12 @@ struct MapFixture {
 
         path = findPathBetweenIntersections(30.00000000000000000, std::make_pair(287857, 115591));
         CHECK(path_is_legal(287857, 115591, path));
-        std::cout << computePathTravelTime(0.00000000000000000, path) << endl;
+        std::cout << computePathTravelTime(30.00000000000000000, path) << endl;
         CHECK(computePathTravelTime(30.00000000000000000, path) <= 2935.41815782033017967);
 
         path = findPathBetweenIntersections(30.00000000000000000, std::make_pair(290693, 324380));
         CHECK(path_is_legal(290693, 324380, path));
-        std::cout << computePathTravelTime(0.00000000000000000, path) << endl;
+        std::cout << computePathTravelTime(30.00000000000000000, path) << endl;
         CHECK(computePathTravelTime(30.00000000000000000, path) <= 3478.42134589164516001);
 
         path = findPathBetweenIntersections(0.00000000000000000, std::make_pair(281132, 219416));
@@ -161,7 +161,7 @@ struct MapFixture {
 
         path = findPathBetweenIntersections(30.00000000000000000, std::make_pair(216649, 152186));
         CHECK(path_is_legal(216649, 152186, path));
-        std::cout << computePathTravelTime(0.00000000000000000, path) << endl;
+        std::cout << computePathTravelTime(30.00000000000000000, path) << endl;
         CHECK(computePathTravelTime(30.00000000000000000, path) <= 3145.55416253628027334);
 
         path = findPathBetweenIntersections(0.00000000000000000, std::make_pair(43890, 41608));
@@ -171,7 +171,7 @@ struct MapFixture {
 
         path = findPathBetweenIntersections(30.00000000000000000, std::make_pair(156317, 5633));
         CHECK(path_is_legal(156317, 5633, path));
-        std::cout << computePathTravelTime(0.00000000000000000, path) << endl;
+        std::cout << computePathTravelTime(30.00000000000000000, path) << endl;
         CHECK(computePathTravelTime(30.00000000000000000, path) <= 2271.95250290435660645);
 
         path = findPathBetweenIntersections(0.00000000000000000, std::make_pair(237985, 136352));

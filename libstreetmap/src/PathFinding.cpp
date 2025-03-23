@@ -6,12 +6,16 @@
 #include <vector>
 #include <stdio.h>
 #include <queue>
+#include <ctime>
 
 #define MAX_STREET_SPEED 36.2 // m/s = 130km/h
 
 using namespace std;
 
 vector<Point*> calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids){
+    // cout << "Started Finding Path" << endl;
+    // clock_t startTime = clock();
+
     Point* destination = new Point(intersect_ids.second);
     Point* start = new Point(intersect_ids.first, destination->coords, nullptr);
     Point* current = start;
@@ -29,6 +33,7 @@ vector<Point*> calculatePathArray(const double turn_penalty, const std::pair<Int
         current->isTraversed = true;
 
         if(current->id == destination->id){
+            //cout<<"Ended finding with seconds: "<< (double)(clock() - startTime) / CLOCKS_PER_SEC << endl;
             vector<Point*> path = current->retracePath();
             for(int i = 0; i <closed.size(); i++)
                 if(!closed[i]->isPath)
@@ -37,6 +42,8 @@ vector<Point*> calculatePathArray(const double turn_penalty, const std::pair<Int
                 delete open.items[i];
             open.items.clear();
             open.currentItemCount = 0;
+            
+            //cout<<"Ended finding with seconds: "<< (double)(clock() - startTime) / CLOCKS_PER_SEC << endl;
             return path;
         }
 

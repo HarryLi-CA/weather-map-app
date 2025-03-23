@@ -61,9 +61,9 @@ static unordered_map<pair<StreetIdx,StreetIdx>,vector<IntersectionIdx>*,StreetPa
 //Uses a special comparator stringComparator to allow for street names to be identified by a partial string
 static multimap<string,StreetIdx,stringComparator> streetNames;
 //stores length of street segment
-static vector<float> streetSegmentLengthCache;
-static vector<float> streetSpeedLimitCache;
-static vector<float> travelTimeCache;
+static vector<double> streetSegmentLengthCache;
+static vector<double> streetSpeedLimitCache;
+static vector<double> travelTimeCache;
 
 int numIntersections = 0;
 int numStreetSegments = 0;

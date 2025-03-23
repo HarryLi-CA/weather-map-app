@@ -36,7 +36,7 @@ void cacheStreetSegmentToIntersection(vector<vector<IntersectionIdx>*>& connecte
     connectedIntersections[streetSegmentIndex]->push_back(intersectionIndex); //add street segment to intersection
 }
 
-void loadStreetSegmentPoint(vector<vector<LatLon>*>& streetSegmentPoints, vector<float>& speedLimitCache, StreetSegmentIdx streetSegmentIndex)
+void loadStreetSegmentPoint(vector<vector<LatLon>*>& streetSegmentPoints, vector<double>& speedLimitCache, StreetSegmentIdx streetSegmentIndex)
 {
     StreetSegmentInfo segmentInfo = osmhelp::getStreetSegmentInfo(streetSegmentIndex);
     vector<LatLon>* pointVector = new vector<LatLon>(); //allocate vector of segment points

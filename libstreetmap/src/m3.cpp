@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <cstdlib>
 #include <ctime>
-#include <cfloat>
 
 using namespace std;
 

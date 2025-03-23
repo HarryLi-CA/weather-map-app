@@ -148,6 +148,12 @@ vector<vector<PathSegment>> paths;
 IntersectionIdx primarySelection = -1;
 IntersectionIdx secondarySelection = -1;
 
+vector<pair<pair<int,IntersectionIdx>,ezgl::application *>> startingIntersectionInfo;
+vector<pair<pair<int,IntersectionIdx>,ezgl::application *>> endingIntersectionInfo;
+int numStartingIntersections;
+int numEndingIntersections;
+pair<IntersectionIdx,IntersectionIdx> selectedRoute;
+
 // void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
 // {
 //    double angle = atan2(direction.y, direction.x);
@@ -1236,6 +1242,9 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    ezgl::rectangle camRect = application->get_canvas("MainCanvas")->get_camera().get_world();
    int cameraPoints = 0;
    bool firstHightlight = false; //already highlighted an intersection
+
+   int counter = 0;
+
    for(int i = 0; i < numOfIntersectionLists; i++){
       for(int j = 0; j < intersectionList[i].size(); j++){
 
@@ -1467,8 +1476,6 @@ void exitClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application)
 
 void typedRouteConfirm_cbk(GtkWidget */*widget*/, ezgl::application *application){
 
-   //Rewrite past routes
-
    bool validInput = true;
 
    string errorMsg;
@@ -1477,11 +1484,48 @@ void typedRouteConfirm_cbk(GtkWidget */*widget*/, ezgl::application *application
    vector<vector<IntersectionIdx>> endingIntersections = findIntersectionsfromSearchbars(application,"routeEndSearchBar1","routeEndSearchBar2",errorMsg,validInput,"Ending");
 
    if(validInput){
-      //cout << startingIntersections[0][0] << " & " << endingIntersections[0][0];
-      cout << "apples";
+      string appy = to_string(startingIntersections.size());
 
       GtkWidget * routeCreatorDialog = GTK_WIDGET(application->get_object("routeCreatorDialog"));
       gtk_widget_hide(routeCreatorDialog);
+
+      int counter = 1;
+
+      //creating buttons for the starting intersection confirmation pop-up
+      for(int i = 0; i < startingIntersections.size(); i++){
+         for(int j = 0; j < startingIntersections[i].size(); j++){
+
+            startingIntersectionInfo.push_back({{1,startingIntersections[i][j]},application});
+
+            string buttonLabel = to_string(counter) + ": " + getIntersectionName(startingIntersections[i][j]);
+
+            application->create_button(buttonLabel.c_str(),counter,selectIntersection_cbk,&startingIntersectionInfo[counter-1]);
+            appy.append(getIntersectionName(startingIntersections[i][j]) + (", "));
+            counter++;
+         }
+      }
+      numStartingIntersections = counter;
+
+      counter = 1;
+      //creating buttons for the ending intersection confirmation pop-up
+      for(int i = 0; i < endingIntersections.size(); i++){
+         for(int j = 0; j < endingIntersections[i].size(); j++){
+
+            endingIntersectionInfo.push_back({{2,endingIntersections[i][j]},application});
+
+            string buttonLabel = to_string(counter) + ": " + getIntersectionName(endingIntersections[i][j]);
+
+            application->create_button(buttonLabel.c_str(),counter,selectIntersection_cbk,&endingIntersectionInfo[counter-1]);
+            appy.append(getIntersectionName(endingIntersections[i][j]) + (", "));
+            counter++;
+         }
+      }
+      numEndingIntersections = counter;
+
+      application->update_message(appy);
+
+      GtkWidget * startingIntersectionDialog = GTK_WIDGET(application->get_object("intersectionSelectorDialog1"));
+      gtk_widget_show(startingIntersectionDialog);
 
    }else{
 
@@ -1493,6 +1537,8 @@ void typedRouteConfirm_cbk(GtkWidget */*widget*/, ezgl::application *application
 vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::application *application, const gchar * searchbarId1, const gchar * searchbarId2, string &errorMsg, bool &validInput, string direction){
    
    vector<vector<IntersectionIdx>> intersectionList;
+
+   bool validNames = true;
 
    //Extracting text from search bars
    GtkEntry* searchbar1 = GTK_ENTRY(application->get_object(searchbarId1));
@@ -1507,10 +1553,12 @@ vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::applicatio
    if(street1Idxs.size() == 0){
       errorMsg.append("\n      " + direction + " street 1 does not exist       \n");
       validInput = false;
+      validNames = false;
    }
    if(street2Idxs.size() == 0){
       errorMsg.append("\n      " + direction + " street 2 does not exist       \n");
       validInput = false;
+      validNames = false;
    }
 
    //Create unique pairs of streetIdxs of the inputted streets
@@ -1543,10 +1591,54 @@ vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::applicatio
    }
    int numOfIntersectionLists = intersectionList.size();
 
-   if(numOfIntersectionLists == 0){
+   if(numOfIntersectionLists == 0 && validNames){
       errorMsg.append("\n      " + direction + " streets do not intersect       \n");
       validInput = false;
    }
 
    return intersectionList;
+}
+
+void selectIntersection_cbk(GtkWidget */*widget*/, pair<pair<int,IntersectionIdx>,ezgl::application *> * intersectionInfo){
+
+   //direction will be 1 for starting, 2 for ending
+   int direction = intersectionInfo->first.first;
+   IntersectionIdx chosenIntersection = intersectionInfo->first.second;
+
+   ezgl::application *application = intersectionInfo->second;
+
+   if(direction == 1){
+      selectedRoute.first = chosenIntersection;
+
+      //close pop up 
+      GtkWidget * startingIntersectionDialog = GTK_WIDGET(application->get_object("intersectionSelectorDialog1"));
+      gtk_widget_hide(startingIntersectionDialog);
+
+      //clean buttons from pop up
+      for(int i = 0; i < numStartingIntersections-1; i++){
+         string buttonLabel = to_string(i + 1) + ": " + getIntersectionName(startingIntersectionInfo[i].first.second);
+         application->destroy_button(buttonLabel.c_str(),1);
+      }
+      startingIntersectionInfo.clear();
+      
+      //open pop up for ending
+      GtkWidget * endingIntersectionDialog = GTK_WIDGET(application->get_object("intersectionSelectorDialog2"));
+      gtk_widget_show(endingIntersectionDialog);
+      
+   } else if(direction == 2){
+      selectedRoute.second = chosenIntersection;
+      
+      //close pop up 
+      GtkWidget * endingIntersectionDialog = GTK_WIDGET(application->get_object("intersectionSelectorDialog2"));
+      gtk_widget_hide(endingIntersectionDialog);
+
+      //clean buttons from pop up
+      for(int i = 0; i < numEndingIntersections-1; i++){
+         string buttonLabel = to_string(i + 1) + ": " + getIntersectionName(endingIntersectionInfo[i].first.second);
+         application->destroy_button(buttonLabel.c_str(),2);
+      }
+      endingIntersectionInfo.clear();
+
+      //start intersection searching
+   }
 }

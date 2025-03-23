@@ -18,6 +18,7 @@
  */
 
 #include "ezgl/application.hpp"
+#include "m2.h"
 
 namespace ezgl {
 
@@ -357,6 +358,65 @@ void application::create_button(const char *button_text,
   create_button(button_text, 4, 0, 1, 1, button_func);
 }
 
+void application::create_button(const char *button_text,
+    int insert_row,
+    intersection_button_callback_fn button_func,
+    std::pair<std::pair<int, int>, ezgl::application *>* intersectionInfo)
+{
+  // get the internal Gtk grid
+  GtkGrid *in_grid;
+  if(intersectionInfo->first.first == 1){
+    in_grid = (GtkGrid *)get_object("startingIntersectionGrid");
+  }else{
+    in_grid = (GtkGrid *)get_object("endingIntersectionGrid");
+  }
+
+  // add a row where we want to insert
+  gtk_grid_insert_row(in_grid, insert_row);
+
+  // create the button
+  create_button(button_text, 0, insert_row, 1, 1, button_func, intersectionInfo);
+}
+
+void application::create_button(const char *button_text,
+    int left,
+    int top,
+    int width,
+    int height,
+    intersection_button_callback_fn button_func,
+    std::pair<std::pair<int, int>, ezgl::application *>* intersectionInfo)
+{
+  // get the internal Gtk grid
+  GtkGrid *in_grid;
+  if(intersectionInfo->first.first == 1){
+    in_grid = (GtkGrid *)get_object("startingIntersectionGrid");
+  }else{
+    in_grid = (GtkGrid *)get_object("endingIntersectionGrid");
+  }
+
+  // create the new button with the given label
+  GtkWidget *new_button = gtk_button_new_with_label(button_text);
+  gtk_widget_set_name(new_button, button_text);
+
+  // set can_focus property to false; helps keyboard events go to more useful
+  // widgets (e.g. MainCanvas can get them if the user set a callback).
+  gtk_widget_set_can_focus(new_button, false);
+#if GTK_CHECK_VERSION (3, 20, 0)
+  gtk_widget_set_focus_on_click(new_button, false);
+#endif
+
+  // connect the buttons clicked event to the callback
+  if(button_func != NULL) {
+    g_signal_connect(G_OBJECT(new_button), "clicked", G_CALLBACK(selectIntersection_cbk), intersectionInfo);
+  }
+
+  // add the new button
+  gtk_grid_attach(in_grid, new_button, left, top, width, height);
+
+  // show the button
+  gtk_widget_show(new_button);
+}
+
 void application::create_label(int insert_row, const char *label_text){
   //Getting grid
   GtkGrid *in_grid = (GtkGrid *)get_object("InnerGrid");
@@ -595,6 +655,54 @@ bool application::destroy_button(const char *button_text_to_destroy)
 {
   // get the inner grid
   GtkGrid *in_grid = (GtkGrid *)get_object("MainCanvasGrid");
+
+  // the text to delete, in c++ string form
+  std::string text_to_del = std::string(button_text_to_destroy);
+
+  // iterate over all of the children in the grid and find the button by it's text
+  GList *children, *iter;
+  children = gtk_container_get_children(GTK_CONTAINER(in_grid));
+  for(iter = children; iter != NULL; iter = g_list_next(iter)) {
+    // iterator to widget
+    GtkWidget *widget = GTK_WIDGET(iter->data);
+
+    // check if widget is a button
+    if(GTK_IS_BUTTON(widget)) {
+      // convert to button
+      GtkButton *button = GTK_BUTTON(widget);
+
+      // get the button label
+      const char *button_label = gtk_button_get_label(button);
+      if(button_label != nullptr) {
+        std::string button_text = std::string(button_label);
+
+        // does the label of the button match the one we want to delete?
+        if(button_text == text_to_del) {
+          // destroy the button (widget) and return true
+          gtk_widget_destroy(widget);
+          // free the children list
+          g_list_free (children);
+          return true;
+        }
+      }
+    }
+  }
+
+  // free the children list
+  g_list_free (children);
+  // couldn't find the button with the label 'button_text_to_destroy'
+  return false;
+}
+
+bool application::destroy_button(const char *button_text_to_destroy,int direction)
+{
+  // get the inner grid
+  GtkGrid *in_grid;
+  if(direction == 1){
+    in_grid = (GtkGrid *)get_object("startingIntersectionGrid");
+  }else{
+    in_grid = (GtkGrid *)get_object("endingIntersectionGrid");
+  }
 
   // the text to delete, in c++ string form
   std::string text_to_del = std::string(button_text_to_destroy);

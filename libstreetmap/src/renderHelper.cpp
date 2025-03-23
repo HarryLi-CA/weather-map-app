@@ -37,6 +37,13 @@ void Graphic::load(ezgl::renderer* g)
     height = cairo_image_surface_get_width(surface);
 }
 
+void Graphic::draw(ezgl::renderer* g, double worldScale, ezgl::point2d position, ezgl::point2d offset, double imageScale, ezgl::color color)
+{
+    cairo_set_operator((cairo_t*)surface, cairo_operator_t::CAIRO_OPERATOR_SOURCE);
+    cairo_set_source_rgba((cairo_t*)surface, color.red, color.green, color.blue, color.alpha);
+    draw(g, worldScale, position, offset, imageScale);
+}
+
 void Graphic::draw(ezgl::renderer* g, double worldScale, ezgl::point2d position, ezgl::point2d offset, double imageScale)
 {
     double drawScale = kGraphicsPixelToMeters/worldScale;

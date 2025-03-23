@@ -30,7 +30,8 @@ const ezgl::color kPathColour = {224, 255, 133}; //colour of a given path
 
 void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ezgl::color colour, double scaling)
 {
-    
+    //dont draw empthy paths
+    if(path.size() == 0){return;}
     //get end points
     ezgl::point2d startPoint = path[0].from;
     ezgl::point2d endPoint = path[path.size() - 1].to;
@@ -112,6 +113,31 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
     
 }
 
+vector<PathSegment> generateFatestPath(IntersectionIdx from, IntersectionIdx to)
+{
+    vector<PathSegment> path;
+
+    vector<StreetSegmentIdx> segmentPath = findPathBetweenIntersections(kDefaultTurnPenalty,{from, to});
+    
+    //if intersection path is empty (or invalid) return empty path
+    if(segmentPath.size() == 0){return path;}
+
+    for(int pathIndex = 0; pathIndex < segmentPath.size() - 1; pathIndex++)
+    {
+        StreetSegmentInfo segmentInfo = getStreetSegmentInfo(segmentPath[pathIndex]);
+
+        ezgl::point2d from = LatLonToPoint2D(getIntersectionPosition(segmentInfo.from));
+        ezgl::point2d to = LatLonToPoint2D(getIntersectionPosition(segmentInfo.to));
+
+        StreetSegmentIdx commonSegment = segmentPath[pathIndex];
+    
+        PathSegment pathSegment = {from,to,commonSegment};
+        path.push_back(pathSegment);
+    }
+
+    return path;
+}
+
 double computePathTravelTime(const double turn_penalty, const std::vector<StreetSegmentIdx>& path)
 {
     double pathTravelTime = 0;
@@ -139,12 +165,12 @@ double computePathTravelTime(const double turn_penalty, const std::vector<Street
     return pathTravelTime;
 }
 
-vector<PathSegment>* generateRandomPath()
+vector<PathSegment> generateRandomPath()
 {
 
     srand(time(NULL));
     StreetSegmentIdx start = rand()%(getNumStreetSegments());
-    vector<PathSegment>* path = new vector<PathSegment>();
+    vector<PathSegment> path;
     StreetSegmentIdx current = start;
 
     int pathSize = 100;
@@ -166,7 +192,7 @@ vector<PathSegment>* generateRandomPath()
         }
         vector<LatLon>* points = getStreetSegmentPoints(current);
 
-        path->push_back({LatLonToPoint2D((*points)[0]), LatLonToPoint2D((*points)[points->size() - 1]), current}); 
+        path.push_back({LatLonToPoint2D((*points)[0]), LatLonToPoint2D((*points)[points->size() - 1]), current}); 
         current = next;
     }
 

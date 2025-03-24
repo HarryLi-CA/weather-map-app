@@ -1947,7 +1947,7 @@ void clickedStartingIntersection_cbk(GtkWidget * /*widget*/, pair<IntersectionId
    if (primarySelection > -1 && secondarySelection > -1)
    {
       setDisplayedPath(findPathBetweenIntersections(kDefaultTurnPenalty,{primarySelection, secondarySelection}));
-      GObject* exitBtn = application->get_object("ExitRouteModeBtn");
+      GObject* exitBtn = clickedIntersectionInfo->second->get_object("ExitRouteModeBtn");
       gtk_widget_show((GtkWidget*)exitBtn);
    }
    // User chose the clicked intersection as an starting for the route, handle here
@@ -1964,7 +1964,7 @@ void clickedEndingIntersection_cbk(GtkWidget * /*widget*/, pair<IntersectionIdx,
    if (primarySelection > -1 && secondarySelection > -1)
    {
       setDisplayedPath(findPathBetweenIntersections(kDefaultTurnPenalty,{primarySelection, secondarySelection}));
-      GObject* exitBtn = application->get_object("ExitRouteModeBtn");
+      GObject* exitBtn = clickedIntersectionInfo->second->get_object("ExitRouteModeBtn");
       gtk_widget_show((GtkWidget*)exitBtn);
    }
    // User chose the clicked intersection as an ending for the route, handle here

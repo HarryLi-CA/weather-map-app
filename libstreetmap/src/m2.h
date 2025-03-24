@@ -22,6 +22,7 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
 void clickedOnFeature(MapFeature* clicked, ezgl::application* app); //helper function to manage clicks on a specific MapFeature
 void clickingModeClickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::application* app); //helper function to manage clicks on a specific MapFeature while in clicking mode
 
+
 void initial_setup(ezgl::application *application, bool /*new_window*/);
 
 void thread_safe_draw_main_canvas(ezgl::renderer *g); // thread safe draw main canvas only one running at a timevoid threadedChangeFilter_cbk(pair<WeatherLayer,ezgl::application*> filterInfo)
@@ -55,6 +56,7 @@ void openHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application);
 void closeHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application);
 
 void clickedIntersectionForRoute(IntersectionIdx clickedIntersection,ezgl::application *application);
+void clickedIntersectionForRoute_hide(ezgl::application *application);
 void closeRouteClickingDialog_cbk(GtkWidget */*widget*/, ezgl::application *application);
 void clickedStartingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo);
 void clickedEndingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo);

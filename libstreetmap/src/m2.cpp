@@ -85,6 +85,7 @@ const double kRoadBorderWidth = 0.5; //width of road borders
 const double TILERATIO = 0.000005805;
 const double kSpatialIndexingThreshold = DBL_MAX;//10; //maximum screen-to-world ratio before quad tree rendering is enabled
 const double kCameraBoundsExtension = 0; //
+const double kDefaultTurnPenalty = 10;
 const bool enableThreading = true;
 bool clickingMode = false; //whether the program is in clicking mode or not
 
@@ -597,12 +598,14 @@ void clickingModeClickedOnFeature(MapFeature* clicked, GdkEventButton* event, ez
 
 void clickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::application* app) //function to manage clicks on a specific MapFeature
 {
+   clickedIntersectionForRoute_hide(app);
    
    mapFeaturesMutex.lock();
 
    mapFeatures.highlightFeature(clicked, true);
 
    mapFeaturesMutex.unlock();
+   
 
    if(clicked->featureType == FEATURE) //clicked on feature
    {
@@ -624,6 +627,7 @@ void clickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::applicat
       string intersection = getKnownIntersectionName(clicked->dataIndex);
       app->update_message("Clicked Intersection: " + intersection);
       prevClickedIntersection = clicked->dataIndex;
+      clickedIntersectionForRoute(clicked->dataIndex,app);
    }
    mainCanvas->redraw();
 }
@@ -1705,7 +1709,7 @@ void selectIntersection_cbk(GtkWidget */*widget*/, pair<pair<int,IntersectionIdx
          return;
       }
 
-      setDisplayedPath(findPathBetweenIntersections(10,selectedRoute));
+      setDisplayedPath(findPathBetweenIntersections(kDefaultTurnPenalty,selectedRoute));
 
    }
 }
@@ -1716,39 +1720,56 @@ void clickedIntersectionForRoute(IntersectionIdx clickedIntersection,ezgl::appli
    clickedIntersectionInfo.first = clickedIntersection;
    clickedIntersectionInfo.second = application;
 
-   GObject* startOfRouteBtn = application->get_object("startOfRouteBtn");
+   GObject* startOfRouteBtn = application->get_object("intersectionPopup_addPrimary");
    g_signal_connect(startOfRouteBtn,"clicked",G_CALLBACK(clickedStartingIntersection_cbk),&clickedIntersectionInfo);
 
-   GObject* endOfRouteBtn = application->get_object("endOfRouteBtn");
+   GObject* endOfRouteBtn = application->get_object("intersectionPopup_addSecondary");
    g_signal_connect(endOfRouteBtn,"clicked",G_CALLBACK(clickedEndingIntersection_cbk),&clickedIntersectionInfo);
 
-   //open pop up since intersection is clicked
-   GtkWidget * routeClickingDialog = GTK_WIDGET(application->get_object("routeClickingDialog"));
-   gtk_widget_show(routeClickingDialog);
+   gtk_widget_show(GTK_WIDGET(startOfRouteBtn));
+   gtk_widget_show(GTK_WIDGET(endOfRouteBtn));
+}
+
+
+void clickedIntersectionForRoute_hide(ezgl::application *application)
+{
+
+   GObject* startOfRouteBtn = application->get_object("intersectionPopup_addPrimary");
+   g_signal_connect(startOfRouteBtn,"clicked",G_CALLBACK(clickedStartingIntersection_cbk),&clickedIntersectionInfo);
+
+   GObject* endOfRouteBtn = application->get_object("intersectionPopup_addSecondary");
+   g_signal_connect(endOfRouteBtn,"clicked",G_CALLBACK(clickedEndingIntersection_cbk),&clickedIntersectionInfo);
+
+   gtk_widget_hide(GTK_WIDGET(startOfRouteBtn));
+   gtk_widget_hide(GTK_WIDGET(endOfRouteBtn));
 }
 
 //callback function called when user clicks "cancel" button on intersection clicking pop up in route creating mode
 void closeRouteClickingDialog_cbk(GtkWidget */*widget*/, ezgl::application *application){
 
-   GtkWidget * routeClickingDialog = GTK_WIDGET(application->get_object("routeClickingDialog"));
+   GtkWidget * routeClickingDialog = GTK_WIDGET(application->get_object("intersectionPopup"));
    gtk_widget_hide(routeClickingDialog);
 }
 
 //callback function called when user clicks "start of route" on intersection clicking pop up in route creating mode
 void clickedStartingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo){
 
+   cout << "click starting intersection" << endl;
    IntersectionIdx clickedStartingIntersection = clickedIntersectionInfo->first;
    ezgl::application * application = clickedIntersectionInfo->second;
 
 
-
+   primarySelection = clickedIntersectionInfo->first;
+   if(primarySelection > -1 && secondarySelection > -1)
+   {
+      setDisplayedPath(findPathBetweenIntersections(kDefaultTurnPenalty,{primarySelection, secondarySelection}));
+   }
    // User chose the clicked intersection as an starting for the route, handle here
 
 
 
    //Close pop up once button is clicked
-   GtkWidget * routeClickingDialog = GTK_WIDGET(application->get_object("routeClickingDialog"));
-   gtk_widget_hide(routeClickingDialog);
+   clickedIntersectionInfo->second->get_canvas("MainCanvas")->redraw();
 }
 
 //callback function called when user clicks "end of route" on intersection clicking pop up in route creating mode
@@ -1758,11 +1779,14 @@ void clickedEndingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,e
    ezgl::application * application = clickedIntersectionInfo->second;
 
 
-
+   secondarySelection = clickedIntersectionInfo->first;
+   if(primarySelection > -1 && secondarySelection > -1)
+   {
+      setDisplayedPath(findPathBetweenIntersections(kDefaultTurnPenalty,{primarySelection, secondarySelection}));
+   }
    // User chose the clicked intersection as an ending for the route, handle here
 
 
    //Close pop up once button is clicked
-   GtkWidget * routeClickingDialog = GTK_WIDGET(application->get_object("routeClickingDialog"));
-   gtk_widget_hide(routeClickingDialog);
+   clickedIntersectionInfo->second->get_canvas("MainCanvas")->redraw();
 }

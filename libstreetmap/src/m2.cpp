@@ -1269,15 +1269,23 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
       }
    }
 
+   bool foundIntersections = false;
+
    //Store the all intersections of each pair of streets
    vector<vector<IntersectionIdx>> intersectionList;
    auto it = streetIdPairs.begin();
    while(it != streetIdPairs.end()){
-      intersectionList.push_back(findIntersectionsOfTwoStreets(*it));
+      std::vector<IntersectionIdx> streetsIntersections = findIntersectionsOfTwoStreets(*it);
+      intersectionList.push_back(streetsIntersections);
+
+      if(streetsIntersections.size() != 0){
+         foundIntersections = true;
+      }
+
       it++;
    }
    int numOfIntersectionLists = intersectionList.size();
-   if(numOfIntersectionLists == 0){
+   if(!foundIntersections){
       application->update_message("No intersections found");
       return;
    }
@@ -1604,8 +1612,6 @@ vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::applicatio
    
    vector<vector<IntersectionIdx>> intersectionList;
 
-   bool validNames = true;
-
    //Extracting text from search bars
    GtkEntry* searchbar1 = GTK_ENTRY(application->get_object(searchbarId1));
    string searchText1 = string(gtk_entry_get_text(searchbar1));
@@ -1619,12 +1625,10 @@ vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::applicatio
    if(street1Idxs.size() == 0){
       errorMsg.append("\n      " + direction + " street 1 does not exist       \n");
       validInput = false;
-      validNames = false;
    }
    if(street2Idxs.size() == 0){
       errorMsg.append("\n      " + direction + " street 2 does not exist       \n");
       validInput = false;
-      validNames = false;
    }
 
    //Create unique pairs of streetIdxs of the inputted streets
@@ -1649,15 +1653,23 @@ vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::applicatio
       }
    }
 
+   bool foundIntersections = false;
+
    //Store the all intersections of each pair of streets
    auto it = streetIdPairs.begin();
    while(it != streetIdPairs.end()){
-      intersectionList.push_back(findIntersectionsOfTwoStreets(*it));
+      std::vector<IntersectionIdx> streetsIntersections = findIntersectionsOfTwoStreets(*it);
+      intersectionList.push_back(streetsIntersections);
+
+      if(streetsIntersections.size() != 0){
+         foundIntersections = true;
+      }
+
       it++;
    }
    int numOfIntersectionLists = intersectionList.size();
 
-   if(numOfIntersectionLists == 0){
+   if(!foundIntersections){
       errorMsg.append("\n      " + direction + " streets do not intersect       \n");
       validInput = false;
    }

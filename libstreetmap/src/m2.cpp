@@ -1755,10 +1755,8 @@ vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::applicatio
       if (searchText1.length() == 0)
       {
          errorMsg.append("\n      " + direction + " first street not entered       \n");
-      }
-      else
-      {
-         errorMsg.append("\n      " + direction + " first street does not exist       \n");
+      } else{
+         errorMsg.append("\n      " + direction + " first street \"" + searchText1 + "\" does not exist       \n");
       }
 
       validStreetNames = false;
@@ -1769,10 +1767,8 @@ vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::applicatio
       if (searchText2.length() == 0)
       {
          errorMsg.append("\n      " + direction + " second street not entered       \n");
-      }
-      else
-      {
-         errorMsg.append("\n      " + direction + " second street does not exist       \n");
+      } else{
+         errorMsg.append("\n      " + direction + " second street \"" + searchText2 +  "\" does not exist       \n");
       }
 
       validStreetNames = false;

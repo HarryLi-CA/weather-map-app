@@ -51,8 +51,11 @@ vector<MapFeature *> intersectionFeatures;
 vector<MapFeature *> streetSegmentFeatures;   
                                                       //vector that takes in intersection index and return correpsonding map feature
 vector<StreetIdx> streetLengthCache;                                                               //stored value of all loaded street lengths;
+
+//garbage collection
 vector<pair<pair<int, vector<PathInstruction> &>, ezgl::application *> *> instructionPairPointers; //pointers that should be deleted when necessary
-vector<vector<PathInstruction> *> segmentHeapPointer;
+vector<vector<PathInstruction> *> segmentHeapPointers;
+vector<std::pair<std::pair<int, int>, ezgl::application *>*> intersectionInfoPointers;
 
 int numberOfStreets = 0; //save number of streets for fast access
 //default colour constants for general objects
@@ -1697,8 +1700,11 @@ void typedRouteConfirm_cbk(GtkWidget * /*widget*/, ezgl::application *applicatio
             startingIntersectionInfo.push_back({{1, startingIntersections[i][j]}, application});
 
             string buttonLabel = to_string(counter) + ": " + getIntersectionName(startingIntersections[i][j]);
+            
+            std::pair<std::pair<int, int>, ezgl::application *>* dynamicIntersectionInfo = new std::pair<std::pair<int, int>, ezgl::application *>(startingIntersectionInfo[counter - 1]);
+            intersectionInfoPointers.push_back(dynamicIntersectionInfo);
 
-            application->create_button(buttonLabel.c_str(), counter, selectIntersection_cbk, &startingIntersectionInfo[counter - 1]);
+            application->create_button(buttonLabel.c_str(), counter, selectIntersection_cbk, dynamicIntersectionInfo);
             counter++;
          }
       }
@@ -1715,7 +1721,10 @@ void typedRouteConfirm_cbk(GtkWidget * /*widget*/, ezgl::application *applicatio
 
             string buttonLabel = to_string(counter) + ": " + getIntersectionName(endingIntersections[i][j]);
 
-            application->create_button(buttonLabel.c_str(), counter, selectIntersection_cbk, &endingIntersectionInfo[counter - 1]);
+            std::pair<std::pair<int, int>, ezgl::application *>* dynamicIntersectionInfo = new std::pair<std::pair<int, int>, ezgl::application *>(endingIntersectionInfo[counter - 1]);
+            intersectionInfoPointers.push_back(dynamicIntersectionInfo);
+
+            application->create_button(buttonLabel.c_str(), counter, selectIntersection_cbk, dynamicIntersectionInfo);
             counter++;
          }
       }
@@ -2042,7 +2051,7 @@ void displayTravelDirections(vector<PathInstruction> &directions, ezgl::applicat
       g_signal_connect(GTK_BUTTON(textButton), "clicked", G_CALLBACK(clickedLabelButton_cbk), buttonData);
 
       instructionPairPointers.push_back(buttonData);
-      segmentHeapPointer.push_back(dynamicIntructions);
+      segmentHeapPointers.push_back(dynamicIntructions);
 
       string mainInstruction = direction.instruction;
 
@@ -2123,12 +2132,18 @@ void clearHeapPointers()
       delete instructionPairPointers[i];
    }
 
-   for (int i = 0; i < segmentHeapPointer.size(); i++)
+   for (int i = 0; i < segmentHeapPointers.size(); i++)
    {
-      segmentHeapPointer[i]->clear();
-      delete segmentHeapPointer[i];
+      segmentHeapPointers[i]->clear();
+      delete segmentHeapPointers[i];
+   }
+
+   for(int i = 0; i < intersectionInfoPointers.size(); i++)
+   {
+      delete intersectionInfoPointers[i];
    }
 
    instructionPairPointers.clear();
-   segmentHeapPointer.clear();
+   segmentHeapPointers.clear();
+   intersectionInfoPointers.clear();
 }

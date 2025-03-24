@@ -26,7 +26,7 @@ const double kMaxArrowSize = 0; //minimum size of arrow
 const double kArrowColourBrightness = 0.8; //how bright arrows are compared to the path colour
 const double kPathBorderBrightness = 0.8; //how bright borders are compared to the path colour
 const double kPathBorderSize = 6; //thickness of the path's borders
-const double kTurnThreshold = 0.8; //absolute sinusoidal coefficient required for an angle to be considered a turn 
+const double kTurnThreshold = 0.6; //absolute sinusoidal coefficient required for an angle to be considered a turn 
 const ezgl::color kPathColour = {224, 255, 133}; //colour of a given path
 const ezgl::color kHighlightedPathColour = {133, 133, 244}; //colour of a given path
 const ezgl::color kColorPathStreetName = {50, 50, 255, 255};
@@ -308,7 +308,7 @@ vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
         {
             PathSegment lastSegment = path[pathIndex - 1];
             double projection = getSignedTurnProjection(lastSegment.segmentIndex, pathSegment.segmentIndex, lastSegment.toIdx);
-            if(abs(projection) > 0.8) //significant turn projection should to conveyed as a left or right turn
+            if(abs(projection) > kTurnThreshold) //significant turn projection should to conveyed as a left or right turn
             {
                 int totalLength = (int)runningPathLength;
                 string unit = "meters";

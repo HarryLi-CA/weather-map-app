@@ -13,12 +13,11 @@
 #include <stdio.h>
 #include <cstdlib>
 #include <ctime>
-#include <cfloat>
 
 using namespace std;
 
 const double kMinimumTurnAngle = M_PI/6.0; //minimum turn angle for street to be considered a turn
-const double kDefaultTurnPenalty = 10; //penalty imposed on a turning street
+const double kDefaultTurnPenalty = 0; //penalty imposed on a turning street
 const double kPathDisplayScaling = 2; //scaling factor for displaying paths
 const double kPathEndpointScaling = 1.5; //scaling factor for displaying path endpoints
 const double kPathArrowAbsoluteSize = 4; //scaling factor for displaying arrows
@@ -207,17 +206,19 @@ double computePathTravelTime(const double turn_penalty, const std::vector<Street
 
 std::vector<StreetSegmentIdx> findPathBetweenIntersections(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids)
 {
-    cout << "Started Finding Path" << endl;
-    int startTime = clock();
+    // cout << "Started Finding Path" << endl;
+    // clock_t startTime = clock();
     vector<Point*> pointVector = calculatePathArray(turn_penalty, intersect_ids);
     vector<StreetSegmentIdx> streetIds;
-    delete pointVector[0];
-    for (int i = 1; i < pointVector.size(); i++)
-    {
-        streetIds.push_back(pointVector[i]->segId);
-        delete pointVector[i];
+    if(pointVector.size() > 0){
+        delete pointVector[0];
+        for (int i = 1; i < pointVector.size(); i++)
+        {
+            streetIds.push_back(pointVector[i]->segId);
+            delete pointVector[i];
+        }
     }
-    cout<<"Ended finding with: "<< clock() - startTime << endl;
+    // cout<<"Ended finding with seconds: "<< (double)(clock() - startTime) / CLOCKS_PER_SEC << endl;
     return streetIds;
 }
 

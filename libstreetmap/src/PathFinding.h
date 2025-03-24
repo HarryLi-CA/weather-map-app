@@ -13,6 +13,8 @@ class Point{
         Point* parent;
         double gCost = 0, hCost =0, fCost =0;
         bool isPath = false;
+        bool isTraversed = false;
+        bool correctDir = false;
         LatLon coords, destCoords;
 
         // for setting destination point
@@ -21,6 +23,8 @@ class Point{
         //default constructor
         Point(int id, LatLon destCoords, Point* parent);
         ~Point();
+
+        void copy(Point copyPoint);
 
         void updateFCost();
         vector<Point*> retracePath();
@@ -41,4 +45,4 @@ public:
     }
 };
 vector<Point*> calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids);
-vector<Point*> getNeighbours(Point* current, double turn_penalty);
+vector<Point*> getNeighbours(Point* current, double turn_penalty, bool isOpposite);

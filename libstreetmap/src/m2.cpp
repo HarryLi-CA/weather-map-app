@@ -1272,15 +1272,23 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
       }
    }
 
+   bool foundIntersections = false;
+
    //Store the all intersections of each pair of streets
    vector<vector<IntersectionIdx>> intersectionList;
    auto it = streetIdPairs.begin();
    while(it != streetIdPairs.end()){
-      intersectionList.push_back(findIntersectionsOfTwoStreets(*it));
+      std::vector<IntersectionIdx> streetsIntersections = findIntersectionsOfTwoStreets(*it);
+      intersectionList.push_back(streetsIntersections);
+
+      if(streetsIntersections.size() != 0){
+         foundIntersections = true;
+      }
+
       it++;
    }
    int numOfIntersectionLists = intersectionList.size();
-   if(numOfIntersectionLists == 0){
+   if(!foundIntersections){
       application->update_message("No intersections found");
       return;
    }
@@ -1518,7 +1526,6 @@ void createRouteBack_cbk(GtkWidget */*widget*/, ezgl::application *application){
 
 void enterClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application){
    GObject* exitBtn = application->get_object("ExitRouteModeBtn");
-   g_signal_connect(exitBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
    gtk_widget_show((GtkWidget*)exitBtn);
 
    clickingMode = true;
@@ -1530,12 +1537,13 @@ void enterClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application
 
 void exitClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application){
    GObject* exitBtn = application->get_object("ExitRouteModeBtn");
-   g_signal_connect(exitBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
 
    clickingMode = false;
    clearPathDisplay();
    
    gtk_widget_hide((GtkWidget*)exitBtn);
+
+   closeTravelDirections(application);
 }
 
 
@@ -1611,8 +1619,6 @@ vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::applicatio
    
    vector<vector<IntersectionIdx>> intersectionList;
 
-   bool validNames = true;
-
    //Extracting text from search bars
    GtkEntry* searchbar1 = GTK_ENTRY(application->get_object(searchbarId1));
    string searchText1 = string(gtk_entry_get_text(searchbar1));
@@ -1623,15 +1629,27 @@ vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::applicatio
    vector<StreetIdx> street1Idxs = findStreetIdsFromPartialStreetName(searchText1);
    vector<StreetIdx> street2Idxs = findStreetIdsFromPartialStreetName(searchText2);
 
+   bool validStreetNames = true;
+
    if(street1Idxs.size() == 0){
-      errorMsg.append("\n      " + direction + " street 1 does not exist       \n");
+      if(searchText1.length() == 0){
+         errorMsg.append("\n      " + direction + " first street not entered       \n");
+      } else{
+         errorMsg.append("\n      " + direction + " first street does not exist       \n");
+      }
+
+      validStreetNames = false;
       validInput = false;
-      validNames = false;
    }
    if(street2Idxs.size() == 0){
-      errorMsg.append("\n      " + direction + " street 2 does not exist       \n");
+      if(searchText2.length() == 0){
+         errorMsg.append("\n      " + direction + " second street not entered       \n");
+      } else{
+         errorMsg.append("\n      " + direction + " second street does not exist       \n");
+      }
+
+      validStreetNames = false;
       validInput = false;
-      validNames = false;
    }
 
    //Create unique pairs of streetIdxs of the inputted streets
@@ -1656,15 +1674,23 @@ vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::applicatio
       }
    }
 
+   bool foundIntersections = false;
+
    //Store the all intersections of each pair of streets
    auto it = streetIdPairs.begin();
    while(it != streetIdPairs.end()){
-      intersectionList.push_back(findIntersectionsOfTwoStreets(*it));
+      std::vector<IntersectionIdx> streetsIntersections = findIntersectionsOfTwoStreets(*it);
+      intersectionList.push_back(streetsIntersections);
+
+      if(streetsIntersections.size() != 0){
+         foundIntersections = true;
+      }
+
       it++;
    }
    int numOfIntersectionLists = intersectionList.size();
 
-   if(numOfIntersectionLists == 0){
+   if(!foundIntersections && validStreetNames){
       errorMsg.append("\n      " + direction + " streets do not intersect       \n");
       validInput = false;
    }
@@ -1713,16 +1739,19 @@ void selectIntersection_cbk(GtkWidget */*widget*/, pair<pair<int,IntersectionIdx
       }
       endingIntersectionInfo.clear();
 
-      //start intersection searching
-      //checks for same intersection
-
+      //Same start and end intersection not will be canceled
       if(selectedRoute.first == selectedRoute.second){
          application->create_popup_message("Error","\nCannot start and end at same intersection!\n");
          return;
       }
 
-      setDisplayedPath(findPathBetweenIntersections(kDefaultTurnPenalty,selectedRoute));
+      std::vector<StreetSegmentIdx> path = findPathBetweenIntersections(10,selectedRoute);
 
+      setDisplayedPath(path);
+
+      //show exit route button
+      GObject* exitBtn = application->get_object("ExitRouteModeBtn");
+      gtk_widget_show((GtkWidget*)exitBtn);
    }
 }
 

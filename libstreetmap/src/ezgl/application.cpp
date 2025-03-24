@@ -586,7 +586,7 @@ void application::create_popup_message_with_callback(dialog_callback_fn cbk_fn, 
     title,   //title
     window,         //window
     GTK_DIALOG_MODAL, //Button and return_id pairs
-    ("DONE"),
+    ("Okay"),
     GTK_RESPONSE_ACCEPT,
     NULL
   );

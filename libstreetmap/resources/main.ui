@@ -398,7 +398,7 @@ The button creates a window that allows you to create a route using two differen
                     </child>
                     <child>
                       <object class="GtkButton" id="ExitRouteModeBtn">
-                        <property name="label" translatable="yes"> Exit Route Mode </property>
+                        <property name="label" translatable="yes">Close Route</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>

@@ -1538,6 +1538,13 @@ void enterClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application
 
    GtkWidget * routeCreatorDialog = GTK_WIDGET(application->get_object("routeCreatorDialog"));
    gtk_widget_hide(routeCreatorDialog);
+
+   GObject* startOfRouteBtn = application->get_object("intersectionPopup_addPrimary");
+   GObject* endOfRouteBtn = application->get_object("intersectionPopup_addSecondary");
+
+   gtk_widget_hide(GTK_WIDGET(startOfRouteBtn));
+   gtk_widget_hide(GTK_WIDGET(endOfRouteBtn));
+
 }
 
 void exitClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application){
@@ -1551,7 +1558,6 @@ void exitClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application)
    closeTravelDirections(application);
 
    GObject* startOfRouteBtn = application->get_object("intersectionPopup_addPrimary");
-
    GObject* endOfRouteBtn = application->get_object("intersectionPopup_addSecondary");
 
    gtk_widget_hide(GTK_WIDGET(startOfRouteBtn));

@@ -4,12 +4,14 @@
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
 #include "OSMAPIHelper.h"
+#include <math.h>
 
 
 namespace osmhelp{
     int numIntersections = -1;
     int numStreetSegments = -1;
     int numStreets = -1;
+    double maxSpeedLimit = -1;
     std::vector<StreetSegmentInfo> segInfo;
     std::vector<std::pair<bool, LatLon>> intersectionPos;
 
@@ -19,6 +21,7 @@ namespace osmhelp{
         numIntersections = -1;
         numStreetSegments = -1;
         numStreets = -1;
+        maxSpeedLimit = -1;
         segInfo.clear();
         intersectionPos.clear();
     }
@@ -77,6 +80,19 @@ namespace osmhelp{
             intersectionPos[idx].first = true;
         }
         return intersectionPos[idx].second;
+    }
+
+    double getSpeedLimitMaximum()
+    {
+        if(maxSpeedLimit == -1) //if max speed limit is default value, it needs to be calculated
+        {
+            for(StreetSegmentIdx segIndex = 0; segIndex < getNumStreetSegments(); segIndex++)
+            {
+                maxSpeedLimit = std::max(maxSpeedLimit, (double)getStreetSegmentInfo(segIndex).speedLimit);
+            }
+        }
+
+        return maxSpeedLimit;
     }
 
 }

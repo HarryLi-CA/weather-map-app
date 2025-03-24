@@ -1623,6 +1623,13 @@ void enterClickingMode_cbk(GtkWidget * /*widget*/, ezgl::application *applicatio
 
    GtkWidget *routeCreatorDialog = GTK_WIDGET(application->get_object("routeCreatorDialog"));
    gtk_widget_hide(routeCreatorDialog);
+
+   GObject* startOfRouteBtn = application->get_object("intersectionPopup_addPrimary");
+   GObject* endOfRouteBtn = application->get_object("intersectionPopup_addSecondary");
+
+   gtk_widget_hide(GTK_WIDGET(startOfRouteBtn));
+   gtk_widget_hide(GTK_WIDGET(endOfRouteBtn));
+
 }
 
 void exitClickingMode_cbk(GtkWidget * /*widget*/, ezgl::application *application)
@@ -1635,6 +1642,13 @@ void exitClickingMode_cbk(GtkWidget * /*widget*/, ezgl::application *application
    gtk_widget_hide((GtkWidget *)exitBtn);
 
    closeTravelDirections(application);
+
+   GObject* startOfRouteBtn = application->get_object("intersectionPopup_addPrimary");
+   GObject* endOfRouteBtn = application->get_object("intersectionPopup_addSecondary");
+
+   gtk_widget_hide(GTK_WIDGET(startOfRouteBtn));
+   gtk_widget_hide(GTK_WIDGET(endOfRouteBtn));
+
 }
 
 void openHelpPopUp_cbk(GtkWidget * /*widget*/, ezgl::application *application)
@@ -1666,6 +1680,11 @@ void typedRouteConfirm_cbk(GtkWidget * /*widget*/, ezgl::application *applicatio
 
       GtkWidget *routeCreatorDialog = GTK_WIDGET(application->get_object("routeCreatorDialog"));
       gtk_widget_hide(routeCreatorDialog);
+
+      startingIntersectionInfo.clear();
+      startingIntersectionInfo.resize(0);
+      endingIntersectionInfo.clear();
+      endingIntersectionInfo.resize(0);
 
       int counter = 1;
 
@@ -1831,11 +1850,14 @@ void selectIntersection_cbk(GtkWidget * /*widget*/, pair<pair<int, IntersectionI
       GtkWidget *startingIntersectionDialog = GTK_WIDGET(application->get_object("intersectionSelectorDialog1"));
       gtk_widget_hide(startingIntersectionDialog);
 
+      GtkGrid *in_grid = (GtkGrid *)application->get_object("startingIntersectionGrid");
+
       //clean buttons from pop up
       for (int i = 0; i < numStartingIntersections - 1; i++)
       {
          string buttonLabel = to_string(i + 1) + ": " + getIntersectionName(startingIntersectionInfo[i].first.second);
-         application->destroy_button(buttonLabel.c_str(), 1);
+         application->destroy_button(buttonLabel.c_str(),1);
+         gtk_grid_remove_row(in_grid,i+1);
       }
       startingIntersectionInfo.clear();
 
@@ -1851,11 +1873,14 @@ void selectIntersection_cbk(GtkWidget * /*widget*/, pair<pair<int, IntersectionI
       GtkWidget *endingIntersectionDialog = GTK_WIDGET(application->get_object("intersectionSelectorDialog2"));
       gtk_widget_hide(endingIntersectionDialog);
 
+      GtkGrid *in_grid = (GtkGrid *)application->get_object("startingIntersectionGrid");
+
       //clean buttons from pop up
       for (int i = 0; i < numEndingIntersections - 1; i++)
       {
          string buttonLabel = to_string(i + 1) + ": " + getIntersectionName(endingIntersectionInfo[i].first.second);
-         application->destroy_button(buttonLabel.c_str(), 2);
+         application->destroy_button(buttonLabel.c_str(),2);
+         gtk_grid_remove_row(in_grid,i+1);
       }
       endingIntersectionInfo.clear();
 
@@ -1921,7 +1946,9 @@ void clickedStartingIntersection_cbk(GtkWidget * /*widget*/, pair<IntersectionId
    primarySelection = clickedIntersectionInfo->first;
    if (primarySelection > -1 && secondarySelection > -1)
    {
-      setDisplayedPath(findPathBetweenIntersections(kDefaultTurnPenalty, {primarySelection, secondarySelection}));
+      setDisplayedPath(findPathBetweenIntersections(kDefaultTurnPenalty,{primarySelection, secondarySelection}));
+      GObject* exitBtn = application->get_object("ExitRouteModeBtn");
+      gtk_widget_show((GtkWidget*)exitBtn);
    }
    // User chose the clicked intersection as an starting for the route, handle here
 
@@ -1936,7 +1963,9 @@ void clickedEndingIntersection_cbk(GtkWidget * /*widget*/, pair<IntersectionIdx,
    secondarySelection = clickedIntersectionInfo->first;
    if (primarySelection > -1 && secondarySelection > -1)
    {
-      setDisplayedPath(findPathBetweenIntersections(kDefaultTurnPenalty, {primarySelection, secondarySelection}));
+      setDisplayedPath(findPathBetweenIntersections(kDefaultTurnPenalty,{primarySelection, secondarySelection}));
+      GObject* exitBtn = application->get_object("ExitRouteModeBtn");
+      gtk_widget_show((GtkWidget*)exitBtn);
    }
    // User chose the clicked intersection as an ending for the route, handle here
 

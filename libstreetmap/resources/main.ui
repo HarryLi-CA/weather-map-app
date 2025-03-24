@@ -81,7 +81,7 @@ The button creates a window that allows you to create a route using two differen
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="valign">start</property>
-                <property name="label" translatable="yes">To create a route by typing a starting and ending intersection, use the 4 search bars. Type in the two streets of the intersection in each search bar to the right of the “Enter Starting Intersection:” text to select a starting intersection. Repeat for the ending intersection. Once each search bar has been filled out, click on the “create route” button to confirm. Once the button is pressed a pop up will appear that displays all the intersections of the starting streets, click on the desired intersection. Once clicked, Another pop up will appear to confirm the ending intersection. After confirming the intersections a route will appear on the map.</property>
+                <property name="label" translatable="yes">To create a route by typing a starting and ending intersection, use the 4 search bars. Type in the two streets of the intersection in each search bar to the right of the “Enter Starting Intersection:” text to select a starting intersection. Repeat for the ending intersection. Once each search bar has been filled out, click on the “create route” button to confirm. Once the button is pressed a pop up will appear that displays all the intersections of the starting streets, click on the desired intersection. Once clicked, another pop up will appear to confirm the ending intersection. After confirming the intersections a route will appear on the map. To stop showing the route, press the red "Close Route" next to the change map button on the top of the map.</property>
                 <property name="wrap">True</property>
                 <property name="max-width-chars">80</property>
               </object>
@@ -117,7 +117,9 @@ The button creates a window that allows you to create a route using two differen
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="valign">start</property>
-                <property name="label" translatable="yes">To create a route by clicking on intersections, click on the “Enter Route Clicking Mode” button. Left click on an intersection on the map to place a red pin indicating the starting intersection of the route. Right click on an intersection on the map to place a blue pin on the map indicating the ending intersection. Once both pins are placed, a route will appear on the map. During this mode, routes can easily be changed by placing these pins on different intersections. To exit the mode click on the red “Exit Route Mode” button will appear on the top of the map next to the “Change Map” button.</property>
+                <property name="label" translatable="yes">To create a route by clicking on intersections, click on the “Enter Route Clicking Mode” button. Left click on an intersection on the map to place a red pin indicating the starting intersection of the route. Right click on an intersection on the map to place a blue pin on the map indicating the ending intersection. Once both pins are placed, a route will appear on the map. During this mode, routes can easily be changed by placing these pins on different intersections. To exit the mode click on the red “Exit Route Mode” button will appear on the top of the map next to the “Change Map” button.
+
+Alternatively, when not in route clicking mode, intersections can be clicked on the map to create a route. When an intersection is clicked, buttons will appear under the "Create Route" to select where the clicked intersection will be the start or end of route. Once a start and end intersection is clicked, a route will appear on the map.</property>
                 <property name="wrap">True</property>
                 <property name="max-width-chars">80</property>
               </object>
@@ -286,6 +288,9 @@ The button creates a window that allows you to create a route using two differen
             <property name="position">1</property>
           </packing>
         </child>
+        <style>
+          <class name="dark"/>
+        </style>
       </object>
     </child>
   </object>
@@ -397,20 +402,7 @@ The button creates a window that allows you to create a route using two differen
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkButton" id="ExitRouteModeBtn">
-                        <property name="label" translatable="yes">Close Route</property>
-                        <property name="visible">True</property>
-                        <property name="can-focus">True</property>
-                        <property name="receives-default">True</property>
-                        <property name="relief">none</property>
-                        <style>
-                          <class name="cancelModeBtn"/>
-                        </style>
-                      </object>
-                      <packing>
-                        <property name="left-attach">4</property>
-                        <property name="top-attach">0</property>
-                      </packing>
+                      <placeholder/>
                     </child>
                   </object>
                   <packing>
@@ -433,7 +425,7 @@ The button creates a window that allows you to create a route using two differen
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
-                        <property name="margin-start">4</property>
+                        <property name="margin-start">1</property>
                         <property name="margin-end">2</property>
                         <property name="relief">none</property>
                         <style>
@@ -795,6 +787,23 @@ The button creates a window that allows you to create a route using two differen
                     <property name="position">3</property>
                   </packing>
                 </child>
+                <child>
+                  <object class="GtkButton" id="ExitRouteModeBtn">
+                    <property name="label" translatable="yes">Close Route</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="receives-default">True</property>
+                    <property name="relief">none</property>
+                    <style>
+                      <class name="cancelModeBtn"/>
+                    </style>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">4</property>
+                  </packing>
+                </child>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -890,6 +899,7 @@ The button creates a window that allows you to create a route using two differen
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
                             <property name="halign">center</property>
+                            <property name="margin-top">10</property>
                             <property name="label" translatable="yes">Travel Directions</property>
                             <property name="justify">center</property>
                             <property name="wrap">True</property>
@@ -989,6 +999,8 @@ The button creates a window that allows you to create a route using two differen
             <property name="margin-end">10</property>
             <property name="row-spacing">10</property>
             <property name="column-spacing">5</property>
+            <property name="row-homogeneous">True</property>
+            <property name="column-homogeneous">True</property>
             <child>
               <object class="GtkLabel">
                 <property name="visible">True</property>
@@ -996,6 +1008,7 @@ The button creates a window that allows you to create a route using two differen
                 <property name="margin-top">10</property>
                 <property name="margin-bottom">15</property>
                 <property name="label" translatable="yes">Please select the desired STARTING intersection:</property>
+                <property name="justify">center</property>
               </object>
               <packing>
                 <property name="left-attach">0</property>
@@ -1007,11 +1020,14 @@ The button creates a window that allows you to create a route using two differen
             </child>
           </object>
           <packing>
-            <property name="expand">False</property>
+            <property name="expand">True</property>
             <property name="fill">True</property>
             <property name="position">0</property>
           </packing>
         </child>
+        <style>
+          <class name="dark"/>
+        </style>
       </object>
     </child>
   </object>
@@ -1047,6 +1063,8 @@ The button creates a window that allows you to create a route using two differen
             <property name="margin-end">10</property>
             <property name="row-spacing">10</property>
             <property name="column-spacing">5</property>
+            <property name="row-homogeneous">True</property>
+            <property name="column-homogeneous">True</property>
             <child>
               <object class="GtkLabel">
                 <property name="visible">True</property>
@@ -1054,6 +1072,7 @@ The button creates a window that allows you to create a route using two differen
                 <property name="margin-top">10</property>
                 <property name="margin-bottom">15</property>
                 <property name="label" translatable="yes">Please select the desired ENDING intersection:</property>
+                <property name="justify">center</property>
               </object>
               <packing>
                 <property name="left-attach">0</property>
@@ -1065,11 +1084,14 @@ The button creates a window that allows you to create a route using two differen
             </child>
           </object>
           <packing>
-            <property name="expand">False</property>
+            <property name="expand">True</property>
             <property name="fill">True</property>
             <property name="position">0</property>
           </packing>
         </child>
+        <style>
+          <class name="dark"/>
+        </style>
       </object>
     </child>
   </object>
@@ -1582,7 +1604,7 @@ The button creates a window that allows you to create a route using two differen
             </child>
             <child>
               <object class="GtkButton" id="EnterClickingModeBtn">
-                <property name="label" translatable="yes">Enter Route Clicking Mode</property>
+                <property name="label" translatable="yes"> Enter Route Clicking Mode </property>
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
                 <property name="receives-default">True</property>

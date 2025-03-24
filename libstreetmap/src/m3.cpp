@@ -17,7 +17,7 @@
 using namespace std;
 
 const double kMinimumTurnAngle = M_PI/6.0; //minimum turn angle for street to be considered a turn
-const double kDefaultTurnPenalty = 10; //penalty imposed on a turning street
+const double kDefaultTurnPenalty = 0; //penalty imposed on a turning street
 const double kPathDisplayScaling = 2; //scaling factor for displaying paths
 const double kPathEndpointScaling = 1.5; //scaling factor for displaying path endpoints
 const double kPathArrowAbsoluteSize = 4; //scaling factor for displaying arrows

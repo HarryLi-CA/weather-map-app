@@ -14,6 +14,7 @@ class Point{
         double gCost = 0, hCost =0, fCost =0;
         bool isPath = false;
         bool isTraversed = false;
+        bool correctDir = false;
         LatLon coords, destCoords;
 
         // for setting destination point
@@ -44,4 +45,4 @@ public:
     }
 };
 vector<Point*> calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids);
-vector<Point*> getNeighbours(Point* current, double turn_penalty);
+vector<Point*> getNeighbours(Point* current, double turn_penalty, bool isOpposite);

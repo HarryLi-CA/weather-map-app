@@ -28,6 +28,7 @@ void setLatLonBounds(LatLon latlonMin, LatLon latlonMax)
 Graphic::Graphic(const char* _path)
 {
     filePath = _path;
+    surface = nullptr;
 }
 
 void Graphic::load(ezgl::renderer* g)
@@ -52,7 +53,12 @@ void Graphic::draw(ezgl::renderer* g, double worldScale, ezgl::point2d position,
 
 void Graphic::deallocate(ezgl::renderer* g)
 {
-    g->free_surface(surface);   
+    if(surface != nullptr)
+    {
+        g->free_surface(surface); 
+    }
+    
+    surface = nullptr;  
 }
 
 MapFeature::MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _color, DrawType _drawType, MapFeatureType _featureType, int _index)

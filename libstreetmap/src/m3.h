@@ -74,7 +74,7 @@ struct PathInstruction
 
 
 // draw path over roads on the map
-void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ezgl::color colour, double scaling, int highlightStep);
+void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ezgl::color colour, double scaling, int highlightStep, vector<MapFeature*>& segmentIdxToFeatures);
 
 //create travel directions
 vector<PathInstruction> getTravelDirections(vector<PathSegment>& path);

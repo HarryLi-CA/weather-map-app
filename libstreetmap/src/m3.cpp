@@ -28,9 +28,11 @@ const double kPathBorderBrightness = 0.8; //how bright borders are compared to t
 const double kPathBorderSize = 6; //thickness of the path's borders
 const double kTurnThreshold = 0.8; //absolute sinusoidal coefficient required for an angle to be considered a turn 
 const ezgl::color kPathColour = {224, 255, 133}; //colour of a given path
-const ezgl::color kHighlightedPathColour = {244, 133, 133}; //colour of a given path
+const ezgl::color kHighlightedPathColour = {133, 133, 244}; //colour of a given path
+const ezgl::color kColorPathStreetName = {50, 50, 255, 255};
+const ezgl::color kColorHighlightedPathStreetName = {255, 255, 244}; //colour of a given path
 
-void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ezgl::color colour, double scaling, int highlightStep)
+void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ezgl::color colour, double scaling, int highlightStep, vector<MapFeature*>& segmentIdxToFeatures)
 {
     //dont draw empthy paths
     if(path.size() == 0){return;}
@@ -125,7 +127,47 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
 
             arrowPositions.push_back(middlePoint);
         }
+
+        //draw street names
+        StreetIdx streetID = getStreetSegmentInfo(pathSeg.segmentIndex).streetID;
+        if (streetID < osmhelp::getNumStreets() && streetID > 0)
+        {
+            MapFeature* feature = segmentIdxToFeatures[pathSeg.segmentIndex];
+            int longestIndex = feature->longestPointSegmentIndex;
+            //get longest segment points
+            ezgl::point2d fromPoint = (*feature->points)[longestIndex];
+            ezgl::point2d toPoint = (*feature->points)[longestIndex + 1];
+
+            //get point in the middle of longest segment
+            ezgl::point2d midPoint = midpoint(fromPoint, toPoint);
+            //get displacement vector between points
+            ezgl::point2d delta = {toPoint.x - fromPoint.x, toPoint.y - fromPoint.y};
+            double angle = (atan2(delta.y, delta.x)) / kDegreeToRadian; //angle from horizontal axis (counter clockwise) of street segment
+            if (angle > 90)
+            {
+            angle -= 180;
+            }
+            if (angle < -90)
+            {
+            angle += 180;
+            }
+            string streetName = getStreetName(feature->streetID);
+
+            ezgl::color streetNameColour = kColorPathStreetName;
+            
+            if(highlightStep == pathSeg.step) //change colour on a highlighted street segment
+            {
+                streetNameColour = kColorHighlightedPathStreetName;
+            }
+
+            //roate and draw text
+            g->set_color(streetNameColour);
+            g->set_text_rotation(angle);
+            g->draw_text(midPoint, streetName, feature->longestSegmentLength, lineWidth * kPathDisplayScaling);
+        }
     }
+
+    
     
 }
 

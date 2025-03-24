@@ -1718,10 +1718,13 @@ void selectIntersection_cbk(GtkWidget */*widget*/, pair<pair<int,IntersectionIdx
       GtkWidget * startingIntersectionDialog = GTK_WIDGET(application->get_object("intersectionSelectorDialog1"));
       gtk_widget_hide(startingIntersectionDialog);
 
+      GtkGrid *in_grid = (GtkGrid *)application->get_object("startingIntersectionGrid");
+
       //clean buttons from pop up
       for(int i = 0; i < numStartingIntersections-1; i++){
          string buttonLabel = to_string(i + 1) + ": " + getIntersectionName(startingIntersectionInfo[i].first.second);
          application->destroy_button(buttonLabel.c_str(),1);
+         gtk_grid_remove_row(in_grid,i+1);
       }
       startingIntersectionInfo.clear();
       
@@ -1736,10 +1739,13 @@ void selectIntersection_cbk(GtkWidget */*widget*/, pair<pair<int,IntersectionIdx
       GtkWidget * endingIntersectionDialog = GTK_WIDGET(application->get_object("intersectionSelectorDialog2"));
       gtk_widget_hide(endingIntersectionDialog);
 
+      GtkGrid *in_grid = (GtkGrid *)application->get_object("startingIntersectionGrid");
+
       //clean buttons from pop up
       for(int i = 0; i < numEndingIntersections-1; i++){
          string buttonLabel = to_string(i + 1) + ": " + getIntersectionName(endingIntersectionInfo[i].first.second);
          application->destroy_button(buttonLabel.c_str(),2);
+         gtk_grid_remove_row(in_grid,i+1);
       }
       endingIntersectionInfo.clear();
 

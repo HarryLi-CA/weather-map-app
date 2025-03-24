@@ -42,3 +42,22 @@ label#travelTime {
     color: rgb(32, 118, 199);
     font-size: 12px;
 }
+
+.travelButtonLabel {
+    color: white;
+    background-color: rgb(47, 137, 255);
+    border-radius: 25px;
+    border-style: hidden;
+    outline-style: hidden;
+    
+    transition-duration: 0.15s;
+}
+
+.travelButtonBack {
+    background-color: rgba(0,0,0,0);
+    background: none;
+    border-style: hidden;
+    outline-style: hidden;
+    visibility: hidden;
+    transition-duration: 0.15s;
+}

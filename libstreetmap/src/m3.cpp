@@ -28,8 +28,9 @@ const double kPathBorderBrightness = 0.8; //how bright borders are compared to t
 const double kPathBorderSize = 6; //thickness of the path's borders
 const double kTurnThreshold = 0.8; //absolute sinusoidal coefficient required for an angle to be considered a turn 
 const ezgl::color kPathColour = {224, 255, 133}; //colour of a given path
+const ezgl::color kHighlightedPathColour = {244, 133, 133}; //colour of a given path
 
-void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ezgl::color colour, double scaling)
+void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ezgl::color colour, double scaling, int highlightStep)
 {
     //dont draw empthy paths
     if(path.size() == 0){return;}
@@ -71,9 +72,19 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
     g->set_line_width(lineWidth*kPathDisplayScaling);
     for(int pathIndex = 0; pathIndex < path.size(); pathIndex++)
     {
-        
         PathSegment pathSeg = path[pathIndex];
         vector<LatLon>* points = getStreetSegmentPoints(pathSeg.segmentIndex);
+
+        ezgl::color pathColour = colour;
+
+        if(highlightStep == pathSeg.step)
+        {
+            pathColour = kHighlightedPathColour;
+        }
+
+        //set path colour
+        g->set_color(pathColour);
+
         for(int pointIndex = 0; pointIndex < points->size() - 1; pointIndex++)
         {
             ezgl::point2d from = LatLonToPoint2D((*points)[pointIndex]);
@@ -83,6 +94,7 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
     }
 
     //draw endpoints
+    g->set_color(colour);
     g->fill_arc(startPoint,endPointRadius,0.0,360.0); //draw start point
     g->fill_arc(endPoint,endPointRadius,0.0,360.0); //draw end point
 
@@ -127,7 +139,7 @@ vector<PathSegment> generateFatestPath(IntersectionIdx from, IntersectionIdx to)
 
     return path;
 }
-
+    
 vector<PathSegment> getPathSegments(vector<StreetSegmentIdx>& segmentPath)
 {
     vector<PathSegment> path;
@@ -156,7 +168,6 @@ vector<PathSegment> getPathSegments(vector<StreetSegmentIdx>& segmentPath)
         }
         else //if segment is the final one, check previous segment
         {
-            cout << "checking last" << endl;
             StreetSegmentInfo prevSegmentInfo = getStreetSegmentInfo(segmentPath[pathIndex-1]);
             if(prevSegmentInfo.from == segmentInfo.to || prevSegmentInfo.to == segmentInfo.to)
             {
@@ -171,7 +182,7 @@ vector<PathSegment> getPathSegments(vector<StreetSegmentIdx>& segmentPath)
 
         StreetSegmentIdx commonSegment = segmentPath[pathIndex];
     
-        PathSegment pathSegment = {fromIntersection,from,toIntersection,to,commonSegment,reverse};
+        PathSegment pathSegment = {fromIntersection,from,toIntersection,to,commonSegment,reverse, -1};
         path.push_back(pathSegment);
     }
 
@@ -208,7 +219,6 @@ double computePathTravelTime(const double turn_penalty, const std::vector<Street
 
 std::vector<StreetSegmentIdx> findPathBetweenIntersections(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids)
 {
-    // cout << "Started Finding Path" << endl;
     // clock_t startTime = clock();
     vector<Point*> pointVector = calculatePathArray(turn_penalty, intersect_ids);
     vector<StreetSegmentIdx> streetIds;
@@ -220,7 +230,7 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections(const double turn_pen
             delete pointVector[i];
         }
     }
-    // cout<<"Ended finding with seconds: "<< (double)(clock() - startTime) / CLOCKS_PER_SEC << endl;
+
     return streetIds;
 }
 
@@ -232,7 +242,8 @@ ezgl::color getPathColour()
 vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
 {
     if(path.size() < 2){return {};}
-    cout << "start:" << endl;
+
+    int step = 0;
 
     vector<PathInstruction> travelDirections;
 
@@ -245,7 +256,7 @@ vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
 
     for(int pathIndex = 0; pathIndex < path.size(); pathIndex++)
     {
-        PathSegment pathSegment = path[pathIndex];
+        PathSegment& pathSegment = path[pathIndex];
 
         StreetIdx streetID = getStreetSegmentInfo(pathSegment.segmentIndex).streetID;
         
@@ -276,8 +287,8 @@ vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
                 }
                 
 
-                cout << straightDirections << endl;
-                travelDirections.push_back({straightDirections, runningTimeTaken});
+                travelDirections.push_back({straightDirections, runningTimeTaken, false});
+                step++; //set step number to next step
 
                 string turnDirection = "left";
 
@@ -291,13 +302,16 @@ vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
                 {
                     turnInstruction += " onto " + currentRoadName;
                 }
-                cout << turnInstruction << endl;
-                travelDirections.push_back({turnInstruction, kDefaultTurnPenalty});
-                
+
+                travelDirections.push_back({turnInstruction, kDefaultTurnPenalty, true});
+                step++; //set step number to next step
+
                 runningPathLength = 0;
                 runningTimeTaken = 0;
             }
         }
+
+        pathSegment.step = step; //set the step ID of the path segment to the current step
         
         double pathLength = findStreetSegmentLength(pathSegment.segmentIndex);
         double pathTime = findStreetSegmentTravelTime(pathSegment.segmentIndex);
@@ -325,9 +339,9 @@ vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
     {
         straightDirections += " along " + lastRoadName;
     }
-    cout << straightDirections << endl;
-    travelDirections.push_back({straightDirections, (int)runningTimeTaken});
-    cout << "arrived!" << endl;
+
+    travelDirections.push_back({straightDirections, (int)runningTimeTaken, false});
+
     return travelDirections;
 }
 

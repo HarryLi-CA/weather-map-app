@@ -49,6 +49,7 @@ LatLon maxPoints; //top right LatLon position
 vector<StaticName> staticLabels; //list of static text objects to draw
 vector<MapFeature*> intersectionFeatures; //vector that takes in intersection index and return correpsonding map feature
 vector<StreetIdx> streetLengthCache; //stored value of all loaded street lengths;
+vector<void*> heapPointers; //pointers that should be deleted when necessary
 int numberOfStreets = 0; //save number of streets for fast access
 //default colour constants for general objects
 const ezgl::color kColorDefaultGround = {235, 235, 235, 255}; 
@@ -88,6 +89,7 @@ const double kCameraBoundsExtension = 0; //
 const double kDefaultTurnPenalty = 10;
 const bool enableThreading = true;
 bool clickingMode = false; //whether the program is in clicking mode or not
+int globalHighlightedStep = -2; //global identifier for the path step the user is highlighting
 
 //graphics
 ezgl::application* currentApp = nullptr;
@@ -466,7 +468,7 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
       //draw active paths
       for(int pathsIndex = 0; pathsIndex < paths.size(); pathsIndex++)
       {
-         drawPath(g, paths[pathsIndex], lineWidth, getPathColour(), scaling);
+         drawPath(g, paths[pathsIndex], lineWidth, getPathColour(), scaling, globalHighlightedStep);
       }
 
       //draw points
@@ -641,7 +643,8 @@ void setDisplayedPath(vector<StreetSegmentIdx> segmentPath)
    primarySelection = paths[0][0].fromIdx;
    secondarySelection = paths[0][paths[0].size()-1].toIdx;
 
-   displayTravelDirections(getTravelDirections(paths[0]),currentApp);
+   vector<PathInstruction> directions = getTravelDirections(paths[0]);
+   displayTravelDirections(directions,currentApp);
    currentApp->get_canvas("MainCanvas")->redraw();
 }
 
@@ -1800,12 +1803,42 @@ void clickedEndingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,e
    clickedIntersectionInfo->second->get_canvas("MainCanvas")->redraw();
 }
 
-void displayTravelDirections(vector<PathInstruction> directions,  ezgl::application *application)
+void clickedLabelButton_cbk(GtkWidget */*widget*/, pair<pair<int, vector<PathInstruction>&>, ezgl::application *> *labelInfo)
+{
+   globalHighlightedStep = labelInfo->first.first;
+   vector<PathInstruction>& instructions = labelInfo->first.second;
+   ezgl::application* app = labelInfo->second;
+   
+
+   mapFeatures.unhighlightAll();
+   for(int i = 1; i < paths[0].size(); i++)
+   {
+      PathSegment pathSegment = paths[0][i];
+      PathSegment lastSegment = paths[0][i - 1];
+      if(globalHighlightedStep >= 0 && globalHighlightedStep < instructions.size() && pathSegment.step == globalHighlightedStep-1 && instructions[globalHighlightedStep].turnInstruction)
+      {
+         IntersectionIdx common = pathSegment.toIdx;
+         MapFeature* relatedFeature = intersectionFeatures[common];
+         mapFeatures.highlightFeature(relatedFeature,true);
+         //recenter camera
+         ezgl::camera& cam = app->get_canvas("MainCanvas")->get_camera();
+         cam.set_world(recenterRect(cam.get_world(),(*relatedFeature->points)[0]));
+      }
+   }
+   
+   app->get_canvas("MainCanvas")->redraw(); //force redraw to immediately show changes
+   cout << globalHighlightedStep << endl;
+}
+
+void displayTravelDirections(vector<PathInstruction>& directions,  ezgl::application *application)
 {
    closeTravelDirections(application); //reset travel directions
 
    GtkWidget* inst = GTK_WIDGET(application->get_object("travelScroll"));
    GtkGrid* travelGrid = GTK_GRID(application->get_object("travelGrid"));
+   GtkLabel* instLabel = GTK_LABEL(application->get_object("directionInstructions"));
+
+   double totalTime = 0;
 
    for(int i = 0; i < directions.size(); i++)
    {
@@ -1819,22 +1852,48 @@ void displayTravelDirections(vector<PathInstruction> directions,  ezgl::applicat
       gtk_widget_set_margin_left(panel, 20);
       gtk_widget_set_margin_right(panel, 20);
       gtk_widget_set_name(panel, "travelPanel");
-      
-      string mainInstruction = to_string(i+1) + ".\n\n" + direction.instruction;
+      gtk_widget_set_hexpand(panel,false);
+
+      string buttonName = to_string(i+1);
+
+      GtkWidget* textButton = gtk_button_new_with_label(buttonName.c_str());
+
+      gtk_grid_attach(GTK_GRID(panel),textButton,0,0,1,1);
+      gtk_widget_set_name(textButton, "travelButton");
+
+      gtk_widget_set_margin_left(textButton, 40);
+      gtk_widget_set_hexpand(textButton,true);
+      gtk_widget_set_margin_right(textButton, 40);
+      gtk_style_context_add_class(gtk_widget_get_style_context(textButton),"travelButtonBack");
+      GList* buttonLabel = gtk_container_get_children(GTK_CONTAINER(textButton));
+      gtk_style_context_add_class(gtk_widget_get_style_context(GTK_WIDGET(buttonLabel->data)),"travelButtonLabel");
+
+      vector<PathInstruction>* dynamicIntructions = new vector<PathInstruction>(directions);
+      pair<pair<int, vector<PathInstruction>&>, ezgl::application *>* buttonData = new pair<pair<int, vector<PathInstruction>&>, ezgl::application *>({{i, *dynamicIntructions}, application});
+      g_signal_connect(GTK_BUTTON(textButton),"clicked",G_CALLBACK(clickedLabelButton_cbk),buttonData);
+      heapPointers.push_back(dynamicIntructions);
+
+      string mainInstruction = direction.instruction;
 
       GtkWidget* textbox = gtk_label_new(mainInstruction.c_str());
       gtk_label_set_line_wrap_mode(GTK_LABEL(textbox), PangoWrapMode::PANGO_WRAP_WORD);
       gtk_label_set_line_wrap(GTK_LABEL(textbox), true);
       gtk_label_set_max_width_chars(GTK_LABEL(textbox), 20);
-      gtk_grid_attach(GTK_GRID(panel),textbox,0,0,1,1);
+      gtk_grid_attach(GTK_GRID(panel),textbox,0,1,1,1);
       gtk_widget_set_name(textbox, "travelText");
+      gtk_label_set_justify(GTK_LABEL(textbox),GtkJustification::GTK_JUSTIFY_CENTER);
+      gtk_widget_set_halign(textbox,GtkAlign::GTK_ALIGN_CENTER);
       gtk_widget_set_margin_left(textbox, 5);
       gtk_widget_set_margin_right(textbox, 5);
       gtk_widget_set_margin_top(textbox, 5);
       gtk_widget_set_margin_bottom(textbox, 5);
+      
 
 
       string timeTaken = to_string((int)direction.timeTaken) + " seconds";
+      totalTime += direction.timeTaken;
+
+
       if(direction.timeTaken >= 60)
       {
          timeTaken = to_string((int)ceil(direction.timeTaken/60)) + " minutes";
@@ -1844,7 +1903,7 @@ void displayTravelDirections(vector<PathInstruction> directions,  ezgl::applicat
       gtk_label_set_line_wrap_mode(GTK_LABEL(texttime), PangoWrapMode::PANGO_WRAP_WORD);
       gtk_label_set_line_wrap(GTK_LABEL(texttime), true);
       gtk_label_set_max_width_chars(GTK_LABEL(texttime), 20);
-      gtk_grid_attach(GTK_GRID(panel),texttime,0,1,1,1);
+      gtk_grid_attach(GTK_GRID(panel),texttime,0,2,1,1);
       gtk_widget_set_name(texttime, "travelTime");
       gtk_widget_set_margin_left(texttime, 5);
       gtk_widget_set_margin_right(texttime, 5);
@@ -1856,16 +1915,21 @@ void displayTravelDirections(vector<PathInstruction> directions,  ezgl::applicat
       gtk_widget_show(panel);
       gtk_widget_show(textbox);
       gtk_widget_show(texttime);
+      gtk_widget_show(textButton);
    }
 
    gtk_widget_set_size_request(inst, 100, 100);
    
+   int minutes = totalTime/60;
+   int seconds = totalTime - minutes*60;
+   string timeMessage = "Travel Directions\n("+to_string(minutes)+"m "+to_string(seconds)+"s)";
+   gtk_label_set_text(instLabel, timeMessage.c_str());
    gtk_widget_show(inst);
 }
 
-
 void closeTravelDirections(ezgl::application *application)
 {
+   globalHighlightedStep = -2;
    GtkWidget* inst = GTK_WIDGET(application->get_object("travelScroll"));
    GtkGrid* travelGrid = GTK_GRID(application->get_object("travelGrid"));
 
@@ -1878,4 +1942,14 @@ void closeTravelDirections(ezgl::application *application)
    }
    //free all dynamically allocated ui elements
    gtk_widget_hide(inst);
+   clearHeapPointers();
+}
+
+void clearHeapPointers()
+{
+   for(int i = 0; i < heapPointers.size(); i++)
+   {
+      delete heapPointers[i];
+   }
+   heapPointers.clear();
 }

@@ -170,6 +170,16 @@ void FeatureList::highlightFeature(MapFeature* feature, bool unhighlightOthers)
     //store feature so it can be unhighlighted if needed
     highlightedFeatures.push_back(feature);
 }
+
+void FeatureList::unhighlightAll()
+{
+    for(int featureIndex = 0; featureIndex < highlightedFeatures.size(); featureIndex++)
+    {
+        highlightedFeatures[featureIndex]->highlight = false;
+    }
+    highlightedFeatures = {};
+}
+
 void FeatureList::addFeature(MapFeature* feature, double areaThreshold, double worldArea)
 {
     bool lowLOD = feature->major || (feature->drawType == DrawType::POLYGON && feature->thresholdArea > areaThreshold) || feature->drawType == DrawType::POINT; //should feature be rendered at high distances

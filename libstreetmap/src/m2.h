@@ -43,8 +43,9 @@ void changeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* applicatio
 void setDisplayedPath(vector<StreetSegmentIdx> segmentPath); //helper function to set the displayed path on the gui
 void clearPathDisplay(); //clears path displays
 void cancelClickingMode_cbk(GtkWidget *widget, ezgl::application *app);
-void displayTravelDirections(vector<PathInstruction> directions,  ezgl::application *application); //helper function to display UI for travel directions
+void displayTravelDirections(vector<PathInstruction>& directions,  ezgl::application *application); //helper function to display UI for travel directions
 void closeTravelDirections(ezgl::application *application); //helper function to reset travel directions list
+
 
 void createRoute_cbk(GtkWidget */*widget*/, ezgl::application *application);
 void createRouteBack_cbk(GtkWidget */*widget*/, ezgl::application *application);
@@ -54,6 +55,7 @@ void typedRouteConfirm_cbk(GtkWidget */*widget*/, ezgl::application *application
 void findIntersectionsfromSearchbars(ezgl::application *application, vector<vector<IntersectionIdx>> &intersectionList, const gchar * searchbarId1, const gchar * searchbarId2, string &errorMsg, bool &validInput, string direction);
 vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::application *application, const gchar * searchbarId1, const gchar * searchbarId2, string &errorMsg, bool &validInput, string direction);
 void selectIntersection_cbk(GtkWidget */*widget*/, pair<pair<int,IntersectionIdx>,ezgl::application *> * intersectionInfo);
+void clickedLabelButton_cbk(GtkWidget */*widget*/, pair<pair<int, vector<PathInstruction>&>, ezgl::application *> *labelInfo); //callback function to manage label button
 
 void openHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application);
 void closeHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application);
@@ -63,3 +65,5 @@ void clickedIntersectionForRoute_hide(ezgl::application *application);
 void closeRouteClickingDialog_cbk(GtkWidget */*widget*/, ezgl::application *application);
 void clickedStartingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo);
 void clickedEndingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo);
+
+void clearHeapPointers(); //helper function to delete all miscellaneous pointers

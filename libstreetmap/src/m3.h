@@ -62,17 +62,19 @@ struct PathSegment
     ezgl::point2d to;
     StreetSegmentIdx segmentIndex;
     bool reverse;
+    int step;
 };
 
 struct PathInstruction
 {
     string instruction;
     double timeTaken;
+    bool turnInstruction;
 };
 
 
 // draw path over roads on the map
-void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ezgl::color colour, double scaling);
+void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ezgl::color colour, double scaling, int highlightStep);
 
 //create travel directions
 vector<PathInstruction> getTravelDirections(vector<PathSegment>& path);

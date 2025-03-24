@@ -79,6 +79,7 @@ class FeatureList {
     FeatureList();
     void addFeature(MapFeature* feature, double areaThreshold, double worldArea); //adds feature to the map at the corresponding layer
     void highlightFeature(MapFeature* feature, bool unhighlightOthers); //highlights feature and unhighlights currently highlighted features
+    void unhighlightAll(); //removes highlight on all highlighted features
     void clear(); //deletes all vectors and map features in the layer map
 };
 

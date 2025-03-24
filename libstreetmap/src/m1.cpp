@@ -176,6 +176,7 @@ void closeMap() {
     //clear map
     unloadFeatures();
     unloadGraphics();
+    clearHeapPointers();
 }
 
 double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){

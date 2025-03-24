@@ -23,7 +23,7 @@ static clock_t totalTime = 0;
 
 non optimal
 16391ms but took 25804.1ms. //djeekstra
-16391ms but took 30932.8ms
+16391ms but took 38236ms
 
 construct destruct total time is 855ms
 */
@@ -62,7 +62,7 @@ PathFinder::~PathFinder(){
 
 vector<Point*> PathFinder::calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids){
     //cout << "searching for path "<<intersect_ids.first << " " << intersect_ids.second <<'\n';
-    clock_t t = clock();
+    //clock_t t = clock();
     thread t1(&PathFinder::findHalfPath, this, turn_penalty, intersect_ids.first, intersect_ids.second, 
         ref(open1), ref(closed1), ref(segToPoint1),
         ref(maxInterGCost1), ref(segToPoint2),
@@ -150,7 +150,7 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
                     break;
                 continue;
             }
-            
+
             vector<Point*> neighbours= getNeighbours(current, turn_penalty, isOpposite);
             
             for(Point* neighbour: neighbours){
@@ -161,7 +161,7 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
                         newMaxInterGCost += turn_penalty;
                     }
                     if(newMaxInterGCost < maxInterGCost[neighbour->id]){
-                        maxInterGCost[current->id] = 0;
+                        maxInterGCost[current->id] = maxInterGCost[neighbour->id];
                     }
                     Point** neighbourInOpen = &(neighbour->correctDir? segToPoint.second[neighbour->segId].first:segToPoint.second[neighbour->segId].second);
                     bool hasBeenTraversed = *neighbourInOpen != nullptr && (*neighbourInOpen)->isTraversed; // closed does not contain current segment

@@ -883,6 +883,8 @@ The button creates a window that allows you to create a route using two differen
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
                         <property name="halign">center</property>
+                        <property name="margin-start">20</property>
+                        <property name="margin-end">20</property>
                         <child>
                           <object class="GtkLabel" id="directionInstructions">
                             <property name="visible">True</property>

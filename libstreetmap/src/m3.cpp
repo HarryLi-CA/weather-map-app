@@ -258,9 +258,17 @@ vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
             if(abs(projection) > 0.8) //significant turn projection should to conveyed as a left or right turn
             {
                 int totalLength = (int)runningPathLength;
+                string unit = "meters";
                 int timeTaken = (int)runningTimeTaken;
 
-                string straightDirections = "Travel " + to_string(totalLength) + " meters";
+                if(totalLength >= 1000)
+                {
+                    totalLength /= 1000;
+                    unit = "km";
+                }
+
+
+                string straightDirections = "Travel " + to_string(totalLength) + " " + unit;
                 
                 if(lastRoadName.find('<') == string::npos)
                 {
@@ -300,13 +308,23 @@ vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
         
     }
 
-    string straightDirections = "Travel " + to_string((int)runningPathLength) + " meters";
+    int totalLength = (int)runningPathLength;
+    string unit = "meters";
+    int timeTaken = (int)runningTimeTaken;
 
+    if(totalLength >= 1000)
+    {
+        totalLength /= 1000;
+        unit = "km";
+    }
+
+
+    string straightDirections = "Travel " + to_string(totalLength) + " " + unit;
+    
     if(lastRoadName.find('<') == string::npos)
     {
         straightDirections += " along " + lastRoadName;
     }
-
     cout << straightDirections << endl;
     travelDirections.push_back({straightDirections, (int)runningTimeTaken});
     cout << "arrived!" << endl;

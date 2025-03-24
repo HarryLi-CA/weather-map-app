@@ -1387,6 +1387,7 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
 
    //Unload old map info
    unloadFeatures();
+   closeTravelDirections(application);
 
    //Load new map info
    loadFeatures();
@@ -1395,6 +1396,9 @@ void openMap_cbk(GtkWidget */*widget*/, pair<string,ezgl::application*> * mapInf
 
    //Reset default values
    clickingMode = false;
+   primarySelection = -1;
+   secondarySelection = -1;
+   paths[0] = {};
 
 
    //Display sunrise onto ui

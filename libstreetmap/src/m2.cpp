@@ -632,11 +632,16 @@ void clickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::applicat
    mainCanvas->redraw();
 }
 
+
+
 void setDisplayedPath(vector<StreetSegmentIdx> segmentPath)
 {
    paths[0] = getPathSegments(segmentPath);
+   if(paths[0].size() == 0){return;}
    primarySelection = paths[0][0].fromIdx;
    secondarySelection = paths[0][paths[0].size()-1].toIdx;
+
+   displayTravelDirections(getTravelDirections(paths[0]),currentApp);
    currentApp->get_canvas("MainCanvas")->redraw();
 }
 
@@ -1789,4 +1794,84 @@ void clickedEndingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,e
 
    //Close pop up once button is clicked
    clickedIntersectionInfo->second->get_canvas("MainCanvas")->redraw();
+}
+
+void displayTravelDirections(vector<PathInstruction> directions,  ezgl::application *application)
+{
+   closeTravelDirections(application); //reset travel directions
+
+   GtkWidget* inst = GTK_WIDGET(application->get_object("travelScroll"));
+   GtkGrid* travelGrid = GTK_GRID(application->get_object("travelGrid"));
+
+   for(int i = 0; i < directions.size(); i++)
+   {
+      cout << "adding" << endl;
+      PathInstruction direction = directions[i];
+      
+      GtkWidget* panel = gtk_grid_new();
+      gtk_grid_attach(travelGrid,panel,0,2+i,1,1);
+
+      gtk_grid_insert_column(GTK_GRID(panel), 0);
+      gtk_widget_set_margin_left(panel, 20);
+      gtk_widget_set_margin_right(panel, 20);
+      gtk_widget_set_name(panel, "travelPanel");
+      
+      string mainInstruction = to_string(i+1) + ".\n\n" + direction.instruction;
+
+      GtkWidget* textbox = gtk_label_new(mainInstruction.c_str());
+      gtk_label_set_line_wrap_mode(GTK_LABEL(textbox), PangoWrapMode::PANGO_WRAP_WORD);
+      gtk_label_set_line_wrap(GTK_LABEL(textbox), true);
+      gtk_label_set_max_width_chars(GTK_LABEL(textbox), 20);
+      gtk_grid_attach(GTK_GRID(panel),textbox,0,0,1,1);
+      gtk_widget_set_name(textbox, "travelText");
+      gtk_widget_set_margin_left(textbox, 5);
+      gtk_widget_set_margin_right(textbox, 5);
+      gtk_widget_set_margin_top(textbox, 5);
+      gtk_widget_set_margin_bottom(textbox, 5);
+
+
+      string timeTaken = to_string((int)direction.timeTaken) + " seconds";
+      if(direction.timeTaken >= 60)
+      {
+         timeTaken = to_string((int)ceil(direction.timeTaken/60)) + " minutes";
+      }
+      
+      GtkWidget* texttime = gtk_label_new(timeTaken.c_str());
+      gtk_label_set_line_wrap_mode(GTK_LABEL(texttime), PangoWrapMode::PANGO_WRAP_WORD);
+      gtk_label_set_line_wrap(GTK_LABEL(texttime), true);
+      gtk_label_set_max_width_chars(GTK_LABEL(texttime), 20);
+      gtk_grid_attach(GTK_GRID(panel),texttime,0,1,1,1);
+      gtk_widget_set_name(texttime, "travelTime");
+      gtk_widget_set_margin_left(texttime, 5);
+      gtk_widget_set_margin_right(texttime, 5);
+      gtk_widget_set_margin_top(texttime, 5);
+      gtk_widget_set_margin_bottom(texttime, 5);
+      
+      //gtk_widget_set_parent(textbox, GTK_WIDGET(application->get_object("travelDirections")));
+      
+      gtk_widget_show(panel);
+      gtk_widget_show(textbox);
+      gtk_widget_show(texttime);
+   }
+
+   gtk_widget_set_size_request(inst, 100, 100);
+   
+   gtk_widget_show(inst);
+}
+
+
+void closeTravelDirections(ezgl::application *application)
+{
+   GtkWidget* inst = GTK_WIDGET(application->get_object("travelScroll"));
+   GtkGrid* travelGrid = GTK_GRID(application->get_object("travelGrid"));
+
+   GList* children = gtk_container_get_children(GTK_CONTAINER(travelGrid));
+
+   while(children->next != nullptr) //skip title (last element)
+   {
+      gtk_widget_destroy(GTK_WIDGET(children->data));
+      children = children->next;
+   }
+   //free all dynamically allocated ui elements
+   gtk_widget_hide(inst);
 }

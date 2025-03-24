@@ -17,7 +17,7 @@
 using namespace std;
 
 const double kMinimumTurnAngle = M_PI/6.0; //minimum turn angle for street to be considered a turn
-const double kDefaultTurnPenalty = 0; //penalty imposed on a turning street
+const double kDefaultTurnPenalty = 10; //penalty imposed on a turning street
 const double kPathDisplayScaling = 2; //scaling factor for displaying paths
 const double kPathEndpointScaling = 1.5; //scaling factor for displaying path endpoints
 const double kPathArrowAbsoluteSize = 4; //scaling factor for displaying arrows
@@ -26,6 +26,7 @@ const double kMaxArrowSize = 0; //minimum size of arrow
 const double kArrowColourBrightness = 0.8; //how bright arrows are compared to the path colour
 const double kPathBorderBrightness = 0.8; //how bright borders are compared to the path colour
 const double kPathBorderSize = 6; //thickness of the path's borders
+const double kTurnThreshold = 0.8; //absolute sinusoidal coefficient required for an angle to be considered a turn 
 const ezgl::color kPathColour = {224, 255, 133}; //colour of a given path
 
 void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ezgl::color colour, double scaling)
@@ -94,8 +95,8 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
         //set triangle colour
         ezgl::color arrowColour = {colour.red*kArrowColourBrightness, colour.green*kArrowColourBrightness, colour.blue*kArrowColourBrightness};
         //draw triangle
-        ezgl::point2d firstPoint = LatLonToPoint2D((*points)[points->size()/2]);
-        ezgl::point2d secondPoint = LatLonToPoint2D((*points)[points->size()/2 + 1]);
+        ezgl::point2d firstPoint = LatLonToPoint2D((*points)[points->size()/2 - 1]);
+        ezgl::point2d secondPoint = LatLonToPoint2D((*points)[points->size()/2]);
 
         ezgl::point2d deltaPosition = normalize(secondPoint - firstPoint); //get direction vector of path
 
@@ -174,6 +175,7 @@ vector<PathSegment> getPathSegments(vector<StreetSegmentIdx>& segmentPath)
         path.push_back(pathSegment);
     }
 
+    getTravelDirections(path);
     return path;
 }
 
@@ -225,4 +227,130 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections(const double turn_pen
 ezgl::color getPathColour()
 {
     return kPathColour;
+}
+
+vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
+{
+    if(path.size() < 2){return {};}
+    cout << "start:" << endl;
+
+    vector<PathInstruction> travelDirections;
+
+
+    StreetIdx startingRoad = getStreetSegmentInfo(path[0].segmentIndex).streetID;
+    
+    string lastRoadName = getStreetName(startingRoad);
+    double runningPathLength = 0;
+    double runningTimeTaken = 0;
+
+    for(int pathIndex = 0; pathIndex < path.size(); pathIndex++)
+    {
+        PathSegment pathSegment = path[pathIndex];
+
+        StreetIdx streetID = getStreetSegmentInfo(pathSegment.segmentIndex).streetID;
+        
+        string currentRoadName = getStreetName(streetID);
+        
+        if(pathIndex > 0)
+        {
+            PathSegment lastSegment = path[pathIndex - 1];
+            double projection = getSignedTurnProjection(lastSegment.segmentIndex, pathSegment.segmentIndex, lastSegment.toIdx);
+            if(abs(projection) > 0.8) //significant turn projection should to conveyed as a left or right turn
+            {
+                int totalLength = (int)runningPathLength;
+                int timeTaken = (int)runningTimeTaken;
+
+                string straightDirections = "Travel " + to_string(totalLength) + " meters";
+                
+                if(lastRoadName.find('<') == string::npos)
+                {
+                    straightDirections += " along " + lastRoadName;
+                }
+                
+
+                cout << straightDirections << endl;
+                travelDirections.push_back({straightDirections, runningTimeTaken});
+
+                string turnDirection = "left";
+
+                if(projection < 0) //if turn projection is less than 0, it is a right turn
+                {
+                    turnDirection = "right";
+                }
+
+                string turnInstruction = "Make a " + turnDirection + " turn";
+                if(currentRoadName != lastRoadName && currentRoadName.find('<') == string::npos)
+                {
+                    turnInstruction += " onto " + currentRoadName;
+                }
+                cout << turnInstruction << endl;
+                travelDirections.push_back({turnInstruction, kDefaultTurnPenalty});
+                
+                runningPathLength = 0;
+                runningTimeTaken = 0;
+            }
+        }
+        
+        double pathLength = findStreetSegmentLength(pathSegment.segmentIndex);
+        double pathTime = findStreetSegmentTravelTime(pathSegment.segmentIndex);
+        runningPathLength += pathLength;
+        runningTimeTaken += pathTime;
+        lastRoadName = currentRoadName;
+        
+        
+    }
+
+    string straightDirections = "Travel " + to_string((int)runningPathLength) + " meters";
+
+    if(lastRoadName.find('<') == string::npos)
+    {
+        straightDirections += " along " + lastRoadName;
+    }
+
+    cout << straightDirections << endl;
+    travelDirections.push_back({straightDirections, (int)runningTimeTaken});
+    cout << "arrived!" << endl;
+    return travelDirections;
+}
+
+double getSignedTurnProjection(StreetSegmentIdx src, StreetSegmentIdx dst, IntersectionIdx commonIntersection) //-1 = right, 1 = left
+{
+    vector<LatLon> srcPoints = *getStreetSegmentPoints(src);
+    vector<LatLon> dstPoints = *getStreetSegmentPoints(dst); 
+
+    StreetSegmentInfo srcInfo = getStreetSegmentInfo(src);
+    StreetSegmentInfo dstInfo = getStreetSegmentInfo(dst);
+    
+    ezgl::point2d srcDir = {0, 0};
+    ezgl::point2d dstDir = {0, 0};
+
+    if(srcInfo.to == commonIntersection)
+    {
+        srcDir = LatLonToPoint2D(srcPoints[srcPoints.size() - 1]) - LatLonToPoint2D(srcPoints[srcPoints.size() - 2]);
+        srcDir = normalize(srcDir);
+    }
+    else
+    {
+        srcDir = LatLonToPoint2D(srcPoints[0]) - LatLonToPoint2D(srcPoints[1]);
+        srcDir = normalize(srcDir);
+    }
+
+    if(dstInfo.to == commonIntersection)
+    {
+        dstDir = LatLonToPoint2D(dstPoints[dstPoints.size() - 2]) - LatLonToPoint2D(dstPoints[dstPoints.size() - 1]);
+        dstDir = normalize(dstDir);
+    }
+    else
+    {
+        dstDir = LatLonToPoint2D(dstPoints[1]) - LatLonToPoint2D(dstPoints[0]);
+        dstDir = normalize(dstDir);
+    }
+    
+    ezgl::point2d delta = dstDir - srcDir;
+    double srcAngle = atan2(srcDir.y, srcDir.x);
+    double dstAngle = atan2(dstDir.y, dstDir.x);
+    double projectedAngle = dstAngle - srcAngle;
+
+    return sin(projectedAngle);
+
 }

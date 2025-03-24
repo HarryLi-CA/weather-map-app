@@ -28,3 +28,17 @@
     color: #ffffff;
     transition-duration: 0.15s;
 }
+
+grid#travelPanel {
+    background-color: whitesmoke;
+    border-radius: 5px;
+}
+
+label#travelText {
+    color: black;
+}
+
+label#travelTime {
+    color: rgb(32, 118, 199);
+    font-size: 12px;
+}

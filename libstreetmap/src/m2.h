@@ -7,6 +7,7 @@
 #include "OpenWeatherHelper.h"
 #include "renderHelper.h"
 #include "OSMAPIHelper.h"
+#include "m3.h"
 using namespace std;
 
 void drawMap();
@@ -42,6 +43,8 @@ void changeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* applicatio
 void setDisplayedPath(vector<StreetSegmentIdx> segmentPath); //helper function to set the displayed path on the gui
 void clearPathDisplay(); //clears path displays
 void cancelClickingMode_cbk(GtkWidget *widget, ezgl::application *app);
+void displayTravelDirections(vector<PathInstruction> directions,  ezgl::application *application); //helper function to display UI for travel directions
+void closeTravelDirections(ezgl::application *application); //helper function to reset travel directions list
 
 void createRoute_cbk(GtkWidget */*widget*/, ezgl::application *application);
 void createRouteBack_cbk(GtkWidget */*widget*/, ezgl::application *application);

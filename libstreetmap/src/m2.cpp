@@ -1623,11 +1623,11 @@ vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::applicatio
    vector<StreetIdx> street2Idxs = findStreetIdsFromPartialStreetName(searchText2);
 
    if(street1Idxs.size() == 0){
-      errorMsg.append("\n      " + direction + " street 1 does not exist       \n");
+      errorMsg.append("\n      " + direction + " first street does not exist       \n");
       validInput = false;
    }
    if(street2Idxs.size() == 0){
-      errorMsg.append("\n      " + direction + " street 2 does not exist       \n");
+      errorMsg.append("\n      " + direction + " second street does not exist       \n");
       validInput = false;
    }
 
@@ -1718,16 +1718,45 @@ void selectIntersection_cbk(GtkWidget */*widget*/, pair<pair<int,IntersectionIdx
       }
       endingIntersectionInfo.clear();
 
-      //start intersection searching
-      //checks for same intersection
-
+      //Same start and end intersection not will be canceled
       if(selectedRoute.first == selectedRoute.second){
          application->create_popup_message("Error","\nCannot start and end at same intersection!\n");
          return;
       }
 
-      setDisplayedPath(findPathBetweenIntersections(kDefaultTurnPenalty,selectedRoute));
+      std::vector<StreetSegmentIdx> path = findPathBetweenIntersections(10,selectedRoute);
 
+      string routeInstructions = "";
+
+      StreetIdx prevStreetIdx = 0;
+      StreetSegmentInfo currStreetSegInfo;
+      double prevStreetLength = 0;
+      bool firstIteration = true;
+      bool firstStreet = true;
+
+      setDisplayedPath(path);
+
+      for(int i = 0; i < path.size(); i++){
+         currStreetSegInfo = getStreetSegmentInfo(path[i]);
+
+         if(prevStreetIdx == currStreetSegInfo.streetID || firstIteration){
+            prevStreetLength += findStreetSegmentLength(path[i]);
+            prevStreetIdx = currStreetSegInfo.streetID;
+            firstIteration = false;
+         }else{
+            if(firstStreet){
+               routeInstructions.append(" Take " + getStreetName(prevStreetIdx) + " for " + to_string((int)prevStreetLength) + " meters, ");
+               firstStreet = false;
+            } else{
+               routeInstructions.append("then take " + getStreetName(prevStreetIdx) + " for " + to_string((int)prevStreetLength) + " meters, ");
+            }
+            
+            prevStreetLength = findStreetSegmentLength(path[i]);
+            prevStreetIdx = currStreetSegInfo.streetID;
+         }
+      }
+      routeInstructions.append("then take " + getStreetName(prevStreetIdx) + " for " + to_string((int)prevStreetLength) + " meters");
+      application->update_message(routeInstructions.c_str());
    }
 }
 

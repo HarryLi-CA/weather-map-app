@@ -1519,7 +1519,6 @@ void createRouteBack_cbk(GtkWidget */*widget*/, ezgl::application *application){
 
 void enterClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application){
    GObject* exitBtn = application->get_object("ExitRouteModeBtn");
-   g_signal_connect(exitBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
    gtk_widget_show((GtkWidget*)exitBtn);
 
    clickingMode = true;
@@ -1531,12 +1530,13 @@ void enterClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application
 
 void exitClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application){
    GObject* exitBtn = application->get_object("ExitRouteModeBtn");
-   g_signal_connect(exitBtn,"clicked",G_CALLBACK(searchBtn_cbk),application);
 
    clickingMode = false;
    clearPathDisplay();
    
    gtk_widget_hide((GtkWidget*)exitBtn);
+
+   closeTravelDirections(application);
 }
 
 
@@ -1742,6 +1742,9 @@ void selectIntersection_cbk(GtkWidget */*widget*/, pair<pair<int,IntersectionIdx
 
       setDisplayedPath(path);
 
+      //show exit route button
+      GObject* exitBtn = application->get_object("ExitRouteModeBtn");
+      gtk_widget_show((GtkWidget*)exitBtn);
    }
 }
 

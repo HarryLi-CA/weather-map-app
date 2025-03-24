@@ -681,6 +681,17 @@ void setDisplayedPath(vector<StreetSegmentIdx> segmentPath)
    primarySelection = paths[0][0].fromIdx;
    secondarySelection = paths[0][paths[0].size() - 1].toIdx;
 
+   //set camera bounds
+   ezgl::point2d startPosition = (*intersectionFeatures[primarySelection]->points)[0];
+   ezgl::point2d endPosition = (*intersectionFeatures[secondarySelection]->points)[0];
+
+   ezgl::camera& cam = currentApp->get_canvas("MainCanvas")->get_camera();
+   ezgl::rectangle camRect = cam.get_world();
+
+   camRect = updateBounds(updateBounds(camRect, startPosition), endPosition);
+
+   cam.set_world(camRect);
+
    vector<PathInstruction> directions = getTravelDirections(paths[0]);
    displayTravelDirections(directions, currentApp);
    currentApp->get_canvas("MainCanvas")->redraw();
@@ -696,7 +707,6 @@ void clearPathDisplay()
 
 void on_mouse_click(ezgl::application *app, GdkEventButton *event, double x, double y)
 {
-   cout << event->button << endl;
    mapFeaturesMutex.lock();
    if (mapFeatures.layerMap.size() == 0)
    {
@@ -1171,7 +1181,6 @@ void drawMap()
    // and your main() function in main/src/main.cpp.
    // The unit tests always call loadMap() before calling this function
    // and call closeMap() after this function returns.
-   cout << "Drawing Map" << endl;
    ezgl::application::settings settings;                         //initialize settings
    settings.main_ui_resource = "libstreetmap/resources/main.ui"; //load ui data
    settings.window_identifier = "MainWindow";                    //setup window
@@ -1458,7 +1467,6 @@ void resetCanvasParameters(ezgl::application *app) //helper function to reset th
 
 void openMap_cbk(GtkWidget * /*widget*/, pair<string, ezgl::application *> *mapInfo)
 {
-   cout << "open map cbk" << endl;
    string nextMapPath = mapInfo->first;
    ezgl::application *application = mapInfo->second;
    currentApp = application;
@@ -2001,7 +2009,6 @@ void clickedLabelButton_cbk(GtkWidget * /*widget*/, pair<pair<int, vector<PathIn
    }
 
    app->get_canvas("MainCanvas")->redraw(); //force redraw to immediately show changes
-   cout << globalHighlightedStep << endl;
 }
 
 void displayTravelDirections(vector<PathInstruction> &directions, ezgl::application *application)
@@ -2016,7 +2023,6 @@ void displayTravelDirections(vector<PathInstruction> &directions, ezgl::applicat
 
    for (int i = 0; i < directions.size(); i++)
    {
-      cout << "adding" << endl;
       PathInstruction direction = directions[i];
 
       GtkWidget *panel = gtk_grid_new();

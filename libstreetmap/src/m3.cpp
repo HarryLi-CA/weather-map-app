@@ -27,6 +27,7 @@ const double kArrowColourBrightness = 0.8; //how bright arrows are compared to t
 const double kPathBorderBrightness = 0.8; //how bright borders are compared to the path colour
 const double kPathBorderSize = 6; //thickness of the path's borders
 const double kTurnThreshold = 0.6; //absolute sinusoidal coefficient required for an angle to be considered a turn 
+const double kHighwaySpeedLimit = 80*1000.0/3600.0; //minimum speed required for highway terminiology to be used in instructions
 const ezgl::color kPathColour = {224, 255, 133}; //colour of a given path
 const ezgl::color kHighlightedPathColour = {133, 133, 244}; //colour of a given path
 const ezgl::color kColorPathStreetName = {50, 50, 255, 255};
@@ -310,6 +311,7 @@ vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
             double projection = getSignedTurnProjection(lastSegment.segmentIndex, pathSegment.segmentIndex, lastSegment.toIdx);
             if(abs(projection) > kTurnThreshold) //significant turn projection should to conveyed as a left or right turn
             {
+                //finalize step from old road
                 int totalLength = (int)runningPathLength;
                 string unit = "meters";
 
@@ -349,6 +351,42 @@ vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
 
                 runningPathLength = 0;
                 runningTimeTaken = 0;
+            }
+            else if(lastRoadName != currentRoadName && currentRoadName.find('<') == string::npos)
+            {
+                //bool merging = getStreetSegmentInfo(pathSegment.segmentIndex).speedLimit > kHighwaySpeedLimit; //is new path a highway
+                //bool exiting = getStreetSegmentInfo(lastSegment.segmentIndex).speedLimit > kHighwaySpeedLimit; //is old path a highway
+
+                //finalize step from old road
+                int totalLength = (int)runningPathLength;
+                string unit = "meters";
+
+                if(totalLength >= 1000)
+                {
+                    totalLength /= 1000;
+                    unit = "km";
+                }
+
+
+                string straightDirections = "Travel " + to_string(totalLength) + " " + unit;
+                
+                if(lastRoadName.find('<') == string::npos)
+                {
+                    straightDirections += " along " + lastRoadName;
+                }
+                
+
+                travelDirections.push_back({straightDirections, runningTimeTaken, false});
+                step++; //set step number to next step
+
+                //add step to enter new road
+                string mergeInstruction = "Enter " + currentRoadName;
+                travelDirections.push_back({mergeInstruction, 0, true});
+                step++;
+                
+                runningPathLength = 0;
+                runningTimeTaken = 0;
+
             }
         }
 

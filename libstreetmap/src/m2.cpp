@@ -1549,6 +1549,14 @@ void exitClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application)
    gtk_widget_hide((GtkWidget*)exitBtn);
 
    closeTravelDirections(application);
+
+   GObject* startOfRouteBtn = application->get_object("intersectionPopup_addPrimary");
+
+   GObject* endOfRouteBtn = application->get_object("intersectionPopup_addSecondary");
+
+   gtk_widget_hide(GTK_WIDGET(startOfRouteBtn));
+   gtk_widget_hide(GTK_WIDGET(endOfRouteBtn));
+
 }
 
 
@@ -1577,6 +1585,11 @@ void typedRouteConfirm_cbk(GtkWidget */*widget*/, ezgl::application *application
 
       GtkWidget * routeCreatorDialog = GTK_WIDGET(application->get_object("routeCreatorDialog"));
       gtk_widget_hide(routeCreatorDialog);
+
+      startingIntersectionInfo.clear();
+      startingIntersectionInfo.resize(0);
+      endingIntersectionInfo.clear();
+      endingIntersectionInfo.resize(0);
 
       int counter = 1;
 
@@ -1640,7 +1653,7 @@ vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::applicatio
       if(searchText1.length() == 0){
          errorMsg.append("\n      " + direction + " first street not entered       \n");
       } else{
-         errorMsg.append("\n      " + direction + " first street does not exist       \n");
+         errorMsg.append("\n      " + direction + " first street " + searchText1 + " does not exist       \n");
       }
 
       validStreetNames = false;
@@ -1650,7 +1663,7 @@ vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::applicatio
       if(searchText2.length() == 0){
          errorMsg.append("\n      " + direction + " second street not entered       \n");
       } else{
-         errorMsg.append("\n      " + direction + " second street does not exist       \n");
+         errorMsg.append("\n      " + direction + " second street " + searchText2 +  "does not exist       \n");
       }
 
       validStreetNames = false;
@@ -1695,7 +1708,7 @@ vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::applicatio
    }
 
    if(!foundIntersections && validStreetNames){
-      errorMsg.append("\n      " + direction + " streets do not intersect       \n");
+      errorMsg.append("\n      " + direction + " streets " + searchText1 + " & " + searchText2 + " do not intersect       \n");
       validInput = false;
    }
 
@@ -1809,6 +1822,8 @@ void clickedStartingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx
    if(primarySelection > -1 && secondarySelection > -1)
    {
       setDisplayedPath(findPathBetweenIntersections(kDefaultTurnPenalty,{primarySelection, secondarySelection}));
+      GObject* exitBtn = application->get_object("ExitRouteModeBtn");
+      gtk_widget_show((GtkWidget*)exitBtn);
    }
    // User chose the clicked intersection as an starting for the route, handle here
 
@@ -1825,6 +1840,8 @@ void clickedEndingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,e
    if(primarySelection > -1 && secondarySelection > -1)
    {
       setDisplayedPath(findPathBetweenIntersections(kDefaultTurnPenalty,{primarySelection, secondarySelection}));
+      GObject* exitBtn = application->get_object("ExitRouteModeBtn");
+      gtk_widget_show((GtkWidget*)exitBtn);
    }
    // User chose the clicked intersection as an ending for the route, handle here
 

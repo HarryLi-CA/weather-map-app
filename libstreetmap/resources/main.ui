@@ -899,6 +899,7 @@ Alternatively, when not in route clicking mode, intersections can be clicked on 
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
                             <property name="halign">center</property>
+                            <property name="margin-top">10</property>
                             <property name="label" translatable="yes">Travel Directions</property>
                             <property name="justify">center</property>
                             <property name="wrap">True</property>
@@ -1603,7 +1604,7 @@ Alternatively, when not in route clicking mode, intersections can be clicked on 
             </child>
             <child>
               <object class="GtkButton" id="EnterClickingModeBtn">
-                <property name="label" translatable="yes">Enter Route Clicking Mode</property>
+                <property name="label" translatable="yes"> Enter Route Clicking Mode </property>
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
                 <property name="receives-default">True</property>

@@ -1740,37 +1740,8 @@ void selectIntersection_cbk(GtkWidget */*widget*/, pair<pair<int,IntersectionIdx
 
       std::vector<StreetSegmentIdx> path = findPathBetweenIntersections(10,selectedRoute);
 
-      string routeInstructions = "";
-
-      StreetIdx prevStreetIdx = 0;
-      StreetSegmentInfo currStreetSegInfo;
-      double prevStreetLength = 0;
-      bool firstIteration = true;
-      bool firstStreet = true;
-
       setDisplayedPath(path);
 
-      for(int i = 0; i < path.size(); i++){
-         currStreetSegInfo = getStreetSegmentInfo(path[i]);
-
-         if(prevStreetIdx == currStreetSegInfo.streetID || firstIteration){
-            prevStreetLength += findStreetSegmentLength(path[i]);
-            prevStreetIdx = currStreetSegInfo.streetID;
-            firstIteration = false;
-         }else{
-            if(firstStreet){
-               routeInstructions.append(" Take " + getStreetName(prevStreetIdx) + " for " + to_string((int)prevStreetLength) + " meters, ");
-               firstStreet = false;
-            } else{
-               routeInstructions.append("then take " + getStreetName(prevStreetIdx) + " for " + to_string((int)prevStreetLength) + " meters, ");
-            }
-            
-            prevStreetLength = findStreetSegmentLength(path[i]);
-            prevStreetIdx = currStreetSegInfo.streetID;
-         }
-      }
-      routeInstructions.append("then take " + getStreetName(prevStreetIdx) + " for " + to_string((int)prevStreetLength) + " meters");
-      application->update_message(routeInstructions.c_str());
    }
 }
 

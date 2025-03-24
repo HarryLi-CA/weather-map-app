@@ -2,7 +2,7 @@
 #include <iostream>
 #include <vector>
 #include "PathFinding.h"
-#include "Heap.h"
+#include "Point.h"
 
 using namespace std;
 

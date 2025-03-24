@@ -7,6 +7,7 @@
 
 
 namespace osmhelp{
+    void load();
     void reset();
     int getNumIntersections();
     int getNumStreetSegments();

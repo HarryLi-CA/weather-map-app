@@ -85,7 +85,7 @@ const double kRoadBorderWidth = 0.5; //width of road borders
 const double TILERATIO = 0.000005805;
 const double kSpatialIndexingThreshold = DBL_MAX;//10; //maximum screen-to-world ratio before quad tree rendering is enabled
 const double kCameraBoundsExtension = 0; //
-const bool enableThreading = true;
+const bool enableThreading = false;
 bool clickingMode = false; //whether the program is in clicking mode or not
 
 //graphics
@@ -223,8 +223,8 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
                g->draw_line((*feature->points)[i],(*feature->points)[i+1]);
             }
             //get direction of road
-            ezgl::point2d from = (*feature->points)[feature->points->size()/2]; //first position in the street
-            ezgl::point2d to = (*feature->points)[feature->points->size()/2 + 1]; //last position in the street
+            ezgl::point2d from = (*feature->points)[feature->points->size()/2-1]; //first position in the street
+            ezgl::point2d to = (*feature->points)[feature->points->size()/2]; //last position in the street
             ezgl::point2d dir = {to.x - from.x, to.y - from.y}; //direction vector for street
             
 

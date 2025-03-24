@@ -6,43 +6,55 @@
 #include <vector>
 #include <stdio.h>
 #include <queue>
-class Point{
+#include <mutex>
+#include <utility>
+#include <limits>
+#include "Heap.h"
+#include "Point.h"
+
+
+class PathFinder{
     public:
-        IntersectionIdx id = -1;
-        StreetSegmentIdx segId = -1;
-        Point* parent;
-        double gCost = 0, hCost =0, fCost =0;
-        bool isPath = false;
-        bool isTraversed = false;
-        bool correctDir = false;
-        LatLon coords, destCoords;
+    Heap open1;
+    Heap open2;
 
-        // for setting destination point
-        Point(int id);
-        
-        //default constructor
-        Point(int id, LatLon destCoords, Point* parent);
-        ~Point();
+    vector<Point*> closed1;
+    vector<Point*> closed2;
 
-        void copy(Point copyPoint);
+    pair<mutex, vector<pair<Point*, Point*>>> segToPoint1;
+    pair<mutex, vector<pair<Point*, Point*>>> segToPoint2;
 
-        void updateFCost();
-        vector<Point*> retracePath();
-        bool operator <(const Point &x) const {
-            return (fCost < x.fCost);
-        }
-        
-        bool operator >(const Point &x) const {
-            return (fCost > x.fCost);
-        }
+    vector<double> maxInterGCost1;
+    vector<double> maxInterGCost2;
+
+    mutex pathFoundMutex;
+    mutex newPointMutex;
+
+    volatile bool pathFound = false;
+    volatile double maxCost = DBL_MAX;
+
+    bool fullyOptimal = false;
+    bool bidirectionalEasy = true;
+    
+    Point* path1 = nullptr;
+    Point* path2 = nullptr;
+
+    Point* minGCostP1 = nullptr;
+    Point* minGCostP2 = nullptr;
+
+    double minGCost1 = -1;
+    double minGCost2 = -1;
+
+    PathFinder();
+    ~PathFinder();
+    vector<Point*> calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids);
+    
+    void findHalfPath(const double turn_penalty, IntersectionIdx begin, IntersectionIdx end, 
+        Heap& open, vector<Point*>& closed, pair<mutex,vector<pair<Point*, Point*>>>& segToPoint,
+        vector<double>& maxInterGCost, pair<mutex,vector<pair<Point*, Point*>>>& segToPoint2,
+        Point*& path, Point*& path2, bool isOpposite);
+    
+    vector<Point*> getNeighbours(Point* current, double turn_penalty, bool isOpposite);
+
+    double getMinGCost(bool isOpposite);
 };
-
-class PointerCompare {
-public:
-    template<typename T>
-    bool operator()(T *a, T *b) {
-    return (*a) > (*b);
-    }
-};
-vector<Point*> calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids);
-vector<Point*> getNeighbours(Point* current, double turn_penalty, bool isOpposite);

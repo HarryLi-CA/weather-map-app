@@ -2,29 +2,105 @@
 #include "m1.h"
 #include "m3.h"
 #include "Heap.h"
+#include "Point.h"
 #include "OSMAPIHelper.h"
 #include <vector>
 #include <stdio.h>
 #include <queue>
 #include <ctime>
 #include <limits>
-
-#define MAX_STREET_SPEED 36.2 // 36.2m/s = 130km/h
+#include <atomic>
+#include <functional>
+#include <algorithm>
 
 using namespace std;
 
-vector<Point*> calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids){
-    //cout << "Started Finding Path" << endl;
-    clock_t startTime = clock();
+static clock_t totalTime = 0;
+/*
+16391ms but took 49981.4ms. // djekstra
 
-    Point* destination = new Point(intersect_ids.second);
-    Point* start = new Point(intersect_ids.first, destination->coords, nullptr);
+16391ms but took 68131.3ms
+
+non optimal
+16391ms but took 25804.1ms. //djeekstra
+16391ms but took 30932.8ms
+
+construct destruct total time is 855ms
+*/
+
+PathFinder::PathFinder(){
+    //clock_t t = clock();
+    segToPoint1.second.resize(osmhelp::getNumStreetSegments(), make_pair(nullptr, nullptr));
+    segToPoint2.second.resize(osmhelp::getNumStreetSegments(), make_pair(nullptr, nullptr));
+    maxInterGCost1.resize(osmhelp::getNumIntersections(), DBL_MAX);
+    maxInterGCost2.resize(osmhelp::getNumIntersections(), DBL_MAX);
+    //cout << "done start: " <<(clock() -t)/(double)CLOCKS_PER_SEC << endl;
+}
+PathFinder::~PathFinder(){
+    //clock_t t = clock();
+    //cout<<"begin free" << endl;
+    for(int i =0; i < closed1.size(); i++){
+        //if(!closed1[i]->isPath)
+            delete closed1[i];
+        closed1[i] = nullptr;
+    }
+    //cout<<"begin free 2" << endl;
+    for(int i =0; i < closed2.size(); i++){
+        //if(!closed2[i]->isPath)
+            delete closed2[i];
+        closed2[i] = nullptr;
+    }
+    //cout<< "free closed" << endl;
+    for(int i =0; i < open1.items.size(); i++)
+        delete open1.items[i];
+    for(int i =0; i < open2.items.size(); i++)
+        delete open2.items[i];
+    //cout << "done delete: " <<(clock() -t)/(double)CLOCKS_PER_SEC << endl;
+    
+    
+}
+
+vector<Point*> PathFinder::calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids){
+    //cout << "searching for path "<<intersect_ids.first << " " << intersect_ids.second <<'\n';
+    clock_t t = clock();
+    thread t1(&PathFinder::findHalfPath, this, turn_penalty, intersect_ids.first, intersect_ids.second, 
+        ref(open1), ref(closed1), ref(segToPoint1),
+        ref(maxInterGCost1), ref(segToPoint2),
+        ref(path1), ref(path2), false);
+    thread t2(&PathFinder::findHalfPath, this, turn_penalty, intersect_ids.second, intersect_ids.first, 
+        ref(open2), ref(closed2), ref(segToPoint2),
+        ref(maxInterGCost2), ref(segToPoint1),
+        ref(path2), ref(path1), true);
+    t1.join();
+    t2.join();
+    //totalTime +=(clock() -t);
+    //cout << "path found: " <<totalTime/(double)CLOCKS_PER_SEC<< endl;
+    //cout << "got path" << endl;
+    vector<Point*> out = {};
+    if(path1 == nullptr && path2 == nullptr)
+        cout << "Error: Path Not Found\n";
+    if(path1 !=nullptr)
+        out = path1->retracePath(out, false);
+    //cout << "path1 complete" << endl;
+    if(path2 !=nullptr)
+        out = path2->retracePath(out, true);
+    //cout << "path2 complete" << endl;
+    return out;
+}
+
+void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, IntersectionIdx end, 
+    Heap& open, vector<Point*>& closed, pair<mutex,vector<pair<Point*, Point*>>>& segToPoint,
+    vector<double>& maxInterGCost, pair<mutex,vector<pair<Point*, Point*>>>& segToPoint2,
+    Point*& path, Point*& path2, const bool isOpposite){
+        
+    newPointMutex.lock();
+    Point* destination = new Point(end);
+    Point* start = new Point(begin, destination->coords, nullptr);
+    newPointMutex.unlock();
+
     Point* current = start;
 
-    Heap open;
-    vector<Point*> closed={destination};
-    vector<pair<Point*, Point*>> segToPoint(osmhelp::getNumStreetSegments(), make_pair(nullptr, nullptr)); // first is correct direction, second is other direction
-    vector<double> maxInterGCost(osmhelp::getNumIntersections(), DBL_MAX);
+    closed.push_back(destination);
 
     start->gCost = 0;
     start->destCoords = destination->coords;
@@ -35,63 +111,93 @@ vector<Point*> calculatePathArray(const double turn_penalty, const std::pair<Int
     while(open.length() > 0){
         closed.push_back(open.removeFirst());
         current = closed.back();
+
+
+
+        if(current->fCost>maxCost)
+            break;
+
+        // double oppositeMin = getMinGCost(!isOpposite);
+        // if(oppositeMin >= 0 && current->gCost + oppositeMin > maxCost)
+        //     continue;
+
+        if(pathFound){
+            return;
+        }
         current->isTraversed = true;
+
         if(current->gCost < maxInterGCost[current->id]){
-            double newMaxInterGCost = current->gCost + turn_penalty;
-            if(newMaxInterGCost < maxInterGCost[current->id]){
-                maxInterGCost[current->id] = newMaxInterGCost;
+            Point* opposing = nullptr;
+            if(current->segId >= 0){
+                pair<Point*, Point*> opposingPair = segToPoint2.second[current->segId];
+                opposing = (current->correctDir) ? opposingPair.first : opposingPair.second;
             }
-
-            if(current->id == destination->id){
-                //cout<<"Ended finding path with seconds: "<< (double)(clock() - startTime) / CLOCKS_PER_SEC << endl;
-                vector<Point*> path = current->retracePath();
-                //cout<<"start basic final with seconds: "<< (double)(clock() - startTime) / CLOCKS_PER_SEC << endl;
-                for(int i = 0; i <closed.size(); i++)
-                    if(!closed[i]->isPath)
-                        delete closed[i];
-                for(int i = 0; i <open.items.size(); i++)
-                    delete open.items[i];
-                open.items.clear();
-                open.currentItemCount = 0;
-                
-                //cout<<"Ended finding with seconds: "<< (double)(clock() - startTime) / CLOCKS_PER_SEC << endl;
-                return path;
+            if(current->id == destination->id || (opposing != nullptr && opposing->isTraversed)){
+                double totalCost = current->gCost;
+                if(opposing !=nullptr){
+                    totalCost += opposing->parent->gCost;
+                }
+                pathFoundMutex.lock();
+                if(totalCost < maxCost){
+                    path = current;
+                    if(opposing !=nullptr){
+                        path2 = opposing->parent;
+                    }
+                    maxCost = totalCost;
+                }
+                pathFoundMutex.unlock();
+                if(bidirectionalEasy)
+                    break;
+                continue;
             }
-
-            vector<Point*> neighbours= getNeighbours(current, turn_penalty, false);
+            
+            vector<Point*> neighbours= getNeighbours(current, turn_penalty, isOpposite);
             
             for(Point* neighbour: neighbours){
-                bool isGCostHigh = neighbour->gCost > maxInterGCost[neighbour->id];
+                bool isGCostHigh = neighbour->gCost >= maxInterGCost[neighbour->id];
                 if(!isGCostHigh){
-                    Point** neighbourInOpen = &(neighbour->correctDir? segToPoint[neighbour->segId].first:segToPoint[neighbour->segId].second);
-                    bool hasBeenTraversed = *neighbourInOpen == nullptr || (*neighbourInOpen)->gCost > neighbour->gCost; // closed does not contain current segment
-                    if(hasBeenTraversed){
-                        if(*neighbourInOpen == nullptr|| neighbour->gCost < (*neighbourInOpen)->gCost){
-                            neighbour->updateFCost();
+                    double newMaxInterGCost = neighbour->gCost;
+                    if(fullyOptimal){
+                        newMaxInterGCost += turn_penalty;
+                    }
+                    if(newMaxInterGCost < maxInterGCost[neighbour->id]){
+                        maxInterGCost[current->id] = 0;
+                    }
+                    Point** neighbourInOpen = &(neighbour->correctDir? segToPoint.second[neighbour->segId].first:segToPoint.second[neighbour->segId].second);
+                    bool hasBeenTraversed = *neighbourInOpen != nullptr && (*neighbourInOpen)->isTraversed; // closed does not contain current segment
+                    bool isBetter = *neighbourInOpen == nullptr || neighbour->gCost < (*neighbourInOpen)->gCost;
+                    if(!hasBeenTraversed && isBetter){
+                        neighbour->updateFCost();
+                        if(neighbour->fCost < maxCost){
                             if(*neighbourInOpen == nullptr){
+                                //clock_t t =clock();
                                 open.add(neighbour);
+                                segToPoint.first.lock();
                                 *neighbourInOpen = neighbour;
+                                segToPoint.first.unlock();
+                                //totalTime +=(clock() -t);
+                                continue;
                             }
                             else{
-                                //cout<<"better duplicate " << endl;
                                 (*neighbourInOpen)->copy(*neighbour);
                                 open.updateItem(*neighbourInOpen);
-                                delete neighbour;
                             }
                         }
-
                     }
                 }
+                delete neighbour;
             }
         }
     }
-    cout << "Error: Path Not Found" << endl;
-    return {};
+    //cout << "done start: " <<totalTime/(double)CLOCKS_PER_SEC<< endl;
+    pathFoundMutex.lock();
+    pathFound = true;
+    pathFoundMutex.unlock();
 }
 
-vector<Point*> getNeighbours(Point* current, double turn_penalty, bool isOpposite){
+
+vector<Point*> PathFinder::getNeighbours(Point* current, double turn_penalty, bool isOpposite){
     vector<StreetSegmentIdx> streetSegs = findStreetSegmentsOfIntersection(current->id);
-    
     vector<Point*> neighbours;
     StreetSegmentInfo curSegInfo;
     if(current->segId >=0)
@@ -99,10 +205,12 @@ vector<Point*> getNeighbours(Point* current, double turn_penalty, bool isOpposit
     for (int i = 0; i < streetSegs.size(); i++)
     {
         StreetSegmentInfo neigbourSegInfo = osmhelp::getStreetSegmentInfo(streetSegs[i]);
-        bool isCorrectWay = neigbourSegInfo.from == current->id ^ isOpposite;
+        bool isCorrectWay = (neigbourSegInfo.from == current->id) ^ isOpposite;
         if(!neigbourSegInfo.oneWay || isCorrectWay){ // check one way direction
             IntersectionIdx curIntIdx = findOppositeIntersection(current->id, streetSegs[i]);
+            //newPointMutex.lock();
             Point* neighbour = new Point(curIntIdx, current->destCoords, current);
+            //newPointMutex.unlock();
             neighbour->segId = streetSegs[i];
             neighbour->correctDir = isCorrectWay;
 
@@ -119,55 +227,27 @@ vector<Point*> getNeighbours(Point* current, double turn_penalty, bool isOpposit
             neighbours.push_back(neighbour);
         }
     }
-    
     return neighbours;
 }
 
-// for setting destination point
-Point::Point(int id){
-    this->id = id;
-    this->coords = osmhelp::getIntersectionPosition(id);
-    this->parent = nullptr;
-}
 
-//default constructor
-Point::Point(int id, LatLon destCoords, Point* parent){
-    this->id = id;
-    this->coords = osmhelp::getIntersectionPosition(id);
-    this->destCoords=  destCoords;
-    this->parent = parent;
-    hCost = findDistanceBetweenTwoPoints(coords, destCoords)/MAX_STREET_SPEED;
-    fCost = gCost + hCost;
-}
-
-Point::~Point(){
-}
-
-void Point:: copy(Point copyPoint){
-    id = copyPoint.id;
-    segId = copyPoint.segId;
-    parent = copyPoint.parent;
-    gCost = copyPoint.gCost; hCost = copyPoint.hCost; fCost = copyPoint.fCost;
-    isPath = copyPoint.isPath;
-    isTraversed = copyPoint.isTraversed;
-    coords = copyPoint.coords; destCoords = copyPoint.destCoords;
-}
-
-void Point::updateFCost(){
-    fCost = gCost + hCost;
-}
-
-vector<Point*> Point::retracePath(){
-    vector<Point> curPath;
-    isPath = true;
-    if(this->parent!=nullptr){
-        // StreetSegmentInfo nextSegmentInfo = osmhelp::getStreetSegmentInfo(this->segId);
-        // cout << nextSegmentInfo.speedLimit << endl;
-        vector<Point*> curPath = this->parent->retracePath();
-        curPath.push_back(this);
-        return curPath;
-    }
-    else{
-        return {this};
-    }
+double PathFinder::getMinGCost(bool isOpposite){
+    // if(path2 == nullptr && path1 == nullptr)
+    //     return -1;
+    // Point** minGCostPoint = isOpposite?&minGCostP2:&minGCostP1;
+    // double* curGCost = isOpposite?&minGCost2:&minGCost1;
+    // if(!(*minGCostPoint)->isTraversed && *curGCost == (*minGCostPoint)->gCost)
+    //     return *curGCost;
+    // Heap curHeap = isOpposite?open2:open1;
+    // double newGCost = DBL_MAX;
+    // Point* newPoint;
+    // for(Point* item : curHeap.items){
+    //     if(item->gCost < newGCost){
+    //         newGCost= item->gCost;
+    //         newPoint= item;
+    //     }
+    // }
+    // *minGCostPoint = newPoint;
+    // *curGCost = newGCost;
+    // return newGCost;
 }

@@ -86,10 +86,12 @@ namespace osmhelp{
     {
         if(maxSpeedLimit == -1) //if max speed limit is default value, it needs to be calculated
         {
+            apiMutex.lock();
             for(StreetSegmentIdx segIndex = 0; segIndex < getNumStreetSegments(); segIndex++)
             {
                 maxSpeedLimit = std::max(maxSpeedLimit, (double)getStreetSegmentInfo(segIndex).speedLimit);
             }
+            apiMutex.unlock();
         }
 
         return maxSpeedLimit;

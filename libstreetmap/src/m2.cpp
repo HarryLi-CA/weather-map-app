@@ -1622,12 +1622,26 @@ vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::applicatio
    vector<StreetIdx> street1Idxs = findStreetIdsFromPartialStreetName(searchText1);
    vector<StreetIdx> street2Idxs = findStreetIdsFromPartialStreetName(searchText2);
 
+   bool validStreetNames = true;
+
    if(street1Idxs.size() == 0){
-      errorMsg.append("\n      " + direction + " first street does not exist       \n");
+      if(searchText1.length() == 0){
+         errorMsg.append("\n      " + direction + " first street not entered       \n");
+      } else{
+         errorMsg.append("\n      " + direction + " first street does not exist       \n");
+      }
+
+      validStreetNames = false;
       validInput = false;
    }
    if(street2Idxs.size() == 0){
-      errorMsg.append("\n      " + direction + " second street does not exist       \n");
+      if(searchText2.length() == 0){
+         errorMsg.append("\n      " + direction + " second street not entered       \n");
+      } else{
+         errorMsg.append("\n      " + direction + " second street does not exist       \n");
+      }
+
+      validStreetNames = false;
       validInput = false;
    }
 
@@ -1669,7 +1683,7 @@ vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::applicatio
    }
    int numOfIntersectionLists = intersectionList.size();
 
-   if(!foundIntersections){
+   if(!foundIntersections && validStreetNames){
       errorMsg.append("\n      " + direction + " streets do not intersect       \n");
       validInput = false;
    }

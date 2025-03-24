@@ -3,6 +3,7 @@
 #include <math.h>
 #include <vector>
 #include <cfloat>
+#include "pointMath.h"
 
 
 using namespace std;

@@ -41,7 +41,7 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
 
 
     //set border colour
-    ezgl::color borderColour = {colour.red*kPathBorderBrightness,colour.green*kPathBorderBrightness,colour.blue*kPathBorderBrightness};
+    ezgl::color borderColour = staticRGBScale(colour, kPathBorderBrightness);
     g->set_color(borderColour);
 
     //draw background
@@ -105,7 +105,7 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
         vector<LatLon>* points = getStreetSegmentPoints(pathSeg.segmentIndex);
         
         //set triangle colour
-        ezgl::color arrowColour = {colour.red*kArrowColourBrightness, colour.green*kArrowColourBrightness, colour.blue*kArrowColourBrightness};
+        ezgl::color arrowColour = staticRGBScale(colour, kArrowColourBrightness);
         //draw triangle
         ezgl::point2d firstPoint = LatLonToPoint2D((*points)[points->size()/2 - 1]);
         ezgl::point2d secondPoint = LatLonToPoint2D((*points)[points->size()/2]);
@@ -270,7 +270,6 @@ vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
             {
                 int totalLength = (int)runningPathLength;
                 string unit = "meters";
-                int timeTaken = (int)runningTimeTaken;
 
                 if(totalLength >= 1000)
                 {
@@ -324,7 +323,6 @@ vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
 
     int totalLength = (int)runningPathLength;
     string unit = "meters";
-    int timeTaken = (int)runningTimeTaken;
 
     if(totalLength >= 1000)
     {
@@ -340,7 +338,7 @@ vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
         straightDirections += " along " + lastRoadName;
     }
 
-    travelDirections.push_back({straightDirections, (int)runningTimeTaken, false});
+    travelDirections.push_back({straightDirections, round(runningTimeTaken), false});
 
     return travelDirections;
 }
@@ -378,7 +376,6 @@ double getSignedTurnProjection(StreetSegmentIdx src, StreetSegmentIdx dst, Inter
         dstDir = normalize(dstDir);
     }
     
-    ezgl::point2d delta = dstDir - srcDir;
     double srcAngle = atan2(srcDir.y, srcDir.x);
     double dstAngle = atan2(dstDir.y, dstDir.x);
     double projectedAngle = dstAngle - srcAngle;

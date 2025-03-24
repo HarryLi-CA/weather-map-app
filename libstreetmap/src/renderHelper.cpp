@@ -25,7 +25,7 @@ void setLatLonBounds(LatLon latlonMin, LatLon latlonMax)
 }
 
 
-Graphic::Graphic(char* _path)
+Graphic::Graphic(const char* _path)
 {
     filePath = _path;
 }
@@ -490,4 +490,14 @@ ezgl::point2d getMiddleOfStreetSegment(StreetSegmentIdx segmentIndex)
     }
     //if no point is found, return zero
     return {0.0, 0.0};
+}
+
+ezgl::color staticRGBScale(ezgl::color rgb, double scale)
+{
+    //safely cast scaled rgb values
+    u_int8_t r = static_cast<u_int8_t>(rgb.red*scale); //scaled red
+    u_int8_t g = static_cast<u_int8_t>(rgb.green*scale); //scaled green
+    u_int8_t b = static_cast<u_int8_t>(rgb.blue*scale); //scaled blue
+
+    return {r,g,b,rgb.alpha}; //return scaled values as color object
 }

@@ -22,11 +22,14 @@ double getScaleFactor(); //returns scale factor from mainCanvas object
 void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, double scaling, double realWorldScaling, ezgl::camera camera); //helper function to draw specific features on app canvas
 void clickedOnFeature(MapFeature* clicked, ezgl::application* app); //helper function to manage clicks on a specific MapFeature
 void clickingModeClickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::application* app); //helper function to manage clicks on a specific MapFeature while in clicking mode
-
+void drawBorder(MapFeature *feature, ezgl::renderer *g, double lineWidth, ezgl::camera camera); //helper function to draw borders on roads
 
 void initial_setup(ezgl::application *application, bool /*new_window*/);
 
 void thread_safe_draw_main_canvas(ezgl::renderer *g); // thread safe draw main canvas only one running at a timevoid threadedChangeFilter_cbk(pair<WeatherLayer,ezgl::application*> filterInfo)
+void threadedLoadFeatures(); //threa safe loadFeatures implementation
+void threadedTimedRedraw(volatile bool& needRedraw); //helper function to manage multithreaded redraw requests
+
 void draw_main_canvas(ezgl::renderer *g); //callback to draw on main canvas
 void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y); //callback when mouse clicks on map
 void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application); //Callback that is called when search button is pressed
@@ -67,3 +70,5 @@ void clickedStartingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx
 void clickedEndingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo);
 
 void clearHeapPointers(); //helper function to delete all miscellaneous pointers
+
+void setCameraPosition(ezgl::point2d point, ezgl::camera& camera); //helper function to set the position of a camera to center around a point

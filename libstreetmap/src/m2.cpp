@@ -49,7 +49,9 @@ LatLon maxPoints; //top right LatLon position
 vector<StaticName> staticLabels; //list of static text objects to draw
 vector<MapFeature*> intersectionFeatures; //vector that takes in intersection index and return correpsonding map feature
 vector<StreetIdx> streetLengthCache; //stored value of all loaded street lengths;
-vector<void*> heapPointers; //pointers that should be deleted when necessary
+vector<pair<pair<int, vector<PathInstruction>&>, ezgl::application *>* > instructionPairPointers; //pointers that should be deleted when necessary
+vector<vector<PathInstruction>*> segmentHeapPointer;
+
 int numberOfStreets = 0; //save number of streets for fast access
 //default colour constants for general objects
 const ezgl::color kColorDefaultGround = {235, 235, 235, 255}; 
@@ -93,6 +95,7 @@ int globalHighlightedStep = -2; //global identifier for the path step the user i
 
 //graphics
 ezgl::application* currentApp = nullptr;
+ezgl::renderer* currentRenderer = nullptr;
 Graphic pinWhite("libstreetmap/resources/pin_white.png");
 Graphic pinBlack("libstreetmap/resources/pin_black.png");
 Graphic pinRed("libstreetmap/resources/pin_red.png");
@@ -157,7 +160,7 @@ vector<pair<pair<int,IntersectionIdx>,ezgl::application *>> endingIntersectionIn
 int numStartingIntersections;
 int numEndingIntersections;
 pair<IntersectionIdx,IntersectionIdx> selectedRoute;
-pair<IntersectionIdx,ezgl::application *> clickedIntersectionInfo;
+pair<IntersectionIdx,ezgl::application *> globalClickedIntersectionInfo;
 
 // void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d direction, ezgl::color color, double distanceFromCenter)
 // {
@@ -305,7 +308,7 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
       g->set_text_rotation(0);
 }
 
-void drawBorder(MapFeature *feature, ezgl::renderer *g, double lineWidth, double scaling, double realWorldScaling, ezgl::camera camera)
+void drawBorder(MapFeature *feature, ezgl::renderer *g, double lineWidth, ezgl::camera camera)
 {  
    switch(feature->drawType)
       {
@@ -319,10 +322,10 @@ void drawBorder(MapFeature *feature, ezgl::renderer *g, double lineWidth, double
             ezgl::rectangle screen_rect(camera.world_to_screen(bounds.bottom_left()),camera.world_to_screen(bounds.top_right()));
             if(!feature->major && !highlightedStreet && screen_rect.area() < kMinimumPixelsToDraw){break;} 
             
-            g->set_color({0.8*feature->color.red,0.8*feature->color.green,0.8*feature->color.blue,255});
+            g->set_color(staticRGBScale(feature->color, 0.8));
             if(highlightedStreet)
             {
-               g->set_color({0.8*kColorHighlight.red,0.8*kColorHighlight.green,0.8*kColorHighlight.blue,255});
+               g->set_color(staticRGBScale(kColorHighlight, 0.8));
             }
             //if major road, make road wider as indication 
             if(feature->major)
@@ -445,7 +448,7 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
       {
          MapFeature* feature = cellRoads[i];
          if(feature->wasRendered){continue;} //skip duplicate renders
-         drawBorder(feature,g,lineWidth,scaling,worldToScreenScale,camera);
+         drawBorder(feature,g,lineWidth,camera);
          feature->wasRendered = true;
       }
       //reset render checking
@@ -535,6 +538,7 @@ void thread_safe_draw_main_canvas(ezgl::renderer *g){
 
 void draw_main_canvas(ezgl::renderer *g)
 {
+   currentRenderer = g;
    if(enableThreading){
       isDrawing++;
       if(isDrawing>1){
@@ -598,7 +602,7 @@ void clickingModeClickedOnFeature(MapFeature* clicked, GdkEventButton* event, ez
    mainCanvas->redraw();
 }
 
-void clickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::application* app) //function to manage clicks on a specific MapFeature
+void clickedOnFeature(MapFeature* clicked, ezgl::application* app) //function to manage clicks on a specific MapFeature
 {
    clickedIntersectionForRoute_hide(app);
    
@@ -713,7 +717,7 @@ void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, dou
       }
       else
       {
-         clickedOnFeature(clicked, event, app); //run click events on the clicked feature  
+         clickedOnFeature(clicked, app); //run click events on the clicked feature  
       }
    }
 }
@@ -928,10 +932,12 @@ void threadedLoadFeatures(){
          case GLACIER:{
             featureColor = kColorBeach; 
             layer = -6;
+            break;
          }
          default: {
             featureColor = kColorWater;
             layer = -9;
+            break;
          }
       }
       
@@ -1035,7 +1041,8 @@ void unloadGraphics(ezgl::renderer* g)
 
 void unloadGraphics()
 {
-   unloadGraphics(currentApp->get_renderer());
+   ezgl::renderer* g = currentRenderer;
+   unloadGraphics(g);
 }
 
 
@@ -1301,8 +1308,6 @@ void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application){
    ezgl::rectangle camRect = application->get_canvas("MainCanvas")->get_camera().get_world();
    int cameraPoints = 0;
    bool firstHightlight = false; //already highlighted an intersection
-
-   int counter = 0;
 
    for(int i = 0; i < numOfIntersectionLists; i++){
       for(int j = 0; j < intersectionList[i].size(); j++){
@@ -1688,7 +1693,6 @@ vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::applicatio
 
       it++;
    }
-   int numOfIntersectionLists = intersectionList.size();
 
    if(!foundIntersections && validStreetNames){
       errorMsg.append("\n      " + direction + " streets do not intersect       \n");
@@ -1758,14 +1762,14 @@ void selectIntersection_cbk(GtkWidget */*widget*/, pair<pair<int,IntersectionIdx
 //Function called when an intersection is clicked in route creating mode
 void clickedIntersectionForRoute(IntersectionIdx clickedIntersection,ezgl::application *application){
 
-   clickedIntersectionInfo.first = clickedIntersection;
-   clickedIntersectionInfo.second = application;
+   globalClickedIntersectionInfo.first = clickedIntersection;
+   globalClickedIntersectionInfo.second = application;
 
    GObject* startOfRouteBtn = application->get_object("intersectionPopup_addPrimary");
-   g_signal_connect(startOfRouteBtn,"clicked",G_CALLBACK(clickedStartingIntersection_cbk),&clickedIntersectionInfo);
+   g_signal_connect(startOfRouteBtn,"clicked",G_CALLBACK(clickedStartingIntersection_cbk),&globalClickedIntersectionInfo);
 
    GObject* endOfRouteBtn = application->get_object("intersectionPopup_addSecondary");
-   g_signal_connect(endOfRouteBtn,"clicked",G_CALLBACK(clickedEndingIntersection_cbk),&clickedIntersectionInfo);
+   g_signal_connect(endOfRouteBtn,"clicked",G_CALLBACK(clickedEndingIntersection_cbk),&globalClickedIntersectionInfo);
 
    gtk_widget_show(GTK_WIDGET(startOfRouteBtn));
    gtk_widget_show(GTK_WIDGET(endOfRouteBtn));
@@ -1776,10 +1780,10 @@ void clickedIntersectionForRoute_hide(ezgl::application *application)
 {
 
    GObject* startOfRouteBtn = application->get_object("intersectionPopup_addPrimary");
-   g_signal_connect(startOfRouteBtn,"clicked",G_CALLBACK(clickedStartingIntersection_cbk),&clickedIntersectionInfo);
+   g_signal_connect(startOfRouteBtn,"clicked",G_CALLBACK(clickedStartingIntersection_cbk),&globalClickedIntersectionInfo);
 
    GObject* endOfRouteBtn = application->get_object("intersectionPopup_addSecondary");
-   g_signal_connect(endOfRouteBtn,"clicked",G_CALLBACK(clickedEndingIntersection_cbk),&clickedIntersectionInfo);
+   g_signal_connect(endOfRouteBtn,"clicked",G_CALLBACK(clickedEndingIntersection_cbk),&globalClickedIntersectionInfo);
 
    gtk_widget_hide(GTK_WIDGET(startOfRouteBtn));
    gtk_widget_hide(GTK_WIDGET(endOfRouteBtn));
@@ -1794,11 +1798,6 @@ void closeRouteClickingDialog_cbk(GtkWidget */*widget*/, ezgl::application *appl
 
 //callback function called when user clicks "start of route" on intersection clicking pop up in route creating mode
 void clickedStartingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo){
-
-   cout << "click starting intersection" << endl;
-   IntersectionIdx clickedStartingIntersection = clickedIntersectionInfo->first;
-   ezgl::application * application = clickedIntersectionInfo->second;
-
 
    primarySelection = clickedIntersectionInfo->first;
    if(primarySelection > -1 && secondarySelection > -1)
@@ -1815,10 +1814,6 @@ void clickedStartingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx
 
 //callback function called when user clicks "end of route" on intersection clicking pop up in route creating mode
 void clickedEndingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo){
-
-   IntersectionIdx clickedEndingIntersection = clickedIntersectionInfo->first;
-   ezgl::application * application = clickedIntersectionInfo->second;
-
 
    secondarySelection = clickedIntersectionInfo->first;
    if(primarySelection > -1 && secondarySelection > -1)
@@ -1843,7 +1838,7 @@ void clickedLabelButton_cbk(GtkWidget */*widget*/, pair<pair<int, vector<PathIns
    for(int i = 1; i < paths[0].size(); i++)
    {
       PathSegment pathSegment = paths[0][i];
-      PathSegment lastSegment = paths[0][i - 1];
+
       if(globalHighlightedStep >= 0 && globalHighlightedStep < instructions.size() && pathSegment.step == globalHighlightedStep-1 && instructions[globalHighlightedStep].turnInstruction)
       {
          IntersectionIdx common = pathSegment.toIdx;
@@ -1878,8 +1873,8 @@ void displayTravelDirections(vector<PathInstruction>& directions,  ezgl::applica
       gtk_grid_attach(travelGrid,panel,0,2+i,1,1);
 
       gtk_grid_insert_column(GTK_GRID(panel), 0);
-      gtk_widget_set_margin_left(panel, 20);
-      gtk_widget_set_margin_right(panel, 20);
+      gtk_widget_set_margin_start(panel, 20);
+      gtk_widget_set_margin_end(panel, 20);
       gtk_widget_set_name(panel, "travelPanel");
       gtk_widget_set_hexpand(panel,false);
 
@@ -1890,9 +1885,9 @@ void displayTravelDirections(vector<PathInstruction>& directions,  ezgl::applica
       gtk_grid_attach(GTK_GRID(panel),textButton,0,0,1,1);
       gtk_widget_set_name(textButton, "travelButton");
 
-      gtk_widget_set_margin_left(textButton, 40);
+      gtk_widget_set_margin_start(textButton, 40);
       gtk_widget_set_hexpand(textButton,true);
-      gtk_widget_set_margin_right(textButton, 40);
+      gtk_widget_set_margin_end(textButton, 40);
       gtk_style_context_add_class(gtk_widget_get_style_context(textButton),"travelButtonBack");
       GList* buttonLabel = gtk_container_get_children(GTK_CONTAINER(textButton));
       gtk_style_context_add_class(gtk_widget_get_style_context(GTK_WIDGET(buttonLabel->data)),"travelButtonLabel");
@@ -1900,7 +1895,9 @@ void displayTravelDirections(vector<PathInstruction>& directions,  ezgl::applica
       vector<PathInstruction>* dynamicIntructions = new vector<PathInstruction>(directions);
       pair<pair<int, vector<PathInstruction>&>, ezgl::application *>* buttonData = new pair<pair<int, vector<PathInstruction>&>, ezgl::application *>({{i, *dynamicIntructions}, application});
       g_signal_connect(GTK_BUTTON(textButton),"clicked",G_CALLBACK(clickedLabelButton_cbk),buttonData);
-      heapPointers.push_back(dynamicIntructions);
+      
+      instructionPairPointers.push_back(buttonData);
+      segmentHeapPointer.push_back(dynamicIntructions);
 
       string mainInstruction = direction.instruction;
 
@@ -1912,8 +1909,8 @@ void displayTravelDirections(vector<PathInstruction>& directions,  ezgl::applica
       gtk_widget_set_name(textbox, "travelText");
       gtk_label_set_justify(GTK_LABEL(textbox),GtkJustification::GTK_JUSTIFY_CENTER);
       gtk_widget_set_halign(textbox,GtkAlign::GTK_ALIGN_CENTER);
-      gtk_widget_set_margin_left(textbox, 5);
-      gtk_widget_set_margin_right(textbox, 5);
+      gtk_widget_set_margin_start(textbox, 5);
+      gtk_widget_set_margin_end(textbox, 5);
       gtk_widget_set_margin_top(textbox, 5);
       gtk_widget_set_margin_bottom(textbox, 5);
       
@@ -1934,8 +1931,8 @@ void displayTravelDirections(vector<PathInstruction>& directions,  ezgl::applica
       gtk_label_set_max_width_chars(GTK_LABEL(texttime), 20);
       gtk_grid_attach(GTK_GRID(panel),texttime,0,2,1,1);
       gtk_widget_set_name(texttime, "travelTime");
-      gtk_widget_set_margin_left(texttime, 5);
-      gtk_widget_set_margin_right(texttime, 5);
+      gtk_widget_set_margin_start(texttime, 5);
+      gtk_widget_set_margin_end(texttime, 5);
       gtk_widget_set_margin_top(texttime, 5);
       gtk_widget_set_margin_bottom(texttime, 5);
       
@@ -1976,9 +1973,17 @@ void closeTravelDirections(ezgl::application *application)
 
 void clearHeapPointers()
 {
-   for(int i = 0; i < heapPointers.size(); i++)
+   for(int i = 0; i < instructionPairPointers.size(); i++)
    {
-      delete heapPointers[i];
+      delete instructionPairPointers[i];
    }
-   heapPointers.clear();
+
+   for(int i = 0; i < segmentHeapPointer.size(); i++)
+   {
+      segmentHeapPointer[i]->clear();
+      delete segmentHeapPointer[i];
+   }
+
+   instructionPairPointers.clear();
+   segmentHeapPointer.clear();
 }

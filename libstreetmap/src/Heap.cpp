@@ -68,7 +68,7 @@ void Heap::sortDown(Point* item){
         }
         }
         if(*items[parentIndex] > *items[swapIndex]){
-            this->swap(items[parentIndex],items[swapIndex]);
+            swap(items[parentIndex],items[swapIndex]);
         }
         else{
         return;
@@ -88,7 +88,7 @@ void Heap::sortUp(Point* item){
     while(parentIndex>0){
     Point* parentItem = items[parentIndex];
     if(*item<*parentItem){
-        this->swap(item,parentItem);
+        swap(item,parentItem);
     }
     else{
         break;

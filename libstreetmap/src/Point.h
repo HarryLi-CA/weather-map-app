@@ -10,7 +10,7 @@
 #include "Heap.h"
 #include "Point.h"
 
-#define MAX_STREET_SPEED 100000// 36.2m/s = 130km/h
+#define MAX_STREET_SPEED 36.2// 36.2m/s = 130km/h
 
 class Point{
     public:

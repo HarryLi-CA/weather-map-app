@@ -232,6 +232,7 @@ vector<Point*> PathFinder::getNeighbours(Point* current, double turn_penalty, bo
 
 
 double PathFinder::getMinGCost(bool isOpposite){
+    return isOpposite?0.0:1.0;
     // if(path2 == nullptr && path1 == nullptr)
     //     return -1;
     // Point** minGCostPoint = isOpposite?&minGCostP2:&minGCostP1;

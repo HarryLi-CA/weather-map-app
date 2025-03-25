@@ -3,6 +3,7 @@
 #include <math.h>
 #include <vector>
 #include <cfloat>
+#include "pointMath.h"
 
 
 using namespace std;
@@ -93,4 +94,9 @@ double getDistanceToClosest(ezgl::point2d P, vector<ezgl::point2d>& points)
         closestDistance = min(distance, closestDistance);
     }
     return closestDistance;
+}
+
+double dot(ezgl::point2d A, ezgl::point2d B)
+{
+    return A.x*B.x + A.y*B.y;
 }

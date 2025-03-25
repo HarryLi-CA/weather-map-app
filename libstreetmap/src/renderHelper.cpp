@@ -25,9 +25,10 @@ void setLatLonBounds(LatLon latlonMin, LatLon latlonMax)
 }
 
 
-Graphic::Graphic(char* _path)
+Graphic::Graphic(const char* _path)
 {
     filePath = _path;
+    surface = nullptr;
 }
 
 void Graphic::load(ezgl::renderer* g)
@@ -52,7 +53,12 @@ void Graphic::draw(ezgl::renderer* g, double worldScale, ezgl::point2d position,
 
 void Graphic::deallocate(ezgl::renderer* g)
 {
-    g->free_surface(surface);   
+    if(surface != nullptr)
+    {
+        g->free_surface(surface); 
+    }
+    
+    surface = nullptr;  
 }
 
 MapFeature::MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _color, DrawType _drawType, MapFeatureType _featureType, int _index)
@@ -170,6 +176,16 @@ void FeatureList::highlightFeature(MapFeature* feature, bool unhighlightOthers)
     //store feature so it can be unhighlighted if needed
     highlightedFeatures.push_back(feature);
 }
+
+void FeatureList::unhighlightAll()
+{
+    for(int featureIndex = 0; featureIndex < highlightedFeatures.size(); featureIndex++)
+    {
+        highlightedFeatures[featureIndex]->highlight = false;
+    }
+    highlightedFeatures = {};
+}
+
 void FeatureList::addFeature(MapFeature* feature, double areaThreshold, double worldArea)
 {
     bool lowLOD = feature->major || (feature->drawType == DrawType::POLYGON && feature->thresholdArea > areaThreshold) || feature->drawType == DrawType::POINT; //should feature be rendered at high distances
@@ -480,4 +496,14 @@ ezgl::point2d getMiddleOfStreetSegment(StreetSegmentIdx segmentIndex)
     }
     //if no point is found, return zero
     return {0.0, 0.0};
+}
+
+ezgl::color staticRGBScale(ezgl::color rgb, double scale)
+{
+    //safely cast scaled rgb values
+    u_int8_t r = static_cast<u_int8_t>(rgb.red*scale); //scaled red
+    u_int8_t g = static_cast<u_int8_t>(rgb.green*scale); //scaled green
+    u_int8_t b = static_cast<u_int8_t>(rgb.blue*scale); //scaled blue
+
+    return {r,g,b,rgb.alpha}; //return scaled values as color object
 }

@@ -145,6 +145,7 @@ bool loadMap(std::string map_streets_database_filename) {
 }
 
 void closeMap() {
+    unloadGraphics();
     //Clean-up your map related data structures here
     //delete and clear all elements in vectors with dynamically allocated data
     delete2DVectorPointers<StreetSegmentIdx>(intersectionToStreetSegments);
@@ -175,8 +176,9 @@ void closeMap() {
     closeStreetDatabase();
     closeOSMDatabase();
     //clear map
+    
     unloadFeatures();
-    unloadGraphics();
+    clearHeapPointers();
 }
 
 double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){

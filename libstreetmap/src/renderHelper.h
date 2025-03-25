@@ -27,12 +27,12 @@ enum MapFeatureType {
 class Graphic
 {
     public:
-    char* filePath;
+    const char* filePath;
     ezgl::surface* surface;
     double width;
     double height;
 
-    Graphic(char* _path);
+    Graphic(const char* _path);
     void load(ezgl::renderer* g); //loads surface pointer
     void draw(ezgl::renderer* g, double worldScale, ezgl::point2d position, ezgl::point2d offset, double imageScale); //function to draw a graphic on the screen during runtime
     void draw(ezgl::renderer* g, double worldScale, ezgl::point2d position, ezgl::point2d offset, double imageScale, ezgl::color color); //function to draw a graphic on the screen during runtime
@@ -79,6 +79,7 @@ class FeatureList {
     FeatureList();
     void addFeature(MapFeature* feature, double areaThreshold, double worldArea); //adds feature to the map at the corresponding layer
     void highlightFeature(MapFeature* feature, bool unhighlightOthers); //highlights feature and unhighlights currently highlighted features
+    void unhighlightAll(); //removes highlight on all highlighted features
     void clear(); //deletes all vectors and map features in the layer map
 };
 
@@ -120,6 +121,7 @@ void drawTriangle(ezgl::renderer *g, ezgl::point2d center, ezgl::point2d directi
 
 ezgl::point2d getMiddleOfStreetSegment(StreetSegmentIdx segmentIndex); //helper function that returns the point that lies in the middle of a street segment (curved or non-curved)
 
+ezgl::color staticRGBScale(ezgl::color rgb, double scale); //helper function to safely scale the brightness of a colour
 
 string getKnownIntersectionName(IntersectionIdx index); //helper function to get an intersection name while removing "<unknown> &" from the name
 

@@ -18,7 +18,7 @@
 using namespace std;
 
 const double kMinimumTurnAngle = M_PI/6.0; //minimum turn angle for street to be considered a turn
-const double kDefaultTurnPenalty = 0; //penalty imposed on a turning street
+const double kDefaultTurnPenalty = 10; //penalty imposed on a turning street
 const double kPathDisplayScaling = 2; //scaling factor for displaying paths
 const double kPathEndpointScaling = 1.5; //scaling factor for displaying path endpoints
 const double kPathArrowAbsoluteSize = 4; //scaling factor for displaying arrows
@@ -27,9 +27,14 @@ const double kMaxArrowSize = 0; //minimum size of arrow
 const double kArrowColourBrightness = 0.8; //how bright arrows are compared to the path colour
 const double kPathBorderBrightness = 0.8; //how bright borders are compared to the path colour
 const double kPathBorderSize = 6; //thickness of the path's borders
+const double kTurnThreshold = 0.6; //absolute sinusoidal coefficient required for an angle to be considered a turn 
+const double kHighwaySpeedLimit = 80*1000.0/3600.0; //minimum speed required for highway terminiology to be used in instructions
 const ezgl::color kPathColour = {224, 255, 133}; //colour of a given path
+const ezgl::color kHighlightedPathColour = {133, 133, 244}; //colour of a given path
+const ezgl::color kColorPathStreetName = {50, 50, 255, 255};
+const ezgl::color kColorHighlightedPathStreetName = {255, 255, 244}; //colour of a given path
 
-void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ezgl::color colour, double scaling)
+void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ezgl::color colour, double scaling, int highlightStep, vector<MapFeature*>& segmentIdxToFeatures)
 {
     //dont draw empthy paths
     if(path.size() == 0){return;}
@@ -40,7 +45,7 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
 
 
     //set border colour
-    ezgl::color borderColour = {colour.red*kPathBorderBrightness,colour.green*kPathBorderBrightness,colour.blue*kPathBorderBrightness};
+    ezgl::color borderColour = staticRGBScale(colour, kPathBorderBrightness);
     g->set_color(borderColour);
 
     //draw background
@@ -71,9 +76,19 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
     g->set_line_width(lineWidth*kPathDisplayScaling);
     for(int pathIndex = 0; pathIndex < path.size(); pathIndex++)
     {
-        
         PathSegment pathSeg = path[pathIndex];
         vector<LatLon>* points = getStreetSegmentPoints(pathSeg.segmentIndex);
+
+        ezgl::color pathColour = colour;
+
+        if(highlightStep == pathSeg.step)
+        {
+            pathColour = kHighlightedPathColour;
+        }
+
+        //set path colour
+        g->set_color(pathColour);
+
         for(int pointIndex = 0; pointIndex < points->size() - 1; pointIndex++)
         {
             ezgl::point2d from = LatLonToPoint2D((*points)[pointIndex]);
@@ -83,6 +98,7 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
     }
 
     //draw endpoints
+    g->set_color(colour);
     g->fill_arc(startPoint,endPointRadius,0.0,360.0); //draw start point
     g->fill_arc(endPoint,endPointRadius,0.0,360.0); //draw end point
 
@@ -93,10 +109,10 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
         vector<LatLon>* points = getStreetSegmentPoints(pathSeg.segmentIndex);
         
         //set triangle colour
-        ezgl::color arrowColour = {colour.red*kArrowColourBrightness, colour.green*kArrowColourBrightness, colour.blue*kArrowColourBrightness};
+        ezgl::color arrowColour = staticRGBScale(colour, kArrowColourBrightness);
         //draw triangle
-        ezgl::point2d firstPoint = LatLonToPoint2D((*points)[points->size()/2]);
-        ezgl::point2d secondPoint = LatLonToPoint2D((*points)[points->size()/2 + 1]);
+        ezgl::point2d firstPoint = LatLonToPoint2D((*points)[points->size()/2 - 1]);
+        ezgl::point2d secondPoint = LatLonToPoint2D((*points)[points->size()/2]);
 
         ezgl::point2d deltaPosition = normalize(secondPoint - firstPoint); //get direction vector of path
 
@@ -113,7 +129,48 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
 
             arrowPositions.push_back(middlePoint);
         }
+
+        //draw street names
+        StreetIdx streetID = getStreetSegmentInfo(pathSeg.segmentIndex).streetID;
+        if (streetID < osmhelp::getNumStreets() && streetID > 0)
+        {
+            MapFeature* feature = segmentIdxToFeatures[pathSeg.segmentIndex];
+            int longestIndex = feature->longestPointSegmentIndex;
+            //get longest segment points
+            cout << feature->points->size() << endl;
+            ezgl::point2d fromPoint = (*feature->points)[longestIndex];
+            ezgl::point2d toPoint = (*feature->points)[longestIndex + 1];
+
+            //get point in the middle of longest segment
+            ezgl::point2d midPoint = midpoint(fromPoint, toPoint);
+            //get displacement vector between points
+            ezgl::point2d delta = {toPoint.x - fromPoint.x, toPoint.y - fromPoint.y};
+            double angle = (atan2(delta.y, delta.x)) / kDegreeToRadian; //angle from horizontal axis (counter clockwise) of street segment
+            if (angle > 90)
+            {
+            angle -= 180;
+            }
+            if (angle < -90)
+            {
+            angle += 180;
+            }
+            string streetName = getStreetName(feature->streetID);
+
+            ezgl::color streetNameColour = kColorPathStreetName;
+            
+            if(highlightStep == pathSeg.step) //change colour on a highlighted street segment
+            {
+                streetNameColour = kColorHighlightedPathStreetName;
+            }
+
+            //roate and draw text
+            g->set_color(streetNameColour);
+            g->set_text_rotation(angle);
+            g->draw_text(midPoint, streetName, feature->longestSegmentLength, lineWidth * kPathDisplayScaling);
+        }
     }
+
+    
     
 }
 
@@ -127,7 +184,7 @@ vector<PathSegment> generateFatestPath(IntersectionIdx from, IntersectionIdx to)
 
     return path;
 }
-
+    
 vector<PathSegment> getPathSegments(vector<StreetSegmentIdx>& segmentPath)
 {
     vector<PathSegment> path;
@@ -156,7 +213,6 @@ vector<PathSegment> getPathSegments(vector<StreetSegmentIdx>& segmentPath)
         }
         else //if segment is the final one, check previous segment
         {
-            cout << "checking last" << endl;
             StreetSegmentInfo prevSegmentInfo = getStreetSegmentInfo(segmentPath[pathIndex-1]);
             if(prevSegmentInfo.from == segmentInfo.to || prevSegmentInfo.to == segmentInfo.to)
             {
@@ -171,10 +227,11 @@ vector<PathSegment> getPathSegments(vector<StreetSegmentIdx>& segmentPath)
 
         StreetSegmentIdx commonSegment = segmentPath[pathIndex];
     
-        PathSegment pathSegment = {fromIntersection,from,toIntersection,to,commonSegment,reverse};
+        PathSegment pathSegment = {fromIntersection,from,toIntersection,to,commonSegment,reverse, -1};
         path.push_back(pathSegment);
     }
 
+    getTravelDirections(path);
     return path;
 }
 
@@ -221,11 +278,193 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections(const double turn_pen
             //delete pointVector[i];
         }
     }
-    // cout<<"Ended finding with seconds: "<< (double)(clock() - startTime) / CLOCKS_PER_SEC << endl;
+
     return streetIds;
 }
 
 ezgl::color getPathColour()
 {
     return kPathColour;
+}
+
+vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
+{
+    if(path.size() < 2){return {};}
+
+    int step = 0;
+
+    vector<PathInstruction> travelDirections;
+
+
+    StreetIdx startingRoad = getStreetSegmentInfo(path[0].segmentIndex).streetID;
+    
+    string lastRoadName = getStreetName(startingRoad);
+    double runningPathLength = 0;
+    double runningTimeTaken = 0;
+
+    for(int pathIndex = 0; pathIndex < path.size(); pathIndex++)
+    {
+        PathSegment& pathSegment = path[pathIndex];
+
+        StreetIdx streetID = getStreetSegmentInfo(pathSegment.segmentIndex).streetID;
+        
+        string currentRoadName = getStreetName(streetID);
+        
+        if(pathIndex > 0)
+        {
+            PathSegment lastSegment = path[pathIndex - 1];
+            double projection = getSignedTurnProjection(lastSegment.segmentIndex, pathSegment.segmentIndex, lastSegment.toIdx);
+            if(abs(projection) > kTurnThreshold) //significant turn projection should to conveyed as a left or right turn
+            {
+                //finalize step from old road
+                int totalLength = (int)runningPathLength;
+                string unit = "meters";
+
+                if(totalLength >= 1000)
+                {
+                    totalLength /= 1000;
+                    unit = "km";
+                }
+
+
+                string straightDirections = "Travel " + to_string(totalLength) + " " + unit;
+                
+                if(lastRoadName.find('<') == string::npos)
+                {
+                    straightDirections += " along " + lastRoadName;
+                }
+                
+
+                travelDirections.push_back({straightDirections, runningTimeTaken, false});
+                step++; //set step number to next step
+
+                string turnDirection = "left";
+
+                if(projection < 0) //if turn projection is less than 0, it is a right turn
+                {
+                    turnDirection = "right";
+                }
+
+                string turnInstruction = "Make a " + turnDirection + " turn";
+                if(currentRoadName != lastRoadName && currentRoadName.find('<') == string::npos)
+                {
+                    turnInstruction += " onto " + currentRoadName;
+                }
+
+                travelDirections.push_back({turnInstruction, kDefaultTurnPenalty, true});
+                step++; //set step number to next step
+
+                runningPathLength = 0;
+                runningTimeTaken = 0;
+            }
+            else if(lastRoadName != currentRoadName && currentRoadName.find('<') == string::npos)
+            {
+                //bool merging = getStreetSegmentInfo(pathSegment.segmentIndex).speedLimit > kHighwaySpeedLimit; //is new path a highway
+                //bool exiting = getStreetSegmentInfo(lastSegment.segmentIndex).speedLimit > kHighwaySpeedLimit; //is old path a highway
+
+                //finalize step from old road
+                int totalLength = (int)runningPathLength;
+                string unit = "meters";
+
+                if(totalLength >= 1000)
+                {
+                    totalLength /= 1000;
+                    unit = "km";
+                }
+
+
+                string straightDirections = "Travel " + to_string(totalLength) + " " + unit;
+                
+                if(lastRoadName.find('<') == string::npos)
+                {
+                    straightDirections += " along " + lastRoadName;
+                }
+                
+
+                travelDirections.push_back({straightDirections, runningTimeTaken, false});
+                step++; //set step number to next step
+
+                //add step to enter new road
+                string mergeInstruction = "Enter " + currentRoadName;
+                travelDirections.push_back({mergeInstruction, 0, true});
+                step++;
+                
+                runningPathLength = 0;
+                runningTimeTaken = 0;
+
+            }
+        }
+
+        pathSegment.step = step; //set the step ID of the path segment to the current step
+        
+        double pathLength = findStreetSegmentLength(pathSegment.segmentIndex);
+        double pathTime = findStreetSegmentTravelTime(pathSegment.segmentIndex);
+        runningPathLength += pathLength;
+        runningTimeTaken += pathTime;
+        lastRoadName = currentRoadName;
+        
+        
+    }
+
+    int totalLength = (int)runningPathLength;
+    string unit = "meters";
+
+    if(totalLength >= 1000)
+    {
+        totalLength /= 1000;
+        unit = "km";
+    }
+
+
+    string straightDirections = "Travel " + to_string(totalLength) + " " + unit;
+    
+    if(lastRoadName.find('<') == string::npos)
+    {
+        straightDirections += " along " + lastRoadName;
+    }
+
+    travelDirections.push_back({straightDirections, round(runningTimeTaken), false});
+
+    return travelDirections;
+}
+
+double getSignedTurnProjection(StreetSegmentIdx src, StreetSegmentIdx dst, IntersectionIdx commonIntersection) //-1 = right, 1 = left
+{
+    vector<LatLon> srcPoints = *getStreetSegmentPoints(src);
+    vector<LatLon> dstPoints = *getStreetSegmentPoints(dst); 
+
+    StreetSegmentInfo srcInfo = getStreetSegmentInfo(src);
+    StreetSegmentInfo dstInfo = getStreetSegmentInfo(dst);
+    
+    ezgl::point2d srcDir = {0, 0};
+    ezgl::point2d dstDir = {0, 0};
+
+    if(srcInfo.to == commonIntersection)
+    {
+        srcDir = LatLonToPoint2D(srcPoints[srcPoints.size() - 1]) - LatLonToPoint2D(srcPoints[srcPoints.size() - 2]);
+        srcDir = normalize(srcDir);
+    }
+    else
+    {
+        srcDir = LatLonToPoint2D(srcPoints[0]) - LatLonToPoint2D(srcPoints[1]);
+        srcDir = normalize(srcDir);
+    }
+
+    if(dstInfo.to == commonIntersection)
+    {
+        dstDir = LatLonToPoint2D(dstPoints[dstPoints.size() - 2]) - LatLonToPoint2D(dstPoints[dstPoints.size() - 1]);
+        dstDir = normalize(dstDir);
+    }
+    else
+    {
+        dstDir = LatLonToPoint2D(dstPoints[1]) - LatLonToPoint2D(dstPoints[0]);
+        dstDir = normalize(dstDir);
+    }
+    
+    double srcAngle = atan2(srcDir.y, srcDir.x);
+    double dstAngle = atan2(dstDir.y, dstDir.x);
+    double projectedAngle = dstAngle - srcAngle;
+
+    return sin(projectedAngle);
+
 }

@@ -7,6 +7,7 @@
 #include "OpenWeatherHelper.h"
 #include "renderHelper.h"
 #include "OSMAPIHelper.h"
+#include "m3.h"
 using namespace std;
 
 void drawMap();
@@ -21,10 +22,14 @@ double getScaleFactor(); //returns scale factor from mainCanvas object
 void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, double scaling, double realWorldScaling, ezgl::camera camera); //helper function to draw specific features on app canvas
 void clickedOnFeature(MapFeature* clicked, ezgl::application* app); //helper function to manage clicks on a specific MapFeature
 void clickingModeClickedOnFeature(MapFeature* clicked, GdkEventButton* event, ezgl::application* app); //helper function to manage clicks on a specific MapFeature while in clicking mode
+void drawBorder(MapFeature *feature, ezgl::renderer *g, double lineWidth, ezgl::camera camera); //helper function to draw borders on roads
 
 void initial_setup(ezgl::application *application, bool /*new_window*/);
 
 void thread_safe_draw_main_canvas(ezgl::renderer *g); // thread safe draw main canvas only one running at a timevoid threadedChangeFilter_cbk(pair<WeatherLayer,ezgl::application*> filterInfo)
+void threadedLoadFeatures(); //threa safe loadFeatures implementation
+void threadedTimedRedraw(volatile bool& needRedraw); //helper function to manage multithreaded redraw requests
+
 void draw_main_canvas(ezgl::renderer *g); //callback to draw on main canvas
 void on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y); //callback when mouse clicks on map
 void searchBtn_cbk(GtkWidget */*widget*/, ezgl::application *application); //Callback that is called when search button is pressed
@@ -41,6 +46,9 @@ void changeCurrentTime_cbk(GtkRange * sliderRange, ezgl::application* applicatio
 void setDisplayedPath(vector<StreetSegmentIdx> segmentPath); //helper function to set the displayed path on the gui
 void clearPathDisplay(); //clears path displays
 void cancelClickingMode_cbk(GtkWidget *widget, ezgl::application *app);
+void displayTravelDirections(vector<PathInstruction>& directions,  ezgl::application *application); //helper function to display UI for travel directions
+void closeTravelDirections(ezgl::application *application); //helper function to reset travel directions list
+
 
 void createRoute_cbk(GtkWidget */*widget*/, ezgl::application *application);
 void createRouteBack_cbk(GtkWidget */*widget*/, ezgl::application *application);
@@ -50,11 +58,17 @@ void typedRouteConfirm_cbk(GtkWidget */*widget*/, ezgl::application *application
 void findIntersectionsfromSearchbars(ezgl::application *application, vector<vector<IntersectionIdx>> &intersectionList, const gchar * searchbarId1, const gchar * searchbarId2, string &errorMsg, bool &validInput, string direction);
 vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::application *application, const gchar * searchbarId1, const gchar * searchbarId2, string &errorMsg, bool &validInput, string direction);
 void selectIntersection_cbk(GtkWidget */*widget*/, pair<pair<int,IntersectionIdx>,ezgl::application *> * intersectionInfo);
+void clickedLabelButton_cbk(GtkWidget */*widget*/, pair<pair<int, vector<PathInstruction>&>, ezgl::application *> *labelInfo); //callback function to manage label button
 
 void openHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application);
 void closeHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application);
 
 void clickedIntersectionForRoute(IntersectionIdx clickedIntersection,ezgl::application *application);
+void clickedIntersectionForRoute_hide(ezgl::application *application);
 void closeRouteClickingDialog_cbk(GtkWidget */*widget*/, ezgl::application *application);
 void clickedStartingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo);
 void clickedEndingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo);
+
+void clearHeapPointers(); //helper function to delete all miscellaneous pointers
+
+void setCameraPosition(ezgl::point2d point, ezgl::camera& camera); //helper function to set the position of a camera to center around a point

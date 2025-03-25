@@ -30,6 +30,7 @@ ECE297 Software Design and Communication Winter 2025
 #include "StreetsDatabaseAPI.h"
 #include "PathFinding.h"
 #include "OSMAPIHelper.h"
+#include <stdlib.h>
 #include <vector>
 #include <random>
 // Returns the time required to travel along the path specified, in seconds.
@@ -61,11 +62,23 @@ struct PathSegment
     ezgl::point2d to;
     StreetSegmentIdx segmentIndex;
     bool reverse;
+    int step;
+};
+
+struct PathInstruction
+{
+    string instruction;
+    double timeTaken;
+    bool turnInstruction;
 };
 
 
 // draw path over roads on the map
-void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ezgl::color colour, double scaling);
+void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ezgl::color colour, double scaling, int highlightStep, vector<MapFeature*>& segmentIdxToFeatures);
+
+//create travel directions
+vector<PathInstruction> getTravelDirections(vector<PathSegment>& path);
+double getSignedTurnProjection(StreetSegmentIdx src, StreetSegmentIdx dst, IntersectionIdx commonIntersection);
 
 //generate path
 vector<PathSegment> generateFatestPath(IntersectionIdx from, IntersectionIdx to);

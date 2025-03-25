@@ -9,6 +9,7 @@ using namespace std;
 Heap::Heap(){}
 void Heap::add(Point* item){
     items.push_back(item);
+    item->index = currentItemCount;
     sortUp(item);
     currentItemCount++;
 }
@@ -16,6 +17,7 @@ Point* Heap::removeFirst(){
     Point* firstItem = items[0];
     currentItemCount--;
     items[0] = items[items.size()-1];
+    items[0]->index = 0;
     if(items[0]==firstItem){
         items.clear();
     }
@@ -31,12 +33,7 @@ bool Heap::contains(Point* item){
 }
 
 int Heap::getIndex(Point* item){
-    for(int i = 0; i < items.size(); i++){
-        if(items[i] == item){ //maybe check intesection id as well
-            return i;
-        }
-    }
-    return -1;
+    return item->index;
 }
 
 Point* Heap::getPoint(Point* item){
@@ -103,6 +100,8 @@ void Heap::sortUp(Point* item){
 void Heap::swap(Point* itemA, Point* itemB){
     int itemAIndex = getIndex(itemA);
     int itemBIndex = getIndex(itemB);
+    itemB->index = itemAIndex;
+    itemA->index = itemBIndex;
     items[itemAIndex] = itemB;
     items[itemBIndex] = itemA;
 }

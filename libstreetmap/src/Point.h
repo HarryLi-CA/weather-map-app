@@ -21,6 +21,8 @@ class Point{
         bool isPath = false;
         bool isTraversed = false;
         bool correctDir = false;
+
+        int index = -1;
         LatLon coords, destCoords;
 
         // for setting destination point

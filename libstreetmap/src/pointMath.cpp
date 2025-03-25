@@ -87,16 +87,19 @@ ezgl::point2d normalize(ezgl::point2d P)
 
 double getDistanceToClosest(ezgl::point2d P, vector<ezgl::point2d>& points)
 {
+    //initialize closest distance as farthest possible distance
     double closestDistance = DBL_MAX;
+
+    //loop through all points to comparatively determine which point is closest 
     for(int pointIndex = 0; pointIndex < points.size(); pointIndex++)
     {
         double distance = magnitude(points[pointIndex] - P);
         closestDistance = min(distance, closestDistance);
     }
-    return closestDistance;
+    return closestDistance; //return distance from closest point to P as closest distance
 }
 
 double dot(ezgl::point2d A, ezgl::point2d B)
 {
-    return A.x*B.x + A.y*B.y;
+    return A.x*B.x + A.y*B.y; //dot product formula
 }

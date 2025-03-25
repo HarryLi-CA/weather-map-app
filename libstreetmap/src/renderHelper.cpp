@@ -20,34 +20,38 @@ const double kGraphicsPixelToMeters = 1.0;
 
 void setLatLonBounds(LatLon latlonMin, LatLon latlonMax)
 {
-    averageLatitude = (latlonMin.latitude() + latlonMax.latitude())/2.0;
-    averageLongitude = (latlonMin.longitude() + latlonMax.longitude())/2.0;
+    averageLatitude = (latlonMin.latitude() + latlonMax.latitude())/2.0; //calculate average latitude using a = (b + c)/2
+    averageLongitude = (latlonMin.longitude() + latlonMax.longitude())/2.0; //calculate average longitude using a = (b + c)/2
 }
 
 
 Graphic::Graphic(const char* _path)
 {
-    filePath = _path;
-    surface = nullptr;
+    filePath = _path; //set target load path
+    surface = nullptr; //initialize image to null
 }
 
 void Graphic::load(ezgl::renderer* g)
 {
-    surface = g->load_png(filePath);
-    width = cairo_image_surface_get_width(surface);
-    height = cairo_image_surface_get_width(surface);
+    surface = g->load_png(filePath); //load image from target path
+    width = cairo_image_surface_get_width(surface); //store width of image
+    height = cairo_image_surface_get_width(surface); //store height of image
 }
 
 void Graphic::draw(ezgl::renderer* g, double worldScale, ezgl::point2d position, ezgl::point2d offset, double imageScale, ezgl::color color)
 {
+    //use cairo to alter image colour
     cairo_set_operator((cairo_t*)surface, cairo_operator_t::CAIRO_OPERATOR_SOURCE);
     cairo_set_source_rgba((cairo_t*)surface, color.red, color.green, color.blue, color.alpha);
+    //run general draw image function
     draw(g, worldScale, position, offset, imageScale);
 }
 
 void Graphic::draw(ezgl::renderer* g, double worldScale, ezgl::point2d position, ezgl::point2d offset, double imageScale)
 {
+    //calculate pixel to world scale
     double drawScale = kGraphicsPixelToMeters/worldScale;
+    //draw image on canvas
     g->draw_surface(surface,{position.x + offset.x*drawScale*height*imageScale, position.y + offset.y*drawScale*height*imageScale},imageScale);
 }
 
@@ -55,10 +59,10 @@ void Graphic::deallocate(ezgl::renderer* g)
 {
     if(surface != nullptr)
     {
-        g->free_surface(surface); 
+        g->free_surface(surface); //free image
     }
     
-    surface = nullptr;  
+    surface = nullptr;  //reset surface pointer
 }
 
 MapFeature::MapFeature(int _layer, vector<ezgl::point2d> *_points, ezgl::color _color, DrawType _drawType, MapFeatureType _featureType, int _index)

@@ -58,6 +58,5 @@ label#travelTime {
     background: none;
     border-style: hidden;
     outline-style: hidden;
-    visibility: hidden;
     transition-duration: 0.15s;
 }

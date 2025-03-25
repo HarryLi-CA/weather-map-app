@@ -75,9 +75,11 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
     g->set_line_width(lineWidth*kPathDisplayScaling);
     for(int pathIndex = 0; pathIndex < path.size(); pathIndex++)
     {
+        //get path segments
         PathSegment pathSeg = path[pathIndex];
         vector<LatLon>* points = getStreetSegmentPoints(pathSeg.segmentIndex);
-
+        
+        //calculate path colour
         ezgl::color pathColour = colour;
 
         if(highlightStep == pathSeg.step)
@@ -144,6 +146,7 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
             ezgl::point2d midPoint = midpoint(fromPoint, toPoint);
             //get displacement vector between points
             ezgl::point2d delta = {toPoint.x - fromPoint.x, toPoint.y - fromPoint.y};
+            //ensure street names are always upright
             double angle = (atan2(delta.y, delta.x)) / kDegreeToRadian; //angle from horizontal axis (counter clockwise) of street segment
             if (angle > 90)
             {
@@ -153,8 +156,10 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
             {
             angle += 180;
             }
+            //get street name
             string streetName = getStreetName(feature->streetID);
 
+            //determine street name font colour
             ezgl::color streetNameColour = kColorPathStreetName;
             
             if(highlightStep == pathSeg.step) //change colour on a highlighted street segment
@@ -162,7 +167,7 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
                 streetNameColour = kColorHighlightedPathStreetName;
             }
 
-            //roate and draw text
+            //rotate and draw text
             g->set_color(streetNameColour);
             g->set_text_rotation(angle);
             g->draw_text(midPoint, streetName, feature->longestSegmentLength, lineWidth * kPathDisplayScaling);
@@ -175,27 +180,28 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
 
 vector<PathSegment> generateFatestPath(IntersectionIdx from, IntersectionIdx to)
 {
-    vector<PathSegment> path;
+    vector<PathSegment> path; //initialize path vector
 
-    vector<StreetSegmentIdx> segmentPath = findPathBetweenIntersections(kDefaultTurnPenalty,{from, to});
+    vector<StreetSegmentIdx> segmentPath = findPathBetweenIntersections(kDefaultTurnPenalty,{from, to}); //get fastest path
     
-    path = getPathSegments(segmentPath);
+    path = getPathSegments(segmentPath); //convert fastest path to vector of path segments
 
-    return path;
+    return path; //return results
 }
     
 vector<PathSegment> getPathSegments(vector<StreetSegmentIdx>& segmentPath)
 {
-    vector<PathSegment> path;
+    vector<PathSegment> path; //initialize path segments
     
     //if intersection path is empty (or invalid) return empty path
     if(segmentPath.size() == 0){return path;}
 
+    //convert segment path to pathSegment path by looping through every element and converting individually
     for(int pathIndex = 0; pathIndex < segmentPath.size(); pathIndex++)
     {
-        StreetSegmentInfo segmentInfo = getStreetSegmentInfo(segmentPath[pathIndex]);
+        StreetSegmentInfo segmentInfo = getStreetSegmentInfo(segmentPath[pathIndex]); //get segment info
         
-
+        //default settings
         IntersectionIdx fromIntersection = segmentInfo.from;
         IntersectionIdx toIntersection = segmentInfo.to;
         bool reverse = false;
@@ -221,22 +227,24 @@ vector<PathSegment> getPathSegments(vector<StreetSegmentIdx>& segmentPath)
             }
         }
 
-        ezgl::point2d from = LatLonToPoint2D(getIntersectionPosition(fromIntersection));
-        ezgl::point2d to = LatLonToPoint2D(getIntersectionPosition(toIntersection));
+        //find from and to points
+        ezgl::point2d from = LatLonToPoint2D(getIntersectionPosition(fromIntersection)); //get latlon from point and convert to point2d
+        ezgl::point2d to = LatLonToPoint2D(getIntersectionPosition(toIntersection)); //get latlon to point and convert to point2d
 
-        StreetSegmentIdx commonSegment = segmentPath[pathIndex];
-    
-        PathSegment pathSegment = {fromIntersection,from,toIntersection,to,commonSegment,reverse, -1};
+        StreetSegmentIdx foundStreetSegment = segmentPath[pathIndex]; //get street object
+
+        //add informatino to vector
+        PathSegment pathSegment = {fromIntersection,from,toIntersection,to,foundStreetSegment,reverse, -1};
         path.push_back(pathSegment);
     }
 
-    getTravelDirections(path);
+    //return path
     return path;
 }
 
 double computePathTravelTime(const double turn_penalty, const std::vector<StreetSegmentIdx>& path)
 {
-    double pathTravelTime = 0;
+    double pathTravelTime = 0; //initialize path time to 0
     for(int pathIndex = 0; pathIndex < path.size(); pathIndex++)
     {
         StreetSegmentIdx segmentIndex = path[pathIndex];
@@ -264,18 +272,18 @@ double computePathTravelTime(const double turn_penalty, const std::vector<Street
 std::vector<StreetSegmentIdx> findPathBetweenIntersections(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids)
 {
     // clock_t startTime = clock();
-    vector<Point*> pointVector = calculatePathArray(turn_penalty, intersect_ids);
-    vector<StreetSegmentIdx> streetIds;
+    vector<Point*> pointVector = calculatePathArray(turn_penalty, intersect_ids); //calculate path using array
+    vector<StreetSegmentIdx> streetIds; //initialize street segment vector
     if(pointVector.size() > 0){
         delete pointVector[0];
         for (int i = 1; i < pointVector.size(); i++)
         {
-            streetIds.push_back(pointVector[i]->segId);
+            streetIds.push_back(pointVector[i]->segId); //add refernced street segment IDs to vetor
             delete pointVector[i];
         }
     }
 
-    return streetIds;
+    return streetIds; //return results
 }
 
 ezgl::color getPathColour()
@@ -285,16 +293,18 @@ ezgl::color getPathColour()
 
 vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
 {
+    //if path size is less than 2, defensively halt function
     if(path.size() < 2){return {};}
 
-    int step = 0;
+    int step = 0; //start at step 0
 
     vector<PathInstruction> travelDirections;
 
 
+    //set initial names
     StreetIdx startingRoad = getStreetSegmentInfo(path[0].segmentIndex).streetID;
-    
     string lastRoadName = getStreetName(startingRoad);
+    //set running totals to 0
     double runningPathLength = 0;
     double runningTimeTaken = 0;
 
@@ -302,10 +312,11 @@ vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
     {
         PathSegment& pathSegment = path[pathIndex];
 
-        StreetIdx streetID = getStreetSegmentInfo(pathSegment.segmentIndex).streetID;
+        StreetIdx streetID = getStreetSegmentInfo(pathSegment.segmentIndex).streetID; //get street corrosponding to path segment
         
-        string currentRoadName = getStreetName(streetID);
+        string currentRoadName = getStreetName(streetID); //get name of path segment's street
         
+        //if path is not the beginning, start checking for variances from the last path's name/angle
         if(pathIndex > 0)
         {
             PathSegment lastSegment = path[pathIndex - 1];
@@ -322,7 +333,7 @@ vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
                     unit = "km";
                 }
 
-
+                //add directions of straight path to instruction list
                 string straightDirections = "Travel " + to_string(totalLength) + " " + unit;
                 
                 if(lastRoadName.find('<') == string::npos)
@@ -334,6 +345,7 @@ vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
                 travelDirections.push_back({straightDirections, runningTimeTaken, false});
                 step++; //set step number to next step
 
+                //add directions for intersection turn to instruction list
                 string turnDirection = "left";
 
                 if(projection < 0) //if turn projection is less than 0, it is a right turn
@@ -353,22 +365,20 @@ vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
                 runningPathLength = 0;
                 runningTimeTaken = 0;
             }
+            //if path is not a turn but has a different name, it is likely a road name change or highway merge
             else if(lastRoadName != currentRoadName && currentRoadName.find('<') == string::npos)
             {
-                //bool merging = getStreetSegmentInfo(pathSegment.segmentIndex).speedLimit > kHighwaySpeedLimit; //is new path a highway
-                //bool exiting = getStreetSegmentInfo(lastSegment.segmentIndex).speedLimit > kHighwaySpeedLimit; //is old path a highway
-
                 //finalize step from old road
                 int totalLength = (int)runningPathLength;
                 string unit = "meters";
-
+                //use more convenient units if default units are too small
                 if(totalLength >= 1000)
                 {
                     totalLength /= 1000;
                     unit = "km";
                 }
 
-
+                //add directions for straight path
                 string straightDirections = "Travel " + to_string(totalLength) + " " + unit;
                 
                 if(lastRoadName.find('<') == string::npos)
@@ -393,6 +403,7 @@ vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
 
         pathSegment.step = step; //set the step ID of the path segment to the current step
         
+        //update running totals
         double pathLength = findStreetSegmentLength(pathSegment.segmentIndex);
         double pathTime = findStreetSegmentTravelTime(pathSegment.segmentIndex);
         runningPathLength += pathLength;
@@ -401,10 +412,11 @@ vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
         
         
     }
-
+    
+    //add final straight path
     int totalLength = (int)runningPathLength;
     string unit = "meters";
-
+    //use most convenient units
     if(totalLength >= 1000)
     {
         totalLength /= 1000;
@@ -421,20 +433,24 @@ vector<PathInstruction> getTravelDirections(vector<PathSegment>& path)
 
     travelDirections.push_back({straightDirections, round(runningTimeTaken), false});
 
-    return travelDirections;
+    return travelDirections; //return instructions
 }
 
 double getSignedTurnProjection(StreetSegmentIdx src, StreetSegmentIdx dst, IntersectionIdx commonIntersection) //-1 = right, 1 = left
 {
-    vector<LatLon> srcPoints = *getStreetSegmentPoints(src);
-    vector<LatLon> dstPoints = *getStreetSegmentPoints(dst); 
+    //get points from street segents
+    vector<LatLon> srcPoints = *getStreetSegmentPoints(src); //get source points
+    vector<LatLon> dstPoints = *getStreetSegmentPoints(dst); //get destination points
 
-    StreetSegmentInfo srcInfo = getStreetSegmentInfo(src);
+    //get info for each road segment
+    StreetSegmentInfo srcInfo = getStreetSegmentInfo(src); 
     StreetSegmentInfo dstInfo = getStreetSegmentInfo(dst);
     
-    ezgl::point2d srcDir = {0, 0};
-    ezgl::point2d dstDir = {0, 0};
+    //initialize directions
+    ezgl::point2d srcDir = {0, 0}; //direction of source road entering intersection
+    ezgl::point2d dstDir = {0, 0}; //direction of destination road leaving intersection
 
+    //determine common intersection by comparing from/to intersections between src and dst
     if(srcInfo.to == commonIntersection)
     {
         srcDir = LatLonToPoint2D(srcPoints[srcPoints.size() - 1]) - LatLonToPoint2D(srcPoints[srcPoints.size() - 2]);
@@ -457,10 +473,11 @@ double getSignedTurnProjection(StreetSegmentIdx src, StreetSegmentIdx dst, Inter
         dstDir = normalize(dstDir);
     }
     
+    //calculate angle
     double srcAngle = atan2(srcDir.y, srcDir.x);
     double dstAngle = atan2(dstDir.y, dstDir.x);
     double projectedAngle = dstAngle - srcAngle;
 
-    return sin(projectedAngle);
+    return sin(projectedAngle); //return sinusoidal project of angle centered around 0  
 
 }

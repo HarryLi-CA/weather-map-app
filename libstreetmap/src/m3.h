@@ -54,6 +54,7 @@ double computePathTravelTime(const double turn_penalty, const std::vector<Street
 // order, would take one from the start to the destination intersection.
 std::vector<StreetSegmentIdx> findPathBetweenIntersections(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids);
 
+//helper struct to store data about each street segment in a path
 struct PathSegment
 {
     IntersectionIdx fromIdx;
@@ -65,6 +66,8 @@ struct PathSegment
     int step;
 };
 
+
+//special struct to store data about individual instructions in a set of travel directions
 struct PathInstruction
 {
     string instruction;
@@ -80,8 +83,8 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
 vector<PathInstruction> getTravelDirections(vector<PathSegment>& path);
 double getSignedTurnProjection(StreetSegmentIdx src, StreetSegmentIdx dst, IntersectionIdx commonIntersection);
 
-//generate path
-vector<PathSegment> generateFatestPath(IntersectionIdx from, IntersectionIdx to);
+
+vector<PathSegment> generateFatestPath(IntersectionIdx from, IntersectionIdx to); //generate fatest path between 2 intersections
 
 vector<PathSegment> getPathSegments(vector<StreetSegmentIdx>& segmentPath); //converts vector of street segments to vector of path segments
 

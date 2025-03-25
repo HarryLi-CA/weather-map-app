@@ -75,6 +75,7 @@ const uint_fast8_t kColorOnewayIndicatorBrightness = 255;
 const ezgl::color kColorMajorRoad = {0, 0, 200, 255};
 const ezgl::color kColorOnewayMajorRoad = {247, 181, 0, 255};
 const ezgl::color kColorPathStreetName = {255, 255, 255, 255};
+const double kBorderBrightness = 0.8; //brightness coefficient for road borders relative to road colour 
 //scaling values for window resizing
 double initialWidth = -1;
 double initialHeight = -1;
@@ -177,22 +178,28 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
       {
          break;
       }
-      feature->wasRendered = false;
+      
+      feature->wasRendered = false; //reset render check
 
-      ezgl::point2d origin = (*(feature->points))[0];
-      g->set_color(feature->color);
+      ezgl::point2d origin = (*(feature->points))[0]; //position to draw point at
 
-      if (feature->dataIndex == primarySelection)
+      g->set_color(feature->color); //set colour to draw feature
+
+      ezgl::point2d midwayOffset = {0, 0.5}; //offset anchored to the middle-bottom of a square image relative to the center
+
+
+      //draw pin depending on selection type
+      if (feature->dataIndex == primarySelection) //red for primary path selector
       {
-         pinRed.draw(g, scaling, origin, {0, 0.5}, kPinScale);
+         pinRed.draw(g, scaling, origin, midwayOffset, kPinScale);
       }
-      else if (feature->dataIndex == secondarySelection)
+      else if (feature->dataIndex == secondarySelection) //blue for primary path selector
       {
-         pinBlue.draw(g, scaling, origin, {0, 0.5}, kPinScale);
+         pinBlue.draw(g, scaling, origin, midwayOffset, kPinScale);
       }
-      else
+      else //black for misc. point highlight
       {
-         pinBlack.draw(g, scaling, origin, {0, 0.5}, kPinScale);
+         pinBlack.draw(g, scaling, origin, midwayOffset, kPinScale);
       }
 
       feature->wasRendered = true; //feature was fully rendered this cycle
@@ -258,6 +265,7 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
          //get displacement vector between points
          ezgl::point2d delta = {toPoint.x - fromPoint.x, toPoint.y - fromPoint.y};
          double angle = (atan2(delta.y, delta.x)) / kDegreeToRadian; //angle from horizontal axis (counter clockwise) of street segment
+         //keep text upright at all times
          if (angle > 90)
          {
             angle -= 180;
@@ -266,11 +274,10 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
          {
             angle += 180;
          }
+         //get/draw street name on road
          string streetName = getStreetName(feature->streetID);
 
-         //if(angle > 180){angle -= 180;} //unflip angles that point downward
-
-         //roate and draw text
+         //rotate and draw text
          g->set_color(kColorPathStreetName);
          g->set_text_rotation(angle);
          g->draw_text(midPoint, streetName, feature->longestSegmentLength, lineWidth * lineWidthScale);
@@ -327,25 +334,30 @@ void drawBorder(MapFeature *feature, ezgl::renderer *g, double lineWidth, ezgl::
    {
    case LINE:
    {
+      //if feature is not a road, do not draw a border
       if (feature->featureType != MapFeatureType::ROAD)
       {
          return;
-      }                          //only draw borders on roads
+      }                          
       double lineWidthScale = 1; //scale of line width used to render line
       feature->wasRendered = false;
       bool highlightedStreet = mapFeatures.highlightedStreetID == feature->streetID; //check if segment is on highlighted street
       //calculate the transparency of a street based on its length
       ezgl::rectangle &bounds = feature->bounds;
       ezgl::rectangle screen_rect(camera.world_to_screen(bounds.bottom_left()), camera.world_to_screen(bounds.top_right()));
+      
+      //if feature is not on screen and is not a major road, do not draw border
       if (!feature->major && !highlightedStreet && screen_rect.area() < kMinimumPixelsToDraw)
       {
          break;
       }
 
-      g->set_color(staticRGBScale(feature->color, 0.8));
+      //get colour
+      g->set_color(staticRGBScale(feature->color, kBorderBrightness));
+      //if highlighted, use highlighted colour
       if (highlightedStreet)
       {
-         g->set_color(staticRGBScale(kColorHighlight, 0.8));
+         g->set_color(staticRGBScale(kColorHighlight, kBorderBrightness));
       }
       //if major road, make road wider as indication
       if (feature->major)

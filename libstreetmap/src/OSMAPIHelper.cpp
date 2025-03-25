@@ -6,6 +6,10 @@
 #include "OSMAPIHelper.h"
 #include <math.h>
 
+#include "ezgl/application.hpp"
+#include "pointMath.h"
+#include "renderHelper.h"
+
 
 namespace osmhelp{
     int numIntersections = -1;
@@ -14,6 +18,7 @@ namespace osmhelp{
     double maxSpeedLimit = -1;
     std::vector<StreetSegmentInfo> segInfo;
     std::vector<std::pair<bool, LatLon>> intersectionPos;
+    std::vector<std::pair<bool, ezgl::point2d>> intersectionCoord;
 
     std::mutex apiMutex;
     void load(){
@@ -24,6 +29,7 @@ namespace osmhelp{
         size = getNumIntersections();
         for(int i =0; i< size; i++){
             getIntersectionPosition(i);
+            getPoint2dOfIntersections(i);
         }
         size = getNumStreets();
     }
@@ -43,6 +49,7 @@ namespace osmhelp{
             apiMutex.unlock();
 
             intersectionPos.resize(numIntersections, std::make_pair(false,LatLon(0,0)));
+            intersectionCoord.resize(numIntersections, std::make_pair(false,ezgl::point2d(0,0)));
         }
         return numIntersections;
     }
@@ -67,7 +74,18 @@ namespace osmhelp{
         }
         return numStreets;
     }
-
+    ezgl::point2d getPoint2dOfIntersections(IntersectionIdx idx){
+        if(idx >= getNumIntersections()){ //ensure vector is sized
+            throw idx;
+        }
+        if(!intersectionPos[idx].first){
+            apiMutex.lock();
+            intersectionCoord[idx].second = LatLonToPoint2D(osmhelp::getIntersectionPosition(idx));
+            apiMutex.unlock();
+            intersectionCoord[idx].first = true;
+        }
+        return intersectionCoord[idx].second;
+    }
     StreetSegmentInfo getStreetSegmentInfo(StreetSegmentIdx idx){
         if(idx >= getNumStreetSegments()){ //ensure vector is sized
             throw idx;

@@ -50,20 +50,20 @@ void displayTravelDirections(vector<PathInstruction>& directions,  ezgl::applica
 void closeTravelDirections(ezgl::application *application); //helper function to reset travel directions list
 
 
-void createRoute_cbk(GtkWidget */*widget*/, ezgl::application *application);
-void createRouteBack_cbk(GtkWidget */*widget*/, ezgl::application *application);
-void enterClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application);
-void exitClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application);
-void typedRouteConfirm_cbk(GtkWidget */*widget*/, ezgl::application *application);
-void findIntersectionsfromSearchbars(ezgl::application *application, vector<vector<IntersectionIdx>> &intersectionList, const gchar * searchbarId1, const gchar * searchbarId2, string &errorMsg, bool &validInput, string direction);
+void createRoute_cbk(GtkWidget */*widget*/, ezgl::application *application); //callback function called when user clicks "Create Route" button from left sidebar
+void createRouteBack_cbk(GtkWidget */*widget*/, ezgl::application *application); //callback function called when user clicks "back" button in route creator dialog window
+void enterClickingMode_cbk(GtkWidget */*widget*/, ezgl::application *application); //callback function called when user clicks "enter route clicking mode" from route creator dialog window
+void exitRouteMode_cbk(GtkWidget */*widget*/, ezgl::application *application); //callback function called when user clicks on red "Close route" button
+void typedRouteConfirm_cbk(GtkWidget */*widget*/, ezgl::application *application); //callback function called when user clicks "Create route" after typing in a route in the route creator
+void findIntersectionsfromSearchbars(ezgl::application *application, vector<vector<IntersectionIdx>> &intersectionList, const gchar * searchbarId1, const gchar * searchbarId2, string &errorMsg, bool &validInput, string direction); //helper function that finds the intersections of the two streets typed into the search bars
 vector<vector<IntersectionIdx>> findIntersectionsfromSearchbars(ezgl::application *application, const gchar * searchbarId1, const gchar * searchbarId2, string &errorMsg, bool &validInput, string direction);
-void selectIntersection_cbk(GtkWidget */*widget*/, pair<pair<int,IntersectionIdx>,ezgl::application *> * intersectionInfo);
+void selectIntersection_cbk(GtkWidget */*widget*/, pair<pair<int,IntersectionIdx>,ezgl::application *> * intersectionInfo); //callback function called when user chooses their desired intersection from the list if they typed in their route
 void clickedLabelButton_cbk(GtkWidget */*widget*/, pair<pair<int, vector<PathInstruction>&>, ezgl::application *> *labelInfo); //callback function to manage label button
 
-void openHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application);
-void closeHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application);
+void openHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application); //callback function called when user clicks help button on UI
+void closeHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application); //callback function called when user presses back button on the help pop up window
 
-void clickedIntersectionForRoute(IntersectionIdx clickedIntersection,ezgl::application *application);
+void clickedIntersectionForRoute(IntersectionIdx clickedIntersection,ezgl::application *application); //Function called when an intersection is clicked during route creating mode
 void clickedIntersectionForRoute_hide(ezgl::application *application);
 void closeRouteClickingDialog_cbk(GtkWidget */*widget*/, ezgl::application *application);
 void clickedStartingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo);

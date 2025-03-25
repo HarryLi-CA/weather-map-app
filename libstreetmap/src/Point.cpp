@@ -11,9 +11,9 @@
 #include <atomic>
 
 // for setting destination point
-Point::Point(int id){
-    this->id = id;
-    this->coords = osmhelp::getIntersectionPosition(id);
+Point::Point(int id_){
+    this->id = id_;
+    this->coords = osmhelp::getIntersectionPosition(id_);
     this->parent = nullptr;
 }
 
@@ -23,7 +23,7 @@ Point::Point(int id_, LatLon destCoords_, Point* parent_){
     this->coords = osmhelp::getIntersectionPosition(id_);
     this->destCoords=  destCoords_;
     this->parent = parent_;
-    hCost = findDistanceBetweenTwoPoints(coords, destCoords_)/MAX_STREET_SPEED;
+    //hCost = findDistanceBetweenTwoPoints(coords, destCoords_)/MAX_STREET_SPEED;
     fCost = gCost + hCost;
 }
 
@@ -38,6 +38,11 @@ void Point:: copy(Point copyPoint){
     isPath = copyPoint.isPath;
     isTraversed = copyPoint.isTraversed;
     coords = copyPoint.coords; destCoords = copyPoint.destCoords;
+}
+
+
+void Point::updateHCost(){
+    hCost = findDistanceBetweenTwoPoints(coords, destCoords)/MAX_STREET_SPEED;
 }
 
 void Point::updateFCost(){

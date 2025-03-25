@@ -15,7 +15,7 @@
 
 using namespace std;
 
-static clock_t totalTime = 0;
+//static clock_t totalTime = 0;
 /*
 16391ms but took 49981.4ms. // djekstra
 
@@ -66,24 +66,24 @@ vector<Point*> PathFinder::calculatePathArray(const double turn_penalty, const s
     thread t1(&PathFinder::findHalfPath, this, turn_penalty, intersect_ids.first, intersect_ids.second, 
         ref(open1), ref(closed1), ref(segToPointCorrect),
         ref(maxInterGCostCorrect), ref(segToPointOpposite),
-        ref(path1), ref(path2), false);
+        ref(pathCorrect), ref(pathOpposite), false);
     thread t2(&PathFinder::findHalfPath, this, turn_penalty, intersect_ids.second, intersect_ids.first, 
         ref(open2), ref(closed2), ref(segToPointOpposite),
         ref(maxInterGCost2), ref(segToPointCorrect),
-        ref(path2), ref(path1), true);
+        ref(pathOpposite), ref(pathCorrect), true);
     t1.join();
     t2.join();
     //totalTime +=(clock() -t);
     //cout << "path found: " <<totalTime/(double)CLOCKS_PER_SEC<< endl;
     //cout << "got path" << endl;
     vector<Point*> out = {};
-    if(path1 == nullptr && path2 == nullptr)
+    if(pathCorrect == nullptr && pathOpposite == nullptr)
         cout << "Error: Path Not Found\n";
-    if(path1 !=nullptr)
-        out = path1->retracePath(out, false);
+    if(pathCorrect !=nullptr)
+        out = pathCorrect->retracePath(out, false);
     //cout << "path1 complete" << endl;
-    if(path2 !=nullptr)
-        out = path2->retracePath(out, true);
+    if(pathOpposite !=nullptr)
+        out = pathOpposite->retracePath(out, true);
     //cout << "path2 complete" << endl;
     return out;
 }
@@ -166,7 +166,8 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
                     Point** neighbourInOpen = &(neighbour->correctDir? segToPoint.second[neighbour->segId].first:segToPoint.second[neighbour->segId].second);
                     bool hasBeenTraversed = *neighbourInOpen != nullptr && (*neighbourInOpen)->isTraversed; // closed does not contain current segment
                     bool isBetter = *neighbourInOpen == nullptr || neighbour->gCost < (*neighbourInOpen)->gCost;
-                    if(!hasBeenTraversed && isBetter){
+                    if(isBetter){
+                        neighbour->updateHCost();
                         neighbour->updateFCost();
                         if(neighbour->fCost < maxCost){
                             if(*neighbourInOpen == nullptr){
@@ -175,7 +176,6 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
                                 segToPoint.first.lock();
                                 *neighbourInOpen = neighbour;
                                 segToPoint.first.unlock();
-                                //totalTime +=(clock() -t);
                                 continue;
                             }
                             else{
@@ -189,7 +189,6 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
             }
         }
     }
-    //cout << "done start: " <<totalTime/(double)CLOCKS_PER_SEC<< endl;
     pathFoundMutex.lock();
     pathFound = true;
     pathFoundMutex.unlock();
@@ -207,7 +206,8 @@ vector<Point*> PathFinder::getNeighbours(Point* current, double turn_penalty, bo
         StreetSegmentInfo neigbourSegInfo = osmhelp::getStreetSegmentInfo(streetSegs[i]);
         bool isCorrectWay = (neigbourSegInfo.from == current->id) ^ isOpposite;
         if(!neigbourSegInfo.oneWay || isCorrectWay){ // check one way direction
-            IntersectionIdx curIntIdx = findOppositeIntersection(current->id, streetSegs[i]);
+            
+            IntersectionIdx curIntIdx = neigbourSegInfo.from == current->id?neigbourSegInfo.to : neigbourSegInfo.from;
             //newPointMutex.lock();
             Point* neighbour = new Point(curIntIdx, current->destCoords, current);
             //newPointMutex.unlock();

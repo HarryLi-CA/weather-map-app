@@ -36,8 +36,8 @@ class PathFinder{
     bool fullyOptimal = false;
     bool bidirectionalEasy = true;
     
-    Point* path1 = nullptr;
-    Point* path2 = nullptr;
+    Point* pathCorrect = nullptr;
+    Point* pathOpposite = nullptr;
 
     Point* minGCostP1 = nullptr;
     Point* minGCostP2 = nullptr;

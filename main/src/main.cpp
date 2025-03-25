@@ -66,32 +66,25 @@ int main(int argc, char** argv) {
 
     std::cout << "Successfully loaded map '" << map_path << "'\n";
 
-    //You can now do something with the map data
-
-    // //TESTING
-    // // if (findIntersectionsOfTwoStreets({1,2}).size() != 0){
-    // //     cout << "work" << endl;
-    // // }
-
     // findStreetIdsFromPartialStreetName("Air");
 
-    // std::cout << "Closing map\n";
-    // closeMap(); 
+    std::cout << "Closing map\n";
+    closeMap(); 
 
-    // load_success = loadMap(map_path);
-    // if(!load_success) {
-    //     std::cerr << "Failed to load map '" << map_path << "'\n";
-    //     return ERROR_EXIT_CODE;
-    // }
+    load_success = loadMap(map_path);
+    if(!load_success) {
+        std::cerr << "Failed to load map '" << map_path << "'\n";
+        return ERROR_EXIT_CODE;
+    }
 
-    // std::cout << "Successfully loaded map '" << map_path << "'\n";
+    std::cout << "Successfully loaded map '" << map_path << "'\n";
 
     // //Clean-up the map data and related data structures
 
     //Clean-up the map data and related data structures
     std::cout << computePathTravelTime(0,findPathBetweenIntersections(0, make_pair(160611, 6334))) << endl;
-    // loadFeatures();
-    // drawMap();
+    loadFeatures();
+    drawMap();
     std::cout << "Closing map\n";
     //draw graphical interface
     closeMap(); 

@@ -23,6 +23,7 @@
 
 #include "m1.h"
 #include "m2.h"
+#include "m3.h"
 
 //Program exit codes
 constexpr int SUCCESS_EXIT_CODE = 0;        //Everyting went OK
@@ -88,8 +89,9 @@ int main(int argc, char** argv) {
     // //Clean-up the map data and related data structures
 
     //Clean-up the map data and related data structures
-    loadFeatures();
-    drawMap();
+    std::cout << computePathTravelTime(0,findPathBetweenIntersections(0, make_pair(160611, 6334))) << endl;
+    // loadFeatures();
+    // drawMap();
     std::cout << "Closing map\n";
     //draw graphical interface
     closeMap(); 

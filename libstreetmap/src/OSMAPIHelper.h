@@ -7,6 +7,7 @@
 
 
 namespace osmhelp{
+    void load();
     void reset();
     int getNumIntersections(); //returns total number of intersections on a map
     int getNumStreetSegments(); //returns total number of street segments on a map

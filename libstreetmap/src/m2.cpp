@@ -234,8 +234,8 @@ void drawFeature(MapFeature *feature, ezgl::renderer *g, double lineWidth, doubl
          g->draw_line((*feature->points)[i], (*feature->points)[i + 1]);
       }
       //get direction of road
-      ezgl::point2d from = (*feature->points)[feature->points->size() / 2];   //first position in the street
-      ezgl::point2d to = (*feature->points)[feature->points->size() / 2 + 1]; //last position in the street
+      ezgl::point2d from = (*feature->points)[feature->points->size() / 2 - 1];   //first position in the street
+      ezgl::point2d to = (*feature->points)[feature->points->size() / 2]; //last position in the street
       ezgl::point2d dir = {to.x - from.x, to.y - from.y};                     //direction vector for street
 
       //draw arrow if street is directional

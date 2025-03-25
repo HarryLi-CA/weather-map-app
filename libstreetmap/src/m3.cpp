@@ -8,6 +8,7 @@
 #include "StreetsDatabaseAPI.h"
 #include "PathFinding.h"
 #include "OSMAPIHelper.h"
+#include "Point.h"
 #include <vector>
 #include <random>
 #include <stdio.h>
@@ -266,20 +267,23 @@ double computePathTravelTime(const double turn_penalty, const std::vector<Street
             }
         }
     }
+    cout <<pathTravelTime << endl;
     return pathTravelTime;
 }
 
 std::vector<StreetSegmentIdx> findPathBetweenIntersections(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids)
 {
+    //cout << "Started Finding Path " << intersect_ids.first << " " << intersect_ids.second <<"\n";
     // clock_t startTime = clock();
-    vector<Point*> pointVector = calculatePathArray(turn_penalty, intersect_ids); //calculate path using array
-    vector<StreetSegmentIdx> streetIds; //initialize street segment vector
+    PathFinder pF; pF.bidirectionalEasy = false;
+    vector<Point*> pointVector = pF.calculatePathArray(turn_penalty, intersect_ids);
+    vector<StreetSegmentIdx> streetIds;
     if(pointVector.size() > 0){
-        delete pointVector[0];
-        for (int i = 1; i < pointVector.size(); i++)
+        for (int i = 0; i < pointVector.size(); i++)
         {
-            streetIds.push_back(pointVector[i]->segId); //add refernced street segment IDs to vetor
-            delete pointVector[i];
+            if(pointVector[i]->segId >= 0)
+                streetIds.push_back(pointVector[i]->segId);
+            //delete pointVector[i];
         }
     }
 

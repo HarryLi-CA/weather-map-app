@@ -101,6 +101,7 @@ bool loadMap(std::string map_streets_database_filename) {
         return false;
     }
 
+    osmhelp::load();
     numIntersections = osmhelp::getNumIntersections(); //load number of intersections once to avoid excessive calculations
     numStreetSegments = osmhelp::getNumStreetSegments(); //load number of street segments once to avoid excessive calculations
     numStreets = osmhelp::getNumStreets(); //load number of streets

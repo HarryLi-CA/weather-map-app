@@ -16,7 +16,17 @@ namespace osmhelp{
     std::vector<std::pair<bool, LatLon>> intersectionPos;
 
     std::mutex apiMutex;
-
+    void load(){
+        int size = getNumStreetSegments();
+        for(int i =0; i< size; i++){
+            getStreetSegmentInfo(i);
+        }
+        size = getNumIntersections();
+        for(int i =0; i< size; i++){
+            getIntersectionPosition(i);
+        }
+        size = getNumStreets();
+    }
     void reset(){
         numIntersections = -1;
         numStreetSegments = -1;

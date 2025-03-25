@@ -892,12 +892,14 @@ Alternatively, when not in route clicking mode, intersections can be clicked on 
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
                         <property name="halign">center</property>
+                        <property name="margin-start">20</property>
+                        <property name="margin-end">20</property>
                         <child>
                           <object class="GtkLabel" id="directionInstructions">
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
                             <property name="halign">center</property>
-                            <property name="margin-top">5</property>
+                            <property name="margin-top">10</property>
                             <property name="label" translatable="yes">Travel Directions</property>
                             <property name="justify">center</property>
                             <property name="wrap">True</property>

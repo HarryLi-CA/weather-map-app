@@ -9,18 +9,19 @@
 #include <ctime>
 #include <limits>
 #include <atomic>
+#include "ezgl/application.hpp"
 
 // for setting destination point
 Point::Point(int id_){
     this->id = id_;
-    this->coords = osmhelp::getIntersectionPosition(id_);
+    this->coords = osmhelp::getPoint2dOfIntersections(id_);
     this->parent = nullptr;
 }
 
 //default constructor
-Point::Point(int id_, LatLon destCoords_, Point* parent_){
+Point::Point(int id_, ezgl::point2d destCoords_, Point* parent_){
     this->id = id_;
-    this->coords = osmhelp::getIntersectionPosition(id_);
+    this->coords = osmhelp::getPoint2dOfIntersections(id_);
     this->destCoords=  destCoords_;
     this->parent = parent_;
     //hCost = findDistanceBetweenTwoPoints(coords, destCoords_)/MAX_STREET_SPEED;
@@ -42,7 +43,7 @@ void Point:: copy(Point copyPoint){
 
 
 void Point::updateHCost(){
-    hCost = findDistanceBetweenTwoPoints(coords, destCoords)/MAX_STREET_SPEED;
+    hCost = magnitude(coords- destCoords)/MAX_STREET_SPEED;
 }
 
 void Point::updateFCost(){

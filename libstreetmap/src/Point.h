@@ -9,6 +9,7 @@
 #include <atomic>
 #include "Heap.h"
 #include "Point.h"
+#include "ezgl/application.hpp"
 
 #define MAX_STREET_SPEED 36.2// 36.2m/s = 130km/h
 
@@ -23,13 +24,13 @@ class Point{
         bool correctDir = false;
 
         int index = -1;
-        LatLon coords, destCoords;
+        ezgl::point2d coords, destCoords;
 
         // for setting destination point
         Point(int id);
         
         //default constructor
-        Point(int id, LatLon destCoords_, Point* parent_);
+        Point(int id, ezgl::point2d destCoords_, Point* parent_);
         ~Point();
 
         void copy(Point copyPoint);

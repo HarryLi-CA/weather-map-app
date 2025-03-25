@@ -36,7 +36,7 @@
           </packing>
         </child>
         <child>
-          <!-- n-columns=2 n-rows=8 -->
+          <!-- n-columns=2 n-rows=9 -->
           <object class="GtkGrid">
             <property name="visible">True</property>
             <property name="can-focus">False</property>
@@ -68,8 +68,9 @@
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="valign">start</property>
-                <property name="label" translatable="yes">Create a route by clicking the “Create Route” button on the very top left corner of the screen. 
+                <property name="label" translatable="yes">Create a route by clicking the “Create Route” button on the left side of the screen. 
 The button creates a window that allows you to create a route using two different methods:</property>
+                <property name="justify">center</property>
               </object>
               <packing>
                 <property name="left-attach">0</property>
@@ -81,7 +82,7 @@ The button creates a window that allows you to create a route using two differen
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="valign">start</property>
-                <property name="label" translatable="yes">To create a route by typing a starting and ending intersection, use the 4 search bars. Type in the two streets of the intersection in each search bar to the right of the “Enter Starting Intersection:” text to select a starting intersection. Repeat for the ending intersection. Once each search bar has been filled out, click on the “create route” button to confirm. Once the button is pressed a pop up will appear that displays all the intersections of the starting streets, click on the desired intersection. Once clicked, another pop up will appear to confirm the ending intersection. After confirming the intersections a route will appear on the map. To stop showing the route, press the red "Close Route" next to the change map button on the top of the map.</property>
+                <property name="label" translatable="yes">To create a route by typing a starting and ending intersection, use the 4 search bars. Type in a street in the two search bars to the right of the “Enter Starting Intersection:” text to enter a starting intersection. Repeat for the ending intersection. Once each search bar has been filled out, click on the “create route” button to confirm. Once the button is pressed a pop up will appear that displays all the intersections of the starting streets, click on the desired intersection. Once clicked, another pop up will appear to confirm the ending intersection. After confirming the intersections a route will appear on the map. To stop showing the route, press the red "Close Route" next to the change map button on the top of the map.</property>
                 <property name="wrap">True</property>
                 <property name="max-width-chars">80</property>
               </object>
@@ -117,9 +118,13 @@ The button creates a window that allows you to create a route using two differen
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="valign">start</property>
-                <property name="label" translatable="yes">To create a route by clicking on intersections, click on the “Enter Route Clicking Mode” button. Left click on an intersection on the map to place a red pin indicating the starting intersection of the route. Right click on an intersection on the map to place a blue pin on the map indicating the ending intersection. Once both pins are placed, a route will appear on the map. During this mode, routes can easily be changed by placing these pins on different intersections. To exit the mode click on the red “Exit Route Mode” button will appear on the top of the map next to the “Change Map” button.
+                <property name="label" translatable="yes">To create a route by clicking on intersections, click on the “Enter Route Clicking Mode” button. Left click on an intersection on the map to place a red pin indicating the starting intersection of the route. Right click on an intersection on the map to place a blue pin on the map indicating the ending intersection. Once both pins are placed, a route will appear on the map. During this mode, routes can easily be changed by placing these pins on different intersections. To exit the mode click on the red “CLose Route” button on the left side of the screen.
 
-Alternatively, when not in route clicking mode, intersections can be clicked on the map to create a route. When an intersection is clicked, buttons will appear under the "Create Route" to select where the clicked intersection will be the start or end of route. Once a start and end intersection is clicked, a route will appear on the map.</property>
+Alternatively, when not in route clicking mode, intersections can still be clicked on the map to create a route. When an intersection is clicked, buttons will appear on the left side of the screen under the "Create Route" button. Click "Set as Start" to make the clicked intersection the beginning of the route. Click another intersection and click "Set as Destination". Once a start and end intersection is clicked, a route will appear on the map.
+
+
+When a route is currently displayed on the map, driving instructions will appear on the right side of the screen. These instructions can be clicked to highlight its respective street or turning intersection on the map.
+</property>
                 <property name="wrap">True</property>
                 <property name="max-width-chars">80</property>
               </object>
@@ -133,7 +138,7 @@ Alternatively, when not in route clicking mode, intersections can be clicked on 
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="margin-top">5</property>
-                <property name="label" translatable="yes">Search bar:</property>
+                <property name="label" translatable="yes">Sunset/sunrise times:</property>
                 <attributes>
                   <attribute name="weight" value="ultrabold"/>
                 </attributes>
@@ -147,29 +152,29 @@ Alternatively, when not in route clicking mode, intersections can be clicked on 
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
+                <property name="margin-top">5</property>
+                <property name="label" translatable="yes">Search bar: </property>
+                <attributes>
+                  <attribute name="weight" value="ultrabold"/>
+                </attributes>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">6</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
                 <property name="valign">start</property>
                 <property name="label" translatable="yes">The top left corner of the map has two search bars used to enter street names. By typing in two street names, one in each search bar, and pressing the search button to the right, all intersections intersecting the two entered streets will be highlighted on the map in red. Incomplete street names will be accepted (as long as the portion is spelt correctly so far).</property>
                 <property name="wrap">True</property>
                 <property name="max-width-chars">80</property>
               </object>
               <packing>
-                <property name="left-attach">1</property>
-                <property name="top-attach">1</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="margin-top">5</property>
-                <property name="label" translatable="yes">Change map:</property>
-                <attributes>
-                  <attribute name="weight" value="ultrabold"/>
-                </attributes>
-              </object>
-              <packing>
-                <property name="left-attach">1</property>
-                <property name="top-attach">2</property>
+                <property name="left-attach">0</property>
+                <property name="top-attach">7</property>
               </packing>
             </child>
             <child>
@@ -177,13 +182,13 @@ Alternatively, when not in route clicking mode, intersections can be clicked on 
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="valign">start</property>
-                <property name="label" translatable="yes">To change the currently displayed map, press the “Change Map” button on the top of the map next to the search button. This creates a window displaying all the available maps as buttons. Click the button with the desired map to change to that map.</property>
+                <property name="label" translatable="yes">The sunset/sunrise times of the date selected by the slider are displayed on the left hand side of the screen. Upon first opening the application, the times correspond to the current date. </property>
                 <property name="wrap">True</property>
                 <property name="max-width-chars">80</property>
               </object>
               <packing>
                 <property name="left-attach">1</property>
-                <property name="top-attach">3</property>
+                <property name="top-attach">1</property>
               </packing>
             </child>
             <child>
@@ -198,7 +203,66 @@ Alternatively, when not in route clicking mode, intersections can be clicked on 
               </object>
               <packing>
                 <property name="left-attach">1</property>
+                <property name="top-attach">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="margin-top">5</property>
+                <property name="label" translatable="yes">Changing time and date:</property>
+                <attributes>
+                  <attribute name="weight" value="ultrabold"/>
+                </attributes>
+              </object>
+              <packing>
+                <property name="left-attach">1</property>
                 <property name="top-attach">4</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="margin-top">5</property>
+                <property name="label" translatable="yes">Change map:</property>
+                <attributes>
+                  <attribute name="weight" value="ultrabold"/>
+                </attributes>
+              </object>
+              <packing>
+                <property name="left-attach">1</property>
+                <property name="top-attach">6</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="valign">start</property>
+                <property name="label" translatable="yes">To change the currently displayed map, press the “Change Map” button on the top of the map next to the search button. This creates a window displaying all the available maps as buttons. Click the button with the desired map to change to that map.</property>
+                <property name="wrap">True</property>
+                <property name="max-width-chars">80</property>
+              </object>
+              <packing>
+                <property name="left-attach">1</property>
+                <property name="top-attach">7</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="valign">start</property>
+                <property name="label" translatable="yes">The time and date of the displayed weather information can be adjusted using the slider on the bottom left hand side of the screen. Upon opening the application, the date and time is set to the date and time that the application was opened. By moving the slider to the right, future times and dates can be selected with an upper bound of 7 days from the time the application was opened. You cannot select past dates and times.
+</property>
+                <property name="wrap">True</property>
+                <property name="max-width-chars">80</property>
+              </object>
+              <packing>
+                <property name="left-attach">1</property>
+                <property name="top-attach">3</property>
               </packing>
             </child>
             <child>
@@ -223,63 +287,10 @@ Alternatively, when not in route clicking mode, intersections can be clicked on 
               </packing>
             </child>
             <child>
-              <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="margin-top">5</property>
-                <property name="label" translatable="yes">Sunset/sunrise times:</property>
-                <attributes>
-                  <attribute name="weight" value="ultrabold"/>
-                </attributes>
-              </object>
-              <packing>
-                <property name="left-attach">0</property>
-                <property name="top-attach">6</property>
-              </packing>
+              <placeholder/>
             </child>
             <child>
-              <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="valign">start</property>
-                <property name="label" translatable="yes">The sunset/sunrise times of the date selected by the slider are displayed on the left hand side of the screen. Upon first opening the application, the times correspond to the current date. </property>
-                <property name="wrap">True</property>
-                <property name="max-width-chars">80</property>
-              </object>
-              <packing>
-                <property name="left-attach">0</property>
-                <property name="top-attach">7</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="margin-top">5</property>
-                <property name="label" translatable="yes">Changing time and date:</property>
-                <attributes>
-                  <attribute name="weight" value="ultrabold"/>
-                </attributes>
-              </object>
-              <packing>
-                <property name="left-attach">1</property>
-                <property name="top-attach">6</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="valign">start</property>
-                <property name="label" translatable="yes">The time and date of the displayed weather information can be adjusted using the slider on the bottom left hand side of the screen. Upon opening the application, the date and time is set to the date and time that the application was opened. By moving the slider to the right, future times and dates can be selected with an upper bound of 7 days from the time the application was opened. You cannot select past dates and times.
-</property>
-                <property name="wrap">True</property>
-                <property name="max-width-chars">80</property>
-              </object>
-              <packing>
-                <property name="left-attach">1</property>
-                <property name="top-attach">7</property>
-              </packing>
+              <placeholder/>
             </child>
           </object>
           <packing>

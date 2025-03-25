@@ -29,7 +29,9 @@ construct destruct total time is 855ms
 */
 
 PathFinder::PathFinder(){
-    //clock_t t = clock();
+    //clock_t t = clock();        
+    intersectionsVisited1.resize(osmhelp::getNumIntersections(), nullptr);
+    intersectionsVisited2.resize(osmhelp::getNumIntersections(), nullptr);
     segToPointCorrect.second.resize(osmhelp::getNumStreetSegments(), make_pair(nullptr, nullptr));
     segToPointOpposite.second.resize(osmhelp::getNumStreetSegments(), make_pair(nullptr, nullptr));
     maxInterGCostCorrect.resize(osmhelp::getNumIntersections(), DBL_MAX);
@@ -67,11 +69,11 @@ vector<Point*> PathFinder::calculatePathArray(const double turn_penalty, const s
     thread t1(&PathFinder::findHalfPath, this, turn_penalty, intersect_ids.first, intersect_ids.second, 
         ref(open1), ref(closed1), ref(segToPointCorrect),
         ref(maxInterGCostCorrect), ref(segToPointOpposite),
-        ref(pathCorrect), ref(pathOpposite), false);
+        ref(pathCorrect), ref(pathOpposite), ref(intersectionsVisited1), ref(intersectionsVisited2),  false);
     thread t2(&PathFinder::findHalfPath, this, turn_penalty, intersect_ids.second, intersect_ids.first, 
         ref(open2), ref(closed2), ref(segToPointOpposite),
         ref(maxInterGCost2), ref(segToPointCorrect),
-        ref(pathOpposite), ref(pathCorrect), true);
+        ref(pathOpposite), ref(pathCorrect),ref(intersectionsVisited2), ref(intersectionsVisited1), true);
     t1.join();
     t2.join();
     //totalTime +=(clock() -t);
@@ -92,7 +94,7 @@ vector<Point*> PathFinder::calculatePathArray(const double turn_penalty, const s
 void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, IntersectionIdx end, 
     Heap& open, vector<Point*>& closed, pair<mutex,vector<pair<Point*, Point*>>>& segToPoint,
     vector<double>& maxInterGCost, pair<mutex,vector<pair<Point*, Point*>>>& segToPoint2,
-    Point*& path, Point*& path2, const bool isOpposite){
+    Point*& path, Point*& path2, vector<Point*>& intersectionsVisited, vector<Point*>& opIntersectionsVisited, const bool isOpposite){
     
     newPointMutex.lock();
     Point* destination = new Point(end);
@@ -164,7 +166,11 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
                     if(newMaxInterGCost < maxInterGCost[neighbour->id]){
                         maxInterGCost[current->id] = maxInterGCost[neighbour->id];
                     }
-                    Point** neighbourInOpen = &(neighbour->correctDir? segToPoint.second[neighbour->segId].first:segToPoint.second[neighbour->segId].second);
+                    Point** neighbourInOpen; 
+                    if(fullyOptimal)
+                        neighbourInOpen= &(neighbour->correctDir? segToPoint.second[neighbour->segId].first:segToPoint.second[neighbour->segId].second);
+                    else
+                        neighbourInOpen = &(intersectionsVisited[neighbour->id]);
                     bool isBetter = *neighbourInOpen == nullptr || neighbour->gCost < (*neighbourInOpen)->gCost;
                     if(isBetter){
                         neighbour->updateHCost();

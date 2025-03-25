@@ -275,7 +275,7 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections(const double turn_pen
 {
     //cout << "Started Finding Path " << intersect_ids.first << " " << intersect_ids.second <<"\n";
     // clock_t startTime = clock();
-    PathFinder pF; pF.bidirectionalEasy = false;
+    PathFinder pF; pF.bidirectionalEasy = turn_penalty <= 0;
     vector<Point*> pointVector = pF.calculatePathArray(turn_penalty, intersect_ids);
     vector<StreetSegmentIdx> streetIds;
     if(pointVector.size() > 0){

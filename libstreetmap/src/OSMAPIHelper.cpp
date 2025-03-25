@@ -43,7 +43,8 @@ namespace osmhelp{
             numStreetSegments = ::getNumStreetSegments();
             apiMutex.unlock();
 
-            segInfo.resize(numStreetSegments,{.speedLimit = -1});
+            StreetSegmentInfo newSegInfo = {OSMID(-1), -1, -1, false, -1, -1, -1};
+            segInfo.resize(numStreetSegments,newSegInfo);
         }
         return numStreetSegments;
     }

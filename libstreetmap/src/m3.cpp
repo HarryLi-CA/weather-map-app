@@ -136,6 +136,7 @@ void drawPath(ezgl::renderer *g, vector<PathSegment>& path, double lineWidth, ez
             MapFeature* feature = segmentIdxToFeatures[pathSeg.segmentIndex];
             int longestIndex = feature->longestPointSegmentIndex;
             //get longest segment points
+            cout << feature->points->size() << endl;
             ezgl::point2d fromPoint = (*feature->points)[longestIndex];
             ezgl::point2d toPoint = (*feature->points)[longestIndex + 1];
 

@@ -1171,6 +1171,9 @@ void unloadFeatures()
 
    mapFeaturesMutex.unlock();
    staticLabels.clear(); //delete all static labels
+
+   intersectionFeatures.clear(); //remove all intersection features
+   streetSegmentFeatures.clear(); //remove all street segment features
 }
 
 void drawMap()

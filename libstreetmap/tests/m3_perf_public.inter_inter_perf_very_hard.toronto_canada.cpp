@@ -138,9 +138,6 @@ struct MapFixture {
         CHECK(computePathTravelTime(0.00000000000000000, path) <= 1568.36098209378496904);
 
         path = findPathBetweenIntersections(30.00000000000000000, std::make_pair(163125, 63061));
-        for(IntersectionIdx i: path){
-            cout << i << " ";
-        }
         CHECK(path_is_legal(163125, 63061, path));
         CHECK(computePathTravelTime(30.00000000000000000, path) <= 609.46144478052076465);
 

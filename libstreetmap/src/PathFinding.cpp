@@ -63,6 +63,7 @@ PathFinder::~PathFinder(){
 vector<Point*> PathFinder::calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids){
     //cout << "searching for path "<<intersect_ids.first << " " << intersect_ids.second <<'\n';
     //clock_t t = clock();
+    //get paths from both ends simultaneously
     thread t1(&PathFinder::findHalfPath, this, turn_penalty, intersect_ids.first, intersect_ids.second, 
         ref(open1), ref(closed1), ref(segToPointCorrect),
         ref(maxInterGCostCorrect), ref(segToPointOpposite),
@@ -92,7 +93,7 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
     Heap& open, vector<Point*>& closed, pair<mutex,vector<pair<Point*, Point*>>>& segToPoint,
     vector<double>& maxInterGCost, pair<mutex,vector<pair<Point*, Point*>>>& segToPoint2,
     Point*& path, Point*& path2, const bool isOpposite){
-        
+    
     newPointMutex.lock();
     Point* destination = new Point(end);
     Point* start = new Point(begin, destination->coords, nullptr);
@@ -164,7 +165,6 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
                         maxInterGCost[current->id] = maxInterGCost[neighbour->id];
                     }
                     Point** neighbourInOpen = &(neighbour->correctDir? segToPoint.second[neighbour->segId].first:segToPoint.second[neighbour->segId].second);
-                    bool hasBeenTraversed = *neighbourInOpen != nullptr && (*neighbourInOpen)->isTraversed; // closed does not contain current segment
                     bool isBetter = *neighbourInOpen == nullptr || neighbour->gCost < (*neighbourInOpen)->gCost;
                     if(isBetter){
                         neighbour->updateHCost();

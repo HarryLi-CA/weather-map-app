@@ -64,7 +64,7 @@ void openHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application); /
 void closeHelpPopUp_cbk(GtkWidget */*widget*/, ezgl::application *application); //callback function called when user presses back button on the help pop up window
 
 void clickedIntersectionForRoute(IntersectionIdx clickedIntersection,ezgl::application *application); //Function called when an intersection is clicked during route creating mode
-void clickedIntersectionForRoute_hide(ezgl::application *application);
+void clickedIntersectionForRoute_hide(ezgl::application *application); //Function used to hide route related buttons on the left sidebar
 void closeRouteClickingDialog_cbk(GtkWidget */*widget*/, ezgl::application *application);
 void clickedStartingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo);
 void clickedEndingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,ezgl::application *> *clickedIntersectionInfo);

@@ -1311,6 +1311,7 @@ void initial_setup(ezgl::application *application, bool /*new_window*/)
    //application->create_button("EXIT ROUTE CLICKING",4,cancelClickingMode_cbk);
 }
 
+//helper function to set the position of a camera to center around a point
 void setCameraPosition(ezgl::point2d point, ezgl::camera &camera)
 {
    ezgl::rectangle world = camera.get_world();            //get camera
@@ -1972,6 +1973,7 @@ void clickedIntersectionForRoute(IntersectionIdx clickedIntersection, ezgl::appl
    gtk_widget_show(GTK_WIDGET(endOfRouteBtn));
 }
 
+//Function used to hide route related buttons on the left sidebar
 void clickedIntersectionForRoute_hide(ezgl::application *application)
 {
 
@@ -1996,7 +1998,6 @@ void closeRouteClickingDialog_cbk(GtkWidget * /*widget*/, ezgl::application *app
 //callback function called when user clicks "start of route" on intersection clicking pop up in route creating mode
 void clickedStartingIntersection_cbk(GtkWidget * /*widget*/, pair<IntersectionIdx, ezgl::application *> *clickedIntersectionInfo)
 {
-
    primarySelection = clickedIntersectionInfo->first;
    if (primarySelection > -1 && secondarySelection > -1)
    {
@@ -2004,7 +2005,6 @@ void clickedStartingIntersection_cbk(GtkWidget * /*widget*/, pair<IntersectionId
       GObject* exitBtn = clickedIntersectionInfo->second->get_object("ExitRouteModeBtn");
       gtk_widget_show((GtkWidget*)exitBtn);
    }
-   // User chose the clicked intersection as an starting for the route, handle here
 
    //Close pop up once button is clicked
    clickedIntersectionInfo->second->get_canvas("MainCanvas")->redraw();
@@ -2013,7 +2013,6 @@ void clickedStartingIntersection_cbk(GtkWidget * /*widget*/, pair<IntersectionId
 //callback function called when user clicks "end of route" on intersection clicking pop up in route creating mode
 void clickedEndingIntersection_cbk(GtkWidget * /*widget*/, pair<IntersectionIdx, ezgl::application *> *clickedIntersectionInfo)
 {
-
    secondarySelection = clickedIntersectionInfo->first;
    if (primarySelection > -1 && secondarySelection > -1)
    {
@@ -2021,12 +2020,12 @@ void clickedEndingIntersection_cbk(GtkWidget * /*widget*/, pair<IntersectionIdx,
       GObject* exitBtn = clickedIntersectionInfo->second->get_object("ExitRouteModeBtn");
       gtk_widget_show((GtkWidget*)exitBtn);
    }
-   // User chose the clicked intersection as an ending for the route, handle here
 
    //Close pop up once button is clicked
    clickedIntersectionInfo->second->get_canvas("MainCanvas")->redraw();
 }
 
+//callback function that manages the label buttons on the route instructions, when an instruction is clicked, its ascociated the street or intersection will be highlighted
 void clickedLabelButton_cbk(GtkWidget * /*widget*/, pair<pair<int, vector<PathInstruction> &>, ezgl::application *> *labelInfo)
 {
    globalHighlightedStep = labelInfo->first.first;
@@ -2052,6 +2051,7 @@ void clickedLabelButton_cbk(GtkWidget * /*widget*/, pair<pair<int, vector<PathIn
    app->get_canvas("MainCanvas")->redraw(); //force redraw to immediately show changes
 }
 
+//helper function to display UI for travel directions that appear on the right side of the screen when a route is shown
 void displayTravelDirections(vector<PathInstruction> &directions, ezgl::application *application)
 {
    closeTravelDirections(application); //reset travel directions
@@ -2150,6 +2150,7 @@ void displayTravelDirections(vector<PathInstruction> &directions, ezgl::applicat
    gtk_widget_show((GtkWidget *)exitBtn);
 }
 
+//Closes travel directions that appear on the right side of the screen when a route is displayed
 void closeTravelDirections(ezgl::application *application)
 {
    globalHighlightedStep = -2;
@@ -2168,6 +2169,7 @@ void closeTravelDirections(ezgl::application *application)
    clearHeapPointers();
 }
 
+//helper function to delete all miscellaneous pointers
 void clearHeapPointers()
 {
    for (int i = 0; i < instructionPairPointers.size(); i++)

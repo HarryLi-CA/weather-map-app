@@ -18,12 +18,12 @@ Point::Point(int id){
 }
 
 //default constructor
-Point::Point(int id, LatLon destCoords, Point* parent){
-    this->id = id;
-    this->coords = osmhelp::getIntersectionPosition(id);
-    this->destCoords=  destCoords;
-    this->parent = parent;
-    hCost = findDistanceBetweenTwoPoints(coords, destCoords)/MAX_STREET_SPEED;
+Point::Point(int id_, LatLon destCoords_, Point* parent_){
+    this->id = id_;
+    this->coords = osmhelp::getIntersectionPosition(id_);
+    this->destCoords=  destCoords_;
+    this->parent = parent_;
+    hCost = findDistanceBetweenTwoPoints(coords, destCoords_)/MAX_STREET_SPEED;
     fCost = gCost + hCost;
 }
 

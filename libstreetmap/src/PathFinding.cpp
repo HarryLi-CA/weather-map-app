@@ -30,9 +30,9 @@ construct destruct total time is 855ms
 
 PathFinder::PathFinder(){
     //clock_t t = clock();
-    segToPoint1.second.resize(osmhelp::getNumStreetSegments(), make_pair(nullptr, nullptr));
-    segToPoint2.second.resize(osmhelp::getNumStreetSegments(), make_pair(nullptr, nullptr));
-    maxInterGCost1.resize(osmhelp::getNumIntersections(), DBL_MAX);
+    segToPointCorrect.second.resize(osmhelp::getNumStreetSegments(), make_pair(nullptr, nullptr));
+    segToPointOpposite.second.resize(osmhelp::getNumStreetSegments(), make_pair(nullptr, nullptr));
+    maxInterGCostCorrect.resize(osmhelp::getNumIntersections(), DBL_MAX);
     maxInterGCost2.resize(osmhelp::getNumIntersections(), DBL_MAX);
     //cout << "done start: " <<(clock() -t)/(double)CLOCKS_PER_SEC << endl;
 }
@@ -64,12 +64,12 @@ vector<Point*> PathFinder::calculatePathArray(const double turn_penalty, const s
     //cout << "searching for path "<<intersect_ids.first << " " << intersect_ids.second <<'\n';
     //clock_t t = clock();
     thread t1(&PathFinder::findHalfPath, this, turn_penalty, intersect_ids.first, intersect_ids.second, 
-        ref(open1), ref(closed1), ref(segToPoint1),
-        ref(maxInterGCost1), ref(segToPoint2),
+        ref(open1), ref(closed1), ref(segToPointCorrect),
+        ref(maxInterGCostCorrect), ref(segToPointOpposite),
         ref(path1), ref(path2), false);
     thread t2(&PathFinder::findHalfPath, this, turn_penalty, intersect_ids.second, intersect_ids.first, 
-        ref(open2), ref(closed2), ref(segToPoint2),
-        ref(maxInterGCost2), ref(segToPoint1),
+        ref(open2), ref(closed2), ref(segToPointOpposite),
+        ref(maxInterGCost2), ref(segToPointCorrect),
         ref(path2), ref(path1), true);
     t1.join();
     t2.join();

@@ -27,7 +27,7 @@ class Point{
         Point(int id);
         
         //default constructor
-        Point(int id, LatLon destCoords, Point* parent);
+        Point(int id, LatLon destCoords_, Point* parent_);
         ~Point();
 
         void copy(Point copyPoint);

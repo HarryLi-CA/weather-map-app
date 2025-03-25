@@ -21,10 +21,10 @@ class PathFinder{
     vector<Point*> closed1;
     vector<Point*> closed2;
 
-    pair<mutex, vector<pair<Point*, Point*>>> segToPoint1;
-    pair<mutex, vector<pair<Point*, Point*>>> segToPoint2;
+    pair<mutex, vector<pair<Point*, Point*>>> segToPointCorrect;
+    pair<mutex, vector<pair<Point*, Point*>>> segToPointOpposite;
 
-    vector<double> maxInterGCost1;
+    vector<double> maxInterGCostCorrect;
     vector<double> maxInterGCost2;
 
     mutex pathFoundMutex;

@@ -82,7 +82,6 @@ int main(int argc, char** argv) {
     // //Clean-up the map data and related data structures
 
     //Clean-up the map data and related data structures
-    std::cout << computePathTravelTime(0,findPathBetweenIntersections(0, make_pair(160611, 6334))) << endl;
     loadFeatures();
     drawMap();
     std::cout << "Closing map\n";

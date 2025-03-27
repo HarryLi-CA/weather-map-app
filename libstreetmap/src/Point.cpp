@@ -1,8 +1,6 @@
-#include "PathFinding.h"
-#include "m1.h"
-#include "m3.h"
 #include "Heap.h"
 #include "OSMAPIHelper.h"
+#include "pointMath.h"
 #include <vector>
 #include <stdio.h>
 #include <queue>
@@ -10,7 +8,7 @@
 #include <limits>
 #include <atomic>
 #include "ezgl/application.hpp"
-
+using namespace std;
 // for setting destination point
 Point::Point(int id_){
     this->id = id_;

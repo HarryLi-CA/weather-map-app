@@ -1,7 +1,6 @@
 #pragma once
 #include <iostream>
 #include <vector>
-#include "PathFinding.h"
 #include "Point.h"
 
 using namespace std;

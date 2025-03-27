@@ -3,7 +3,6 @@
 #include <random>
 #include <UnitTest++/UnitTest++.h>
 
-#include "StreetsDatabaseAPI.h"
 #include "m1.h"
 #include "m2.h"
 
@@ -16,7 +15,7 @@ int main(int argc, char** argv) {
     //Disable interactive graphics
     ezgl::set_disable_event_loop(true);
 
-    std::string map_name = "/cad2/ece297s/public/maps/london_england.streets.bin";
+    std::string map_name = "/cad2/ece297s/public/maps/toronto_canada.streets.bin";
     bool load_success = loadMap(map_name);
 
     if(!load_success) {

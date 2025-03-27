@@ -1,7 +1,5 @@
 #pragma once
 
-#include "m1.h"
-#include "m3.h"
 #include "StreetsDatabaseAPI.h"
 #include <vector>
 #include <stdio.h>
@@ -10,6 +8,7 @@
 #include <utility>
 #include <limits>
 #include "Heap.h"
+#include "SegmentTree.h"
 #include "Point.h"
 
 
@@ -33,20 +32,21 @@ class PathFinder{
     mutex pathFoundMutex;
     mutex newPointMutex;
 
-    volatile bool pathFound = false;
+    volatile bool optimalPathFound = false;
+    volatile bool possiblePathFound = false;
     volatile double maxCost = DBL_MAX;
 
-    bool fullyOptimal = false;
-    bool bidirectionalEasy = true;
+    bool fullyOptimal = true;
+    bool bidirectionalEasy = false;
     
     Point* pathCorrect = nullptr;
     Point* pathOpposite = nullptr;
 
-    Point* minGCostP1 = nullptr;
-    Point* minGCostP2 = nullptr;
+    MinSegmentTree* mSTCorrect = nullptr;
+    MinSegmentTree* mSTOpposite = nullptr;
 
-    double minGCost1 = -1;
-    double minGCost2 = -1;
+    Point* minGCostPCorrect = nullptr;
+    Point* minGCostPOpposite = nullptr;
 
     PathFinder();
     ~PathFinder();

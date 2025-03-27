@@ -36,6 +36,8 @@ PathFinder::PathFinder(){
     segToPointOpposite.second.resize(osmhelp::getNumStreetSegments(), make_pair(nullptr, nullptr));
     maxInterGCostCorrect.resize(osmhelp::getNumIntersections(), DBL_MAX);
     maxInterGCost2.resize(osmhelp::getNumIntersections(), DBL_MAX);
+    //mSTCorrect = new MinSegmentTree(osmhelp::getNumStreetSegments()*2);
+    //mSTOpposite = new MinSegmentTree(osmhelp::getNumStreetSegments()*2);
     //cout << "done start: " <<(clock() -t)/(double)CLOCKS_PER_SEC << endl;
 }
 PathFinder::~PathFinder(){
@@ -59,7 +61,8 @@ PathFinder::~PathFinder(){
         delete open2.items[i];
     //cout << "done delete: " <<(clock() -t)/(double)CLOCKS_PER_SEC << endl;
     
-    
+    delete mSTCorrect;
+    delete mSTOpposite;
 }
 
 vector<Point*> PathFinder::calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids){
@@ -114,20 +117,44 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
     while(open.length() > 0){
         closed.push_back(open.removeFirst());
         current = closed.back();
+        current->isTraversed = true;
 
-
-
-        if(current->fCost>maxCost)
+        if(current->fCost>=maxCost)
             break;
 
         // double oppositeMin = getMinGCost(!isOpposite);
         // if(oppositeMin >= 0 && current->gCost + oppositeMin > maxCost)
         //     continue;
 
-        if(pathFound){
+        if(optimalPathFound){
             return;
         }
-        current->isTraversed = true;
+
+        //MinSegmentTree* mST1 = isOpposite?mSTOpposite:mSTCorrect;
+        //MinSegmentTree* mST2 = isOpposite?mSTCorrect:mSTOpposite;
+        Point** minGCostP1 = isOpposite?&minGCostPOpposite:&minGCostPCorrect;
+        Point** minGCostP2 = isOpposite?&minGCostPCorrect:&minGCostPOpposite;
+
+        if(*minGCostP2 !=nullptr && (current->gCost + (*minGCostP2)->gCost >= maxCost))
+            continue;
+
+        if(*minGCostP1 != nullptr){
+            //cout<<"test2"<<endl;
+            //mST1->update(1, 0, mST1->maxArrSize-1, current->segTreeIndex, DBL_MAX);
+            if(current == *minGCostP1){
+                for(int i = 0; i < open.currentItemCount;i++){
+                    if(open.items[i]->gCost < (*minGCostP1)->gCost)
+                         *minGCostP1 = open.items[i];
+                }
+            }
+        }
+        if(*minGCostP1 ==nullptr && open.currentItemCount>0 && possiblePathFound){
+            //cout<<"test" << endl;
+            for(int i = 0; i < open.currentItemCount;i++){
+                if((*minGCostP1) == nullptr || open.items[i]->gCost < (*minGCostP1)->gCost)
+                     *minGCostP1 = open.items[i];
+            }
+        }
 
         if(current->gCost < maxInterGCost[current->id]){
             Point* opposing = nullptr;
@@ -141,6 +168,7 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
                     totalCost += opposing->parent->gCost;
                 }
                 pathFoundMutex.lock();
+                possiblePathFound = true;
                 if(totalCost < maxCost){
                     path = current;
                     if(opposing !=nullptr){
@@ -151,13 +179,14 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
                 pathFoundMutex.unlock();
                 if(bidirectionalEasy)
                     break;
+                
                 continue;
             }
 
             vector<Point*> neighbours= getNeighbours(current, turn_penalty, isOpposite);
             
             for(Point* neighbour: neighbours){
-                bool isGCostHigh = neighbour->gCost >= maxInterGCost[neighbour->id];
+                bool isGCostHigh = neighbour->gCost >= maxInterGCost[neighbour->id] || (*minGCostP2 !=nullptr && (current->gCost + (*minGCostP2)->gCost >= maxCost));
                 if(!isGCostHigh){
                     double newMaxInterGCost = neighbour->gCost;
                     if(fullyOptimal){
@@ -182,11 +211,23 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
                                 segToPoint.first.lock();
                                 *neighbourInOpen = neighbour;
                                 segToPoint.first.unlock();
+                                if(*minGCostP1 != nullptr &&neighbour->gCost < (*minGCostP1)->gCost){
+                                    *minGCostP1 = neighbour;
+                                }
                                 continue;
                             }
                             else{
                                 (*neighbourInOpen)->copy(*neighbour);
                                 open.updateItem(*neighbourInOpen);
+                                if(*minGCostP1 !=nullptr && (*neighbourInOpen)->gCost < (*minGCostP1)->gCost){
+                                    
+                         *minGCostP1 = (*neighbourInOpen);
+                                    //cout<<"test3"<<endl;
+                                    // mST1->update(neighbour->segTreeIndex,neighbour->gCost);
+                                    // if(neighbour->gCost <minGCostP1->gCost){
+                                    //     minGCostP1 = mST1->query().second;
+                                    // }
+                                }
                             }
                         }
                     }
@@ -196,7 +237,7 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
         }
     }
     pathFoundMutex.lock();
-    pathFound = true;
+    optimalPathFound = true;
     pathFoundMutex.unlock();
 }
 

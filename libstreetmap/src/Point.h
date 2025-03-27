@@ -1,14 +1,11 @@
 #pragma once
 
-#include "m1.h"
-#include "m3.h"
 #include "StreetsDatabaseAPI.h"
 #include <vector>
 #include <stdio.h>
 #include <queue>
 #include <atomic>
-#include "Heap.h"
-#include "Point.h"
+#include <vector>
 #include "ezgl/application.hpp"
 
 #define MAX_STREET_SPEED 36.2// 36.2m/s = 130km/h
@@ -24,6 +21,7 @@ class Point{
         bool correctDir = false;
 
         int index = -1;
+        int segTreeIndex = -1;
         ezgl::point2d coords, destCoords;
 
         // for setting destination point
@@ -37,7 +35,7 @@ class Point{
 
         void updateHCost();
         void updateFCost();
-        vector<Point*> retracePath(vector<Point*> curPath, bool isOpposite);
+        std::vector<Point*> retracePath(std::vector<Point*> curPath, bool isOpposite);
         bool operator <(const Point &x) const {
             return (fCost < x.fCost);
         }

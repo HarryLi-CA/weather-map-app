@@ -103,6 +103,7 @@ IntersectionIdx findClosestIntersection(LatLon my_position);
 // Returns the street segments that connect to the given intersection.
 // Speed Requirement --> high
 std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection(IntersectionIdx intersection_id);
+std::vector<StreetSegmentIdx>* findStreetSegmentsOfIntersectionPtr(IntersectionIdx intersection_id);
 
 // Returns all intersections along the given street.
 // There should be no duplicate intersections in the returned vector.

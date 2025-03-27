@@ -75,7 +75,7 @@ namespace osmhelp{
         }
         return numStreets;
     }
-    ezgl::point2d getPoint2dOfIntersections(IntersectionIdx idx){
+    ezgl::point2d getPoint2dOfIntersections(const IntersectionIdx idx){
         if(idx >= getNumIntersections()){ //ensure vector is sized
             throw idx;
         }
@@ -87,7 +87,7 @@ namespace osmhelp{
         }
         return intersectionCoord[idx].second;
     }
-    StreetSegmentInfo getStreetSegmentInfo(StreetSegmentIdx idx){
+    StreetSegmentInfo getStreetSegmentInfo(const StreetSegmentIdx idx){
         if(idx >= getNumStreetSegments()){ //ensure vector is sized
             throw idx;
         }
@@ -99,7 +99,7 @@ namespace osmhelp{
         return segInfo[idx];
     }
 
-    LatLon getIntersectionPosition(IntersectionIdx idx){
+    LatLon getIntersectionPosition(const IntersectionIdx idx){
         if(idx >= getNumIntersections()){ //ensure vector is sized
             throw idx;
         }

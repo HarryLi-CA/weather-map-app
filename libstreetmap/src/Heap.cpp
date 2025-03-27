@@ -28,15 +28,15 @@ Point* Heap::removeFirst(){
     return firstItem;
 }
 
-bool Heap::contains(Point* item){
+bool Heap::contains(const Point* item){
     return getIndex(item)>=0;
 }
 
-int Heap::getIndex(Point* item){
+int Heap::getIndex(const Point* item){
     return item->index;
 }
 
-Point* Heap::getPoint(Point* item){
+Point* Heap::getPoint(const Point* item){
     for(int i = 0; i < items.size(); i++){
         if(items[i]->segId == item->segId){ //maybe check intesection id as well
             return items[i];
@@ -45,7 +45,7 @@ Point* Heap::getPoint(Point* item){
     return nullptr;
 }
 
-void Heap::updateItem(Point* item){
+void Heap::updateItem(Point* const item){
     sortUp(item);
 }
 
@@ -53,15 +53,12 @@ int Heap::length(){
     return currentItemCount;
 }
 
-void Heap::sortDown(Point* item){
-    while(true){
+void Heap::sortDown(Point* const item){
     int parentIndex = getIndex(item);
     int childIndexLeft = parentIndex*2+1;
     int childIndexRight = parentIndex*2+2;
-    int swapIndex = 0;
-
-    if(childIndexLeft < currentItemCount){
-        swapIndex = childIndexLeft;
+    int& swapIndex = childIndexLeft;
+    while(childIndexLeft < currentItemCount){
         if(childIndexRight<currentItemCount){
         if(*items[childIndexLeft] > *items[childIndexRight]){
             swapIndex = childIndexRight;
@@ -69,18 +66,17 @@ void Heap::sortDown(Point* item){
         }
         if(*items[parentIndex] > *items[swapIndex]){
             swap(items[parentIndex],items[swapIndex]);
+            parentIndex = swapIndex;
         }
         else{
         return;
         }
-    }
-    else{
-        return;
-    }
+        childIndexLeft = parentIndex*2+1;
+        childIndexRight = parentIndex*2+2;
     }
 }
 
-void Heap::sortUp(Point* item){
+void Heap::sortUp(Point* const item){
     int parentIndex = ((getIndex(item)-1)/2);
     if(parentIndex<=0){
     return;
@@ -97,7 +93,7 @@ void Heap::sortUp(Point* item){
     }
 
 }
-void Heap::swap(Point* itemA, Point* itemB){
+void Heap::swap(Point* const itemA, Point* const itemB){
     int itemAIndex = getIndex(itemA);
     int itemBIndex = getIndex(itemB);
     itemB->index = itemAIndex;

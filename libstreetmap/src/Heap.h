@@ -13,17 +13,17 @@ class Heap{
     void add(Point* item);
     Point* removeFirst();
   
-    bool contains(Point* item);
+    bool contains(const Point* item);
 
-    int getIndex(Point* item);
-    Point* getPoint(Point* item);
+    int getIndex(const Point* item);
+    Point* getPoint(const Point* item);
   
-    void updateItem(Point* item);
+    void updateItem(Point* const item);
   
     int length();
   
-    void sortDown(Point* item);
+    void sortDown(Point* const item);
   
-    void sortUp(Point* item);
-    void swap(Point* itemA, Point* itemB);
+    void sortUp(Point* const item);
+    void swap(Point* const itemA, Point* const itemB);
   };

@@ -403,6 +403,15 @@ std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection(IntersectionIdx i
     }
 }
 
+std::vector<StreetSegmentIdx>* findStreetSegmentsOfIntersectionPtr(IntersectionIdx intersection_id){
+    if(intersection_id >= 0 && intersection_id < numIntersections){
+        return intersectionToStreetSegments[intersection_id];
+
+    } else {
+        return {};
+    }
+}
+
 std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
     if(street_id >= 0 && street_id < numStreets){
         return *streetToIntersections[street_id];

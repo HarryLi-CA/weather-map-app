@@ -19,3 +19,5 @@ null.d
 libstreetmap/tests/.old_tests
 libstreetmap/src/keys/*
 libstreetmap/src/reference_m1_headers/*
+perf.data
+flamegraph.svg

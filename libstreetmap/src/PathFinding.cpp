@@ -243,14 +243,14 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
 
 
 vector<Point*> PathFinder::getNeighbours(Point* current, double turn_penalty, bool isOpposite){
-    vector<StreetSegmentIdx> streetSegs = findStreetSegmentsOfIntersection(current->id);
+    vector<StreetSegmentIdx>* streetSegs = findStreetSegmentsOfIntersectionPtr(current->id);
     vector<Point*> neighbours;
     StreetSegmentInfo curSegInfo;
     if(current->segId >=0)
         curSegInfo = osmhelp::getStreetSegmentInfo(current->segId);
-    for (int i = 0; i < streetSegs.size(); i++)
+    for (int i = 0; i < streetSegs->size(); i++)
     {
-        StreetSegmentInfo neigbourSegInfo = osmhelp::getStreetSegmentInfo(streetSegs[i]);
+        StreetSegmentInfo neigbourSegInfo = osmhelp::getStreetSegmentInfo((*streetSegs)[i]);
         bool isCorrectWay = (neigbourSegInfo.from == current->id) ^ isOpposite;
         if(!neigbourSegInfo.oneWay || isCorrectWay){ // check one way direction
             
@@ -258,7 +258,7 @@ vector<Point*> PathFinder::getNeighbours(Point* current, double turn_penalty, bo
             //newPointMutex.lock();
             Point* neighbour = new Point(curIntIdx, current->destCoords, current);
             //newPointMutex.unlock();
-            neighbour->segId = streetSegs[i];
+            neighbour->segId = (*streetSegs)[i];
             neighbour->correctDir = isCorrectWay;
 
             double pathTravelTime = 0;

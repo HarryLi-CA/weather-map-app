@@ -41,7 +41,7 @@ void Point:: copy(Point copyPoint){
 
 
 void Point::updateHCost(){
-    hCost = magnitude(coords- destCoords)/MAX_STREET_SPEED;
+    hCost = magnitude(coords- destCoords)/osmhelp::getSpeedLimitMaximum();
 }
 
 void Point::updateFCost(){

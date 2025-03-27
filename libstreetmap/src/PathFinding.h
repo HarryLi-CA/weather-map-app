@@ -36,8 +36,8 @@ class PathFinder{
     volatile bool possiblePathFound = false;
     volatile double maxCost = DBL_MAX;
 
-    bool fullyOptimal = true;
-    bool bidirectionalEasy = false;
+    bool fullyOptimal = true; // 0.5% time save to flip off
+    bool bidirectionalEasy = false; //flipping this might only save 3.57% time
     
     Point* pathCorrect = nullptr;
     Point* pathOpposite = nullptr;

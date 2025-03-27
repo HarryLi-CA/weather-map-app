@@ -32,6 +32,7 @@ namespace osmhelp{
             getPoint2dOfIntersections(i);
         }
         size = getNumStreets();
+        getSpeedLimitMaximum();
     }
     void reset(){
         numIntersections = -1;

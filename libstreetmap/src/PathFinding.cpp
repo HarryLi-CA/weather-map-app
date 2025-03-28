@@ -178,8 +178,9 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
             StreetSegmentInfo curSegInfo;
             if(current->segId >=0)
                 curSegInfo = osmhelp::getStreetSegmentInfo(current->segId);
-            
-            for(StreetSegmentIdx streetSeg: (*streetSegs)){
+            int streetSegsSize = streetSegs->size();
+            for(int i = 0; i < streetSegsSize; i++){
+                StreetSegmentIdx streetSeg = (*streetSegs)[i];
                 StreetSegmentInfo* neigbourSegInfo = osmhelp::getStreetSegmentInfoPtr(streetSeg);
                 bool isCorrectWay = (neigbourSegInfo->from == current->id) ^ isOpposite;
                 if(!neigbourSegInfo->oneWay || isCorrectWay){ // check one way direction

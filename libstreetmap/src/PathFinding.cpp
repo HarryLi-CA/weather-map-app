@@ -61,8 +61,8 @@ PathFinder::~PathFinder(){
         delete open2.items[i];
     //cout << "done delete: " <<(clock() -t)/(double)CLOCKS_PER_SEC << endl;
     
-    delete mSTCorrect;
-    delete mSTOpposite;
+    // delete mSTCorrect;
+    // delete mSTOpposite;
 }
 
 vector<Point*> PathFinder::calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids){
@@ -178,7 +178,7 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
             StreetSegmentInfo curSegInfo;
             if(current->segId >=0)
                 curSegInfo = osmhelp::getStreetSegmentInfo(current->segId);
-            int streetSegsSize = streetSegs->size();
+            int streetSegsSize = streetSegs->size(); //TODO: make helper function to avoid calling vector function
             for(int i = 0; i < streetSegsSize; i++){
                 StreetSegmentIdx streetSeg = (*streetSegs)[i];
                 StreetSegmentInfo* neigbourSegInfo = osmhelp::getStreetSegmentInfoPtr(streetSeg);
@@ -209,14 +209,13 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
                         if(newMaxInterGCost < maxInterGCost[curIntIdx]){
                             maxInterGCost[current->id] = maxInterGCost[curIntIdx];
                         }
-                        Point** neighbourInOpen; 
-                        if(fullyOptimal)
-                            neighbourInOpen= &(isCorrectWay? segToPoint.second[neighbourSegId].first:segToPoint.second[neighbourSegId].second);
-                        else
-                            neighbourInOpen = &(intersectionsVisited[curIntIdx]);
+                        Point** neighbourInOpen = fullyOptimal?
+                        &(isCorrectWay? segToPoint.second[neighbourSegId].first:segToPoint.second[neighbourSegId].second):
+                        neighbourInOpen = &(intersectionsVisited[curIntIdx]);
                         bool isBetter = *neighbourInOpen == nullptr || neighbourGCost < (*neighbourInOpen)->gCost;
                         if(isBetter){
-                            double neighbourHCost =Point::calculateHCost(osmhelp::getPoint2dOfIntersections(curIntIdx),current->destCoords);
+                            double neighbourHCost = (*neighbourInOpen ==nullptr)? Point::calculateHCost(osmhelp::getPoint2dOfIntersections(curIntIdx),current->destCoords) : (*neighbourInOpen)->hCost;
+                            
                             double neighbourFCost = neighbourGCost + neighbourHCost;
                             if(neighbourFCost < maxCost){
                                 if(*neighbourInOpen == nullptr){

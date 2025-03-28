@@ -17,7 +17,7 @@ class PathFinder{
     Heap open1;
     Heap open2;
 
-    vector<Point*> closed1;
+    vector<Point*> closed1; //TODO: turn into queue
     vector<Point*> closed2;
 
     pair<mutex, vector<pair<Point*, Point*>>> segToPointCorrect;
@@ -55,7 +55,9 @@ class PathFinder{
     void findHalfPath(const double turn_penalty, IntersectionIdx begin, IntersectionIdx end, 
     Heap& open, vector<Point*>& closed, pair<mutex,vector<pair<Point*, Point*>>>& segToPoint,
     vector<double>& maxInterGCost, pair<mutex,vector<pair<Point*, Point*>>>& segToPoint2,
-    Point*& path, Point*& path2, vector<Point*>& intersectionsVisited, vector<Point*>& opIntersectionsVisited, const bool isOpposite);
+    Point*& path, Point*& path2, 
+    vector<Point*>& intersectionsVisited, vector<Point*>& opIntersectionsVisited, 
+    const bool isOpposite);
     
     vector<Point*> getNeighbours(Point* current, double turn_penalty, bool isOpposite);
 

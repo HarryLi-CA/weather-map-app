@@ -3,10 +3,13 @@
 #include <algorithm>
 #include "PathFinding.h"
 #include "Heap.h"
+#include "OSMAPIHelper.h"
 
 using namespace std;
 
-Heap::Heap(){}
+Heap::Heap(){
+    items.resize(osmhelp::getNumStreetSegments(), nullptr);
+}
 void Heap::add(Point* item){
     items.push_back(item);
     item->index = currentItemCount;

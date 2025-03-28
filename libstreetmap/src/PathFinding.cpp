@@ -55,9 +55,9 @@ PathFinder::~PathFinder(){
         closed2[i] = nullptr;
     }
     //cout<< "free closed" << endl;
-    for(int i =0; i < open1.items.size(); i++)
+    for(int i =0; i < open1.currentItemCount; i++)
         delete open1.items[i];
-    for(int i =0; i < open2.items.size(); i++)
+    for(int i =0; i < open2.currentItemCount; i++)
         delete open2.items[i];
     //cout << "done delete: " <<(clock() -t)/(double)CLOCKS_PER_SEC << endl;
     
@@ -244,17 +244,19 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
 
 vector<Point*> PathFinder::getNeighbours(Point* current, double turn_penalty, bool isOpposite){
     vector<StreetSegmentIdx>* streetSegs = findStreetSegmentsOfIntersectionPtr(current->id);
+    int streetSegsSize = streetSegs->size();
     vector<Point*> neighbours;
+    neighbours.reserve(streetSegsSize);
     StreetSegmentInfo curSegInfo;
     if(current->segId >=0)
         curSegInfo = osmhelp::getStreetSegmentInfo(current->segId);
-    for (int i = 0; i < streetSegs->size(); i++)
+    for (int i = 0; i < streetSegsSize; i++)
     {
-        StreetSegmentInfo neigbourSegInfo = osmhelp::getStreetSegmentInfo((*streetSegs)[i]);
-        bool isCorrectWay = (neigbourSegInfo.from == current->id) ^ isOpposite;
-        if(!neigbourSegInfo.oneWay || isCorrectWay){ // check one way direction
+        StreetSegmentInfo* neigbourSegInfo = osmhelp::getStreetSegmentInfoPtr((*streetSegs)[i]);
+        bool isCorrectWay = (neigbourSegInfo->from == current->id) ^ isOpposite;
+        if(!neigbourSegInfo->oneWay || isCorrectWay){ // check one way direction
             
-            IntersectionIdx curIntIdx = neigbourSegInfo.from == current->id?neigbourSegInfo.to : neigbourSegInfo.from;
+            IntersectionIdx curIntIdx = neigbourSegInfo->from == current->id?neigbourSegInfo->to : neigbourSegInfo->from;
             //newPointMutex.lock();
             Point* neighbour = new Point(curIntIdx, current->destCoords, current);
             //newPointMutex.unlock();
@@ -264,7 +266,7 @@ vector<Point*> PathFinder::getNeighbours(Point* current, double turn_penalty, bo
             double pathTravelTime = 0;
             if(current->parent != nullptr){
                 //if streets of segments are not the same, there is a turn
-                if(neigbourSegInfo.streetID != curSegInfo.streetID)
+                if(neigbourSegInfo->streetID != curSegInfo.streetID)
                 {
                     pathTravelTime += turn_penalty; //apply turn penalty
                 }

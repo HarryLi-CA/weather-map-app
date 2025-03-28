@@ -98,6 +98,9 @@ namespace osmhelp{
         }
         return segInfo[idx];
     }
+    StreetSegmentInfo* getStreetSegmentInfoPtr(const StreetSegmentIdx idx){
+        return &(segInfo[idx]);
+    }
 
     LatLon getIntersectionPosition(const IntersectionIdx idx){
         if(idx >= getNumIntersections()){ //ensure vector is sized

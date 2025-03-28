@@ -40,6 +40,9 @@ void Point:: copy(Point copyPoint){
 }
 
 
+double Point::calculateHCost(ezgl::point2d point1, ezgl::point2d point2){
+    return magnitude(point1- point2)/osmhelp::getSpeedLimitMaximum();
+}
 void Point::updateHCost(){
     hCost = magnitude(coords- destCoords)/osmhelp::getSpeedLimitMaximum();
 }

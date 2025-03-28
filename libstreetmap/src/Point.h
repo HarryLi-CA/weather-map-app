@@ -33,7 +33,9 @@ class Point{
 
         void copy(Point copyPoint);
 
+        static double calculateHCost(ezgl::point2d point1, ezgl::point2d point2);
         void updateHCost();
+        
         void updateFCost();
         std::vector<Point*> retracePath(std::vector<Point*> curPath, bool isOpposite);
         bool operator <(const Point &x) const {

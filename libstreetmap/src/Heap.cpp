@@ -8,7 +8,7 @@
 using namespace std;
 
 Heap::Heap(){
-    items.resize(osmhelp::getNumStreetSegments(), nullptr);
+    items.reserve(osmhelp::getNumStreetSegments());
 }
 void Heap::add(Point* item){
     items.push_back(item);

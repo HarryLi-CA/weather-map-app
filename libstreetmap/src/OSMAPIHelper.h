@@ -18,4 +18,5 @@ namespace osmhelp{
     StreetSegmentInfo* getStreetSegmentInfoPtr(const StreetSegmentIdx idx);
     LatLon getIntersectionPosition(const IntersectionIdx idx);
     double getSpeedLimitMaximum(); //calculates maximum speed limit for a map
+    double getSpeedLimitMinimum();
 }

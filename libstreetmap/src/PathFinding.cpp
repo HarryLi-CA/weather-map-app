@@ -99,17 +99,11 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
     vector<double>& maxInterGCost, pair<mutex,vector<pair<Point*, Point*>>>& segToPoint2,
     Point*& path, Point*& path2, vector<Point*>& intersectionsVisited, vector<Point*>& opIntersectionsVisited, const bool isOpposite){
     
-    newPointMutex.lock();
-    Point* destination = new Point(end);
-    Point* start = new Point(begin, destination->coords, nullptr);
-    newPointMutex.unlock();
+    Point* start = new Point(begin, osmhelp::getPoint2dOfIntersections(end), nullptr);
 
     Point* current = start;
 
-    closed.push_back(destination);
-
     start->gCost = 0;
-    start->destCoords = destination->coords;
     open.add(start);
 
     //cout<<"Ended basic initial with seconds: "<< (double)(clock() - startTime) / CLOCKS_PER_SEC << endl;
@@ -162,12 +156,11 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
                 pair<Point*, Point*> opposingPair = segToPoint2.second[current->segId];
                 opposing = (current->correctDir) ? opposingPair.first : opposingPair.second;
             }
-            if(current->id == destination->id || (opposing != nullptr && opposing->isTraversed)){
+            if(current->id == end || (opposing != nullptr && opposing->isTraversed)){
                 double totalCost = current->gCost;
                 if(opposing !=nullptr){
                     totalCost += opposing->parent->gCost;
                 }
-                pathFoundMutex.lock();
                 possiblePathFound = true;
                 if(totalCost < maxCost){
                     path = current;
@@ -176,63 +169,92 @@ void PathFinder::findHalfPath(const double turn_penalty, IntersectionIdx begin, 
                     }
                     maxCost = totalCost;
                 }
-                pathFoundMutex.unlock();
                 if(bidirectionalEasy)
                     break;
                 
                 continue;
             }
-
-            vector<Point*> neighbours= getNeighbours(current, turn_penalty, isOpposite);
+            vector<StreetSegmentIdx>* streetSegs = findStreetSegmentsOfIntersectionPtr(current->id);
+            StreetSegmentInfo curSegInfo;
+            if(current->segId >=0)
+                curSegInfo = osmhelp::getStreetSegmentInfo(current->segId);
             
-            for(Point* neighbour: neighbours){
-                bool isGCostHigh = neighbour->gCost >= maxInterGCost[neighbour->id] || (*minGCostP2 !=nullptr && (current->gCost + (*minGCostP2)->gCost >= maxCost));
-                if(!isGCostHigh){
-                    double newMaxInterGCost = neighbour->gCost;
-                    if(fullyOptimal){
-                        newMaxInterGCost += turn_penalty;
+            for(StreetSegmentIdx streetSeg: (*streetSegs)){
+                StreetSegmentInfo* neigbourSegInfo = osmhelp::getStreetSegmentInfoPtr(streetSeg);
+                bool isCorrectWay = (neigbourSegInfo->from == current->id) ^ isOpposite;
+                if(!neigbourSegInfo->oneWay || isCorrectWay){ // check one way direction
+                    
+                    IntersectionIdx curIntIdx = neigbourSegInfo->from == current->id?neigbourSegInfo->to : neigbourSegInfo->from;
+                    //newPointMutex.lock();
+                    //newPointMutex.unlock();
+                    int neighbourSegId = streetSeg;
+
+                    double pathTravelTime = 0;
+                    if(current->parent != nullptr){
+                        //if streets of segments are not the same, there is a turn
+                        if(neigbourSegInfo->streetID != curSegInfo.streetID)
+                        {
+                            pathTravelTime += turn_penalty; //apply turn penalty
+                        }
                     }
-                    if(newMaxInterGCost < maxInterGCost[neighbour->id]){
-                        maxInterGCost[current->id] = maxInterGCost[neighbour->id];
-                    }
-                    Point** neighbourInOpen; 
-                    if(fullyOptimal)
-                        neighbourInOpen= &(neighbour->correctDir? segToPoint.second[neighbour->segId].first:segToPoint.second[neighbour->segId].second);
-                    else
-                        neighbourInOpen = &(intersectionsVisited[neighbour->id]);
-                    bool isBetter = *neighbourInOpen == nullptr || neighbour->gCost < (*neighbourInOpen)->gCost;
-                    if(isBetter){
-                        neighbour->updateHCost();
-                        neighbour->updateFCost();
-                        if(neighbour->fCost < maxCost){
-                            if(*neighbourInOpen == nullptr){
-                                //clock_t t =clock();
-                                open.add(neighbour);
-                                segToPoint.first.lock();
-                                *neighbourInOpen = neighbour;
-                                segToPoint.first.unlock();
-                                if(*minGCostP1 != nullptr &&neighbour->gCost < (*minGCostP1)->gCost){
-                                    *minGCostP1 = neighbour;
+
+                    double neighbourGCost = current->gCost + findStreetSegmentTravelTime(neighbourSegId) + pathTravelTime;
+                    bool isGCostHigh = neighbourGCost >= maxInterGCost[curIntIdx] || (*minGCostP2 !=nullptr && (current->gCost + (*minGCostP2)->gCost >= maxCost));
+                    if(!isGCostHigh){
+                        double newMaxInterGCost = neighbourGCost;
+                        if(fullyOptimal){
+                            newMaxInterGCost += turn_penalty;
+                        }
+                        if(newMaxInterGCost < maxInterGCost[curIntIdx]){
+                            maxInterGCost[current->id] = maxInterGCost[curIntIdx];
+                        }
+                        Point** neighbourInOpen; 
+                        if(fullyOptimal)
+                            neighbourInOpen= &(isCorrectWay? segToPoint.second[neighbourSegId].first:segToPoint.second[neighbourSegId].second);
+                        else
+                            neighbourInOpen = &(intersectionsVisited[curIntIdx]);
+                        bool isBetter = *neighbourInOpen == nullptr || neighbourGCost < (*neighbourInOpen)->gCost;
+                        if(isBetter){
+                            double neighbourHCost =Point::calculateHCost(osmhelp::getPoint2dOfIntersections(curIntIdx),current->destCoords);
+                            double neighbourFCost = neighbourGCost + neighbourHCost;
+                            if(neighbourFCost < maxCost){
+                                if(*neighbourInOpen == nullptr){
+                                    //clock_t t =clock();
+                                    Point* neighbour = new Point(curIntIdx, current->destCoords, current);
+                                    neighbour->fCost = neighbourFCost;
+                                    neighbour->hCost = neighbourHCost;
+                                    neighbour->gCost = neighbourGCost;
+                                    neighbour->segId = neighbourSegId;
+                                    neighbour->correctDir = isCorrectWay;
+                                    open.add(neighbour);
+                                    *neighbourInOpen = neighbour;
+                                    if(*minGCostP1 != nullptr &&neighbour->gCost < (*minGCostP1)->gCost){
+                                        *minGCostP1 = neighbour;
+                                    }
+                                    continue;
                                 }
-                                continue;
-                            }
-                            else{
-                                (*neighbourInOpen)->copy(*neighbour);
-                                open.updateItem(*neighbourInOpen);
-                                if(*minGCostP1 !=nullptr && (*neighbourInOpen)->gCost < (*minGCostP1)->gCost){
-                                    
-                         *minGCostP1 = (*neighbourInOpen);
-                                    //cout<<"test3"<<endl;
-                                    // mST1->update(neighbour->segTreeIndex,neighbour->gCost);
-                                    // if(neighbour->gCost <minGCostP1->gCost){
-                                    //     minGCostP1 = mST1->query().second;
-                                    // }
+                                else{
+                                    (*neighbourInOpen)->fCost = neighbourFCost;
+                                    (*neighbourInOpen)->gCost = neighbourGCost;
+                                    (*neighbourInOpen)->segId = neighbourSegId;
+                                    (*neighbourInOpen)->correctDir = isCorrectWay;
+                                    (*neighbourInOpen)->parent = current;
+
+                                    open.updateItem(*neighbourInOpen);
+                                    if(*minGCostP1 !=nullptr && (*neighbourInOpen)->gCost < (*minGCostP1)->gCost){
+                                        
+                            *minGCostP1 = (*neighbourInOpen);
+                                        //cout<<"test3"<<endl;
+                                        // mST1->update(neighbour->segTreeIndex,neighbour->gCost);
+                                        // if(neighbour->gCost <minGCostP1->gCost){
+                                        //     minGCostP1 = mST1->query().second;
+                                        // }
+                                    }
                                 }
                             }
                         }
                     }
                 }
-                delete neighbour;
             }
         }
     }

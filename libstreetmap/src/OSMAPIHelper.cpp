@@ -16,6 +16,7 @@ namespace osmhelp{
     int numStreetSegments = -1;
     int numStreets = -1;
     double maxSpeedLimit = -1;
+    double minSpeedLimit = DBL_MAX;
     std::vector<StreetSegmentInfo> segInfo;
     std::vector<std::pair<bool, LatLon>> intersectionPos;
     std::vector<std::pair<bool, ezgl::point2d>> intersectionCoord;
@@ -33,6 +34,7 @@ namespace osmhelp{
         }
         size = getNumStreets();
         getSpeedLimitMaximum();
+        //getSpeedLimitMinimum();
     }
     void reset(){
         numIntersections = -1;
@@ -128,6 +130,20 @@ namespace osmhelp{
         }
 
         return maxSpeedLimit;
+    }
+    double getSpeedLimitMinimum()
+    {
+        if(minSpeedLimit == DBL_MAX) //if max speed limit is default value, it needs to be calculated
+        {
+            apiMutex.lock();
+            for(StreetSegmentIdx segIndex = 0; segIndex < getNumStreetSegments(); segIndex++)
+            {
+                minSpeedLimit = std::min(minSpeedLimit, (double)getStreetSegmentInfo(segIndex).speedLimit);
+            }
+            apiMutex.unlock();
+        }
+
+        return minSpeedLimit;
     }
 
 }

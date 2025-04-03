@@ -72,3 +72,5 @@ void clickedEndingIntersection_cbk(GtkWidget */*widget*/, pair<IntersectionIdx,e
 void clearHeapPointers(); //helper function to delete all miscellaneous pointers
 
 void setCameraPosition(ezgl::point2d point, ezgl::camera& camera); //helper function to set the position of a camera to center around a point
+
+MapFeature* getIntersectionMapFeature(IntersectionIdx intersection);

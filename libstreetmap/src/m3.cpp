@@ -267,7 +267,7 @@ double computePathTravelTime(const double turn_penalty, const std::vector<Street
             }
         }
     }
-    cout <<pathTravelTime << endl;
+    //cout <<pathTravelTime << endl;
     return pathTravelTime;
 }
 

@@ -2192,3 +2192,8 @@ void clearHeapPointers()
    segmentHeapPointers.clear();
    intersectionInfoPointers.clear();
 }
+
+MapFeature* getIntersectionMapFeature(IntersectionIdx intersection)
+{
+   return intersectionFeatures[intersection];
+}

@@ -8,6 +8,8 @@
 #include "time.h"
 #include <thread>
 #include <mutex>
+#include <map>
+
 using namespace std;
 
 std::mutex mutexFlag;
@@ -38,6 +40,8 @@ vector<IntersectionIdx> threeoptSwap(vector<IntersectionIdx>& path, int indexA, 
     return temp;
 }
 
+map<pair<IntersectionIdx,IntersectionIdx>, double> timeCache;
+
 double getTravelTime(vector<IntersectionIdx>& path, double turnPenalty)
 {
     double totalTime = 0;
@@ -46,7 +50,11 @@ double getTravelTime(vector<IntersectionIdx>& path, double turnPenalty)
     {
         IntersectionIdx from = path[i];
         IntersectionIdx to = path[i+1];
-        double fastestTime = computePathTravelTime(turnPenalty, findPathBetweenIntersections(turnPenalty, {from, to}));
+        double fastestTime = timeCache[{from, to}];
+        if(fastestTime == 0){
+            fastestTime = computePathTravelTime(turnPenalty, findPathBetweenIntersections(turnPenalty, {from, to}));
+            timeCache[{from, to}] = fastestTime;
+        }
         totalTime += fastestTime;
     }
     return totalTime;
@@ -105,7 +113,7 @@ void optimize3Opt(vector<IntersectionIdx>& path, double turnPenalty)
             {
                 for(int thirdEdgeIndex = secondEdgeIndex + 2; thirdEdgeIndex < pathSize; thirdEdgeIndex++)
                 {
-                    cout << "(" << firstEdgeIndex << ", " << secondEdgeIndex << ", " << thirdEdgeIndex <<")" << endl;
+                    //cout << "(" << firstEdgeIndex << ", " << secondEdgeIndex << ", " << thirdEdgeIndex <<")" << endl;
                     //perform 2opt swap to check if the path is better
                     if(firstEdgeIndex == secondEdgeIndex || secondEdgeIndex == thirdEdgeIndex || firstEdgeIndex == thirdEdgeIndex){continue;}
 
@@ -190,6 +198,7 @@ void optimize2Opt(vector<IntersectionIdx>& path, double turnPenalty)
         {
             threads[tIndex].join();
         }
+        cout << "improvement = " << improvement << endl;
 
         if(forceQuit){break;}
     }

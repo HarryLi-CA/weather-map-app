@@ -67,6 +67,24 @@ void optimal3EdgeReconstruction(int firstEdgeIndex, int secondEdgeIndex, int thi
     mutexFlag.unlock();
 }
 
+void basic2NodeReconstruction(int firstNode, int secondNode, vector<IntersectionIdx>& path, double turnPenalty, double& oldTime, double& improvement)
+{
+    mutexFlag.lock();
+    vector<IntersectionIdx> copyPath = path;
+    mutexFlag.unlock();
+    vector<IntersectionIdx> newPath = twooptSwap(path, firstNode, secondNode);
+    double newTime = getTravelTime(newPath, turnPenalty);
+    mutexFlag.lock();
+    double localImprovement =  oldTime - newTime;
+    if(localImprovement > improvement)
+    {
+        path = newPath; //set path to better path
+        oldTime = newTime; //set time of old best path to time of new best path
+        improvement = localImprovement;
+    }
+    mutexFlag.unlock();
+}
+
 void optimize3Opt(vector<IntersectionIdx>& path, double turnPenalty)
 {
     double improvement = DBL_MAX;
@@ -149,23 +167,20 @@ void optimize2Opt(vector<IntersectionIdx>& path, double turnPenalty)
         improvement = 0;
         //go through all eligible nodes to make improvements
         double oldTime = getTravelTime(path, turnPenalty);
+        vector<thread> threads;
         for(int i = 0; i < pathSize - 1; i++)
         {
             for(int j = i + 2; j < pathSize; j++)
             {
                 //perform 2opt swap to check if the path is better
-                vector<IntersectionIdx> newPath = twooptSwap(path, i, j);
-
-                double newTime = getTravelTime(newPath, turnPenalty);
-
-                double localImprovement =  oldTime - newTime;
-                if(localImprovement > improvement)
-                {
-                    path = newPath; //set path to better path
-                    oldTime = newTime; //set time of old best path to time of new best path
-                    improvement = localImprovement;
-                }
+                thread t(basic2NodeReconstruction, i, j, ref(path), turnPenalty, ref(oldTime), ref(improvement));
+                threads.push_back(move(t));
             }
+        }
+
+        for(int tIndex = 0; tIndex < threads.size(); tIndex++)
+        {
+            threads[tIndex].join();
         }
     }
 }

@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
     drawMap();
     for(int i = 0; i < 1; i++){
     std::vector<IntersectionIdx> intersections;
-    randomIntersections(intersections,10);
+    randomIntersections(intersections,7);
     std::vector<IntersectionIdx> intersections3 = intersections;;
     double oldBestTime = getTravelTime(intersections, 0);
     optimize2Opt(intersections, 0);

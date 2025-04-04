@@ -85,20 +85,20 @@ int main(int argc, char** argv) {
     //Clean-up the map data and related data structures
     loadFeatures();
     drawMap();
-    // for(int i = 0; i < 1; i++){
-    // std::vector<IntersectionIdx> intersections;
-    // randomIntersections(intersections,10);
-    // std::vector<IntersectionIdx> intersections3 = intersections;;
-    // double oldBestTime = getTravelTime(intersections, 0);
-    // optimize2Opt(intersections, 0);
-    // optimize3Opt(intersections3, 0);
+    for(int i = 0; i < 1; i++){
+    std::vector<IntersectionIdx> intersections;
+    randomIntersections(intersections,10);
+    std::vector<IntersectionIdx> intersections3 = intersections;;
+    double oldBestTime = getTravelTime(intersections, 0);
+    optimize2Opt(intersections, 0);
+    optimize3Opt(intersections3, 0);
 
-    // double newBestTime = getTravelTime(intersections, 0);
-    // double newBestTime3 = getTravelTime(intersections3, 0);
+    double newBestTime = getTravelTime(intersections, 0);
+    double newBestTime3 = getTravelTime(intersections3, 0);
     
 
-    // std::cout << oldBestTime << "s >>> " << newBestTime << "s >>> " << newBestTime3 << "s" << std::endl;
-    // }
+    std::cout << oldBestTime << "s >>> " << newBestTime << "s >>> " << newBestTime3 << "s" << std::endl;
+    }
     std::cout << "Closing map\n";
     //draw graphical interface
     closeMap(); 

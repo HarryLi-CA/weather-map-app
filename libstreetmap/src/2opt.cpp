@@ -6,8 +6,11 @@
 #include "OSMAPIHelper.h"
 #include <stdlib.h>
 #include "time.h"
+#include <thread>
+#include <mutex>
 using namespace std;
 
+std::mutex mutexFlag;
 
 vector<IntersectionIdx> twooptSwap(vector<IntersectionIdx>& path, int indexA, int indexB)
 {
@@ -48,6 +51,22 @@ double getTravelTime(vector<IntersectionIdx>& path, double turnPenalty)
     return totalTime;
 }
 
+void optimal3EdgeReconstruction(int firstEdgeIndex, int secondEdgeIndex, int thirdEdgeIndex, int firstEdgeDestination, int secondEdgeDestination, int thirdEdgeDestination, vector<IntersectionIdx> path, double turnPenalty, double& bestTime, vector<IntersectionIdx>& bestRoute)
+{
+    mutexFlag.lock();
+    vector<IntersectionIdx> pathCopy = path;
+    mutexFlag.unlock();
+    vector<IntersectionIdx> newPath = threeoptSwap(pathCopy, firstEdgeIndex, secondEdgeIndex, thirdEdgeIndex, firstEdgeDestination, secondEdgeDestination, thirdEdgeDestination);
+    double newTime = getTravelTime(newPath, turnPenalty);
+    mutexFlag.lock();
+    if(newTime < bestTime)
+    {
+        bestTime = newTime;
+        bestRoute = newPath;
+    }
+    mutexFlag.unlock();
+}
+
 void optimize3Opt(vector<IntersectionIdx>& path, double turnPenalty)
 {
     double improvement = DBL_MAX;
@@ -58,39 +77,50 @@ void optimize3Opt(vector<IntersectionIdx>& path, double turnPenalty)
         improvement = 0;
         //go through all eligible nodes to make improvements
         double oldTime = getTravelTime(path, turnPenalty);
-        for(int i = 0; i < pathSize - 1; i++)
+
+        
+
+        for(int firstEdgeIndex = 0; firstEdgeIndex < pathSize - 1; firstEdgeIndex++)
         {
-            for(int j = i + 2; j < pathSize - 1; j++)
+            for(int secondEdgeIndex = firstEdgeIndex + 2; secondEdgeIndex < pathSize - 1; secondEdgeIndex++)
             {
-                for(int k = j + 2; k < pathSize; k++)
+                for(int thirdEdgeIndex = secondEdgeIndex + 2; thirdEdgeIndex < pathSize; thirdEdgeIndex++)
                 {
-                    cout << "(" << i << ", " << j << ", " << k <<")" << endl;
+                    cout << "(" << firstEdgeIndex << ", " << secondEdgeIndex << ", " << thirdEdgeIndex <<")" << endl;
                     //perform 2opt swap to check if the path is better
-                    if(i == j || j == k || i == k){continue;}
+                    if(firstEdgeIndex == secondEdgeIndex || secondEdgeIndex == thirdEdgeIndex || firstEdgeIndex == thirdEdgeIndex){continue;}
 
                     vector<IntersectionIdx> bestRoute;
                     double bestTime = DBL_MAX;
 
-                    vector<int> toIndices = {i, j, k};
+                    vector<thread> threads;
 
-                    for(int a = 0; a < 3; a++)
+                    vector<int> toIndices = {firstEdgeIndex, secondEdgeIndex, thirdEdgeIndex};
+
+                    for(int firstEdgeDestinationIndex = 0; firstEdgeDestinationIndex < 3; firstEdgeDestinationIndex++)
                     {
-                        for(int b = a; b < 3; b++)
+                        for(int secondEdgeDestinationIndex = firstEdgeDestinationIndex; secondEdgeDestinationIndex < 3; secondEdgeDestinationIndex++)
                         {
-                            for(int c = b; c < 3; c++)
+                            for(int thirdEdgeDestinationIndex = secondEdgeDestinationIndex; thirdEdgeDestinationIndex < 3; thirdEdgeDestinationIndex++)
                             {
-                                if(a == 0 && b == 0 && c == 0){continue;} //in this case the path is the same
-                                vector<IntersectionIdx> newPath = threeoptSwap(path, i, j, k, toIndices[a],toIndices[b],toIndices[c]);
-                                double newTime = getTravelTime(newPath, turnPenalty);
-                                if(newTime < bestTime)
-                                {
-                                    bestTime = newTime;
-                                    bestRoute = newPath;
-                                }
+                                if(firstEdgeDestinationIndex == 0 && secondEdgeDestinationIndex == 0 && thirdEdgeDestinationIndex == 0){continue;} //in this case the path is the same
+                                thread t(optimal3EdgeReconstruction,firstEdgeIndex, secondEdgeIndex, thirdEdgeIndex, 
+                                toIndices[firstEdgeDestinationIndex], toIndices[secondEdgeDestinationIndex], toIndices[thirdEdgeDestinationIndex],
+                                ref(path), turnPenalty, ref(bestTime), ref(bestRoute));
+                                
+                                threads.push_back(move(t));
+                                
+                                // optimal3EdgeReconstruction(firstEdgeIndex, secondEdgeIndex, thirdEdgeIndex, 
+                                // toIndices[firstEdgeDestinationIndex], toIndices[secondEdgeDestinationIndex], toIndices[thirdEdgeDestinationIndex],
+                                // path, turnPenalty, bestTime, bestRoute);
                             }
                         }
                     }
                     
+                    for(int i = 0; i < threads.size(); i++)
+                    {
+                        threads[i].join();
+                    }
 
                     double localImprovement =  oldTime - bestTime;
                 

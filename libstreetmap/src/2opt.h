@@ -11,3 +11,7 @@ double getTravelTime(vector<IntersectionIdx>& path, double turnPenalty); //find 
 void randomIntersections(vector<IntersectionIdx>& toAdd, int size); //helper function to return a list of random intersections
 void optimize3Opt(vector<IntersectionIdx>& path, double turnPenalty);
 vector<IntersectionIdx> threeoptSwap(vector<IntersectionIdx>& path, int indexA, int indexB, int indexC);
+
+void optimal3EdgeReconstruction(int firstEdgeIndex, int secondEdgeIndex, int thirdEdgeIndex, int firstEdgeDestination, int secondEdgeDestination, int thirdEdgeDestination, vector<IntersectionIdx> path, double turnPenalty, double& bestTime, vector<IntersectionIdx>& bestRoute); //helper function for multithreading 3opt
+void basic2NodeReconstruction(int firstNode, int secondNode, vector<IntersectionIdx>& path, double turnPenalty, double& oldTime, double& improvement); //helper function for multithreading 2opt
+void setForceQuit(bool _forceQuit); //setter function to set force quit and disable all 2opt/3opt operations at the next eligible instance

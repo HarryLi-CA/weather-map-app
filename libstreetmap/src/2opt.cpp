@@ -11,6 +11,7 @@
 using namespace std;
 
 std::mutex mutexFlag;
+bool forceQuit = false;
 
 vector<IntersectionIdx> twooptSwap(vector<IntersectionIdx>& path, int indexA, int indexB)
 {
@@ -140,6 +141,8 @@ void optimize3Opt(vector<IntersectionIdx>& path, double turnPenalty)
                         threads[i].join();
                     }
 
+                    if(forceQuit){break;}
+
                     double localImprovement =  oldTime - bestTime;
                 
                     if(localImprovement > improvement)
@@ -149,10 +152,13 @@ void optimize3Opt(vector<IntersectionIdx>& path, double turnPenalty)
                         improvement = localImprovement;
                     }
                 }
+                if(forceQuit){break;}
                 
             }
+            if(forceQuit){break;}
         }
         cout << "improvement: " << improvement << endl;
+        if(forceQuit){break;}
     }
     
 }
@@ -175,13 +181,17 @@ void optimize2Opt(vector<IntersectionIdx>& path, double turnPenalty)
                 //perform 2opt swap to check if the path is better
                 thread t(basic2NodeReconstruction, i, j, ref(path), turnPenalty, ref(oldTime), ref(improvement));
                 threads.push_back(move(t));
+                if(forceQuit){break;}
             }
+            if(forceQuit){break;}
         }
 
         for(int tIndex = 0; tIndex < threads.size(); tIndex++)
         {
             threads[tIndex].join();
         }
+
+        if(forceQuit){break;}
     }
 }
 
@@ -194,4 +204,9 @@ void randomIntersections(vector<IntersectionIdx>& toAdd, int size)
         toAdd.push_back(rand()%osmhelp::getNumIntersections());
     }
     return;
+}
+
+void setForceQuit(bool _forceQuit)
+{
+    forceQuit = _forceQuit;
 }

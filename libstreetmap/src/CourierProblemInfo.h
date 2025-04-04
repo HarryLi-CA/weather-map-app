@@ -5,6 +5,6 @@ struct CourierProblemInfo
 {
     const float turn_penalty;
     const std::vector<DeliveryInf>* deliveries;
-    conststd::vector<IntersectionIdx>* depots;
+    const std::vector<IntersectionIdx>* depots;
 };
 

@@ -88,21 +88,6 @@ int main(int argc, char** argv) {
     //Clean-up the map data and related data structures
     loadFeatures();
     drawMap();
-    for(int i = 0; i < 100; i++){
-        vector<int> path;
-        vector<DeliveryInf> deliveries;
-        vector<IntersectionIdx> depots;
-        randomIntersections(path, deliveries, depots, 10);
-        vector<int> path3 = path;
-        CourierProblemInfo cPI = {0,&deliveries,&depots};
-        double oldTime = getTravelTime(path,cPI);
-        optimize2Opt(path,cPI);
-        optimize3Opt(path3,cPI);
-        double newTime = getTravelTime(path, cPI);
-        double newTime3 = getTravelTime(path3, cPI);
-        std::cout << oldTime << "s -> " << newTime << "s -> " << newTime3 << "s" << endl;
-        std::cout << "Closing map\n";
-    }
     //draw graphical interface
     closeMap(); 
 

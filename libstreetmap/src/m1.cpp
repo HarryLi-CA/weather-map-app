@@ -73,7 +73,7 @@ int numStreets = 0;
 //New for M4
 const double kDefaultTurnPenalty = 10;
 //number of clusters of intersections to create
-const int numClusters = 100;
+const int numClusters = 25; //set to 25 for now so that loading isnt crazy long
 //Array of vectors of intersections, the index of the array corresponds with a cluster, each cluster has a vector of intersections ascociated with it
 static vector<vector<IntersectionIdx>> clusters;
 //map with intersection index and clusterID
@@ -814,33 +814,33 @@ ClusterIdx getIntersectionCluster(IntersectionIdx intersection){
 
 void loadClusterTravelTimes(){
     
-    //for every cluster, find the lowest travel time to every other cluster
-    for(int startCluster = 0; startCluster < numClusters; startCluster++){
+    // //for every cluster, find the lowest travel time to every other cluster
+    // for(int startCluster = 0; startCluster < numClusters; startCluster++){
 
-        //look at every intersection in the cluster to see what could get the lowest time
-        int numStartIntersections = clusters[startCluster].size();
-        for(int startClusterIntersection = 0; startClusterIntersection < numStartIntersections; startClusterIntersection++){
+    //     //look at every intersection in the cluster to see what could get the lowest time
+    //     int numStartIntersections = clusters[startCluster].size();
+    //     for(int startClusterIntersection = 0; startClusterIntersection < numStartIntersections; startClusterIntersection++){
             
-            //find the travel time between a starting intersection and an ending intersection in every cluster
-            for(int endCluster = 0; endCluster < numClusters; endCluster++){
+    //         //find the travel time between a starting intersection and an ending intersection in every cluster
+    //         for(int endCluster = 0; endCluster < numClusters; endCluster++){
 
-                if(endCluster != startCluster){
+    //             if(endCluster != startCluster){
 
-                    //find travel time for every intersection in the other cluster
-                    int numEndIntersections = clusters[endCluster].size();
-                    for(int endClusterIntersection = 0; endClusterIntersection < numEndIntersections; endClusterIntersection++){
+    //                 //find travel time for every intersection in the other cluster
+    //                 int numEndIntersections = clusters[endCluster].size();
+    //                 for(int endClusterIntersection = 0; endClusterIntersection < numEndIntersections; endClusterIntersection++){
 
-                        std::vector<StreetSegmentIdx> path = findPathBetweenIntersections(kDefaultTurnPenalty, {clusters[startCluster][startClusterIntersection],clusters[endCluster][endClusterIntersection]});
-                        double travelTime = computePathTravelTime(kDefaultTurnPenalty, path);
+    //                     std::vector<StreetSegmentIdx> path = findPathBetweenIntersections(kDefaultTurnPenalty, {clusters[startCluster][startClusterIntersection],clusters[endCluster][endClusterIntersection]});
+    //                     double travelTime = computePathTravelTime(kDefaultTurnPenalty, path);
 
-                        if((endClusterIntersection == 0 && startClusterIntersection == 0) ||  travelTime <= clusterTravelTimes[{startCluster,endCluster}]){
-                            clusterTravelTimes[{startCluster,endCluster}] = travelTime;
-                        }
-                    }
-                }
-            }
-        }
-    }
+    //                     if((endClusterIntersection == 0 && startClusterIntersection == 0) ||  travelTime <= clusterTravelTimes[{startCluster,endCluster}]){
+    //                         clusterTravelTimes[{startCluster,endCluster}] = travelTime;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 }
 
 //Finds the lowest travel time between every cluster by using the intersections on the edges of the clusters

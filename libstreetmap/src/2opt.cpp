@@ -104,17 +104,32 @@ void optimal3EdgeReconstruction(int firstEdgeIndex, int secondEdgeIndex, int thi
 {
     mutexFlag.lock();
     vector<IntersectionIdx> pathCopy = path;
+    int n = problemInfo.deliveries->size();
     mutexFlag.unlock();
     vector<IntersectionIdx> newPath = threeoptSwap(pathCopy, firstEdgeIndex, secondEdgeIndex, thirdEdgeIndex, firstEdgeDestination, secondEdgeDestination, thirdEdgeDestination);
     if(!validPath(newPath, problemInfo)){return;}
-    double newTime = getTravelTime(newPath, problemInfo);
-    mutexFlag.lock();
-    if(newTime < bestTime)
+    for(int i = 0; i <= newPath.size(); i++)
     {
-        bestTime = newTime;
-        bestRoute = newPath;
+        //to test all starts, shift the vector by one
+        if(i > 0)
+        {
+            int temp = newPath[0];
+            for(int i = 0; i < newPath.size() - 1; i++)
+            {
+                newPath[i] = newPath[i + 1];
+            }
+            newPath[newPath.size() - 1] = temp;
+        }
+        if(newPath[0] >= n){continue;}
+        double newTime = getTravelTime(newPath, problemInfo);
+        mutexFlag.lock();
+        if(newTime < bestTime)
+        {
+            bestTime = newTime;
+            bestRoute = newPath;
+        }
+        mutexFlag.unlock();
     }
-    mutexFlag.unlock();
 }
 
 void basic2NodeReconstruction(int firstNode, int secondNode, vector<IntersectionIdx>& path, CourierProblemInfo problemInfo,  double& oldTime, double& improvement)
@@ -124,16 +139,30 @@ void basic2NodeReconstruction(int firstNode, int secondNode, vector<Intersection
     mutexFlag.unlock();
     vector<IntersectionIdx> newPath = twooptSwap(pathCopy, firstNode, secondNode);
     if(!validPath(newPath, problemInfo)){return;}
-    double newTime = getTravelTime(newPath, problemInfo);
-    mutexFlag.lock();
-    double localImprovement =  oldTime - newTime;
-    if(localImprovement > improvement)
+    for(int i = 0; i <= newPath.size(); i++)
     {
-        path = newPath; //set path to better path
-        oldTime = newTime; //set time of old best path to time of new best path
-        improvement = localImprovement;
+        //to test all starts, shift the vector by one
+        if(i > 0)
+        {
+            int temp = newPath[0];
+            for(int i = 0; i < newPath.size() - 1; i++)
+            {
+                newPath[i] = newPath[i + 1];
+            }
+            newPath[newPath.size() - 1] = temp;
+        }
+        if(newPath[0] >= n){continue;}
+        double newTime = getTravelTime(newPath, problemInfo);
+        mutexFlag.lock();
+        double localImprovement =  oldTime - newTime;
+        if(localImprovement > improvement)
+        {
+            path = newPath; //set path to better path
+            oldTime = newTime; //set time of old best path to time of new best path
+            improvement = localImprovement;
+        }
+        mutexFlag.unlock();
     }
-    mutexFlag.unlock();
 }
 
 bool validPath(vector<IntersectionIdx>& path,CourierProblemInfo problemInfo)

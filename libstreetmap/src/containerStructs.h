@@ -15,10 +15,26 @@ struct StreetPairHash {
     }
 };
 
+//Hash function that allows pairs to be inserted into a unordered_map
+struct PairHash {
+    size_t operator () (const std::pair<int, int>& pair) const {
+    auto hash1 = hash<StreetIdx>{}(pair.first);
+    auto hash2 = hash<StreetIdx>{}(pair.second);
+    return hash1 ^ hash2;
+    }
+};
+
 //Allows pairs to be equated also in any order
 struct StreetPairEqual {
     bool operator () (const std::pair<StreetIdx, StreetIdx>& streetPair1, const std::pair<StreetIdx, StreetIdx>& streetPair2) const {
     return (streetPair1.first == streetPair2.first && streetPair1.second == streetPair2.second) || (streetPair1.first == streetPair2.second && streetPair1.second == streetPair2.first);
+    }
+};
+
+//Allows pairs to be equated, order dependent
+struct PairEqual {
+    bool operator () (const std::pair<int, int>& pair1, const std::pair<int, int>& pair2) const {
+    return (pair1.first == pair2.first && pair1.second == pair2.second);
     }
 };
 

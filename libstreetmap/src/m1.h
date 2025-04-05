@@ -172,3 +172,19 @@ IntersectionIdx findOppositeIntersection(IntersectionIdx intersection_id, Street
 //Helper function to return cached street segment points
 std::vector<LatLon>* getStreetSegmentPoints(StreetSegmentIdx streetSegmentIndex);
 std::vector<StreetSegmentIdx>* getIntersectionStreetSegments(IntersectionIdx intersectionIndex);
+
+
+typedef int ClusterIdx; //0 to k-1
+
+//Creates k number of clusters to organize intersectionIdxs geographically
+void loadClusters(int k);
+
+//Return a intersection's clusterIdx
+ClusterIdx getIntersectionCluster(IntersectionIdx intersection);
+
+//Finds lowest travel times between every cluster
+void loadClusterTravelTimes();
+void loadClusterTravelTimesByEdges();
+
+//Return the lowest travel time between two clusters
+double getClustersTravelTime(ClusterIdx startCluster, ClusterIdx endCluster);

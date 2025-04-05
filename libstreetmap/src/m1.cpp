@@ -73,7 +73,7 @@ int numStreets = 0;
 //New for M4
 const double kDefaultTurnPenalty = 10;
 //number of clusters of intersections to create
-int numClusters = 8;
+const int numClusters = 100;
 //Array of vectors of intersections, the index of the array corresponds with a cluster, each cluster has a vector of intersections ascociated with it
 static vector<vector<IntersectionIdx>> clusters;
 //map with intersection index and clusterID
@@ -729,7 +729,7 @@ void loadClusters(int k){
             intersectionToCluster[currIntersection] = closestCentroid;
         }
 
-        cout << "Clusters Sizes: ";
+        //cout << "Clusters Sizes: ";
 
         //find the new centroid of each cluster
         for(int currCluster = 0; currCluster < k; currCluster++){
@@ -738,7 +738,7 @@ void loadClusters(int k){
             double meanLongitude = 0.0;
             
             int numClusterIntersections = clusters[currCluster].size();
-            cout << currCluster << ": " << numClusterIntersections << ",  ";
+            //cout << currCluster << ": " << numClusterIntersections << ",  ";
 
             double LargestLat, LargestLon, SmallestLat, SmallestLon;
             int LargestLatIntersection, LargestLonIntersection, SmallestLatIntersection, SmallestLonIntersection;
@@ -780,7 +780,7 @@ void loadClusters(int k){
             //New centroid located at the mean position of all intersections in cluster
             centroids[currCluster] = LatLon(meanLattitude/numClusterIntersections,meanLongitude/numClusterIntersections);
         }
-        cout << endl;
+        //cout << endl;
 
         //compare centroids to previous centroids to see if they have convergerd
         bool flag = true;

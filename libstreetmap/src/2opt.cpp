@@ -3,6 +3,7 @@
 #include "m2.h"
 #include "m3.h"
 #include "m4.h"
+#include "m4Helper.h"
 #include "ezgl/point.hpp"
 #include "stdio.h"
 #include "OSMAPIHelper.h"
@@ -57,24 +58,39 @@ vector<int> threeoptSwap(vector<int>& path, int indexA, int indexB, int indexC, 
 
 map<pair<IntersectionIdx,IntersectionIdx>, double> timeCache;
 
-double getTravelTime(vector<int>& path, vector<DeliveryInf>& deliveries, double turnPenalty)
+double getTravelTime(vector<int>& path, CourierProblemInfo problemInfo)
 {
     double totalTime = 0;
-    int n = deliveries.size();
+    int n = (*problemInfo.deliveries).size();
     //find fastest route between every point
     for(int i = 0; i < path.size() - 1; i++)
     {
-        DeliveryInf dFrom = deliveries[path[i]%n];
-        DeliveryInf dTo = deliveries[path[i+1]%n];
+        mutexFlag.lock();
+        DeliveryInf dFrom = (*problemInfo.deliveries)[path[i]%n];
+        DeliveryInf dTo = (*problemInfo.deliveries)[path[i+1]%n];
+        mutexFlag.unlock();
         IntersectionIdx from = (path[i] < n) ? dFrom.pickUp : dFrom.dropOff;
         IntersectionIdx to = (path[i+1] < n) ? dTo.pickUp : dTo.dropOff;
+
+        //add time to closest depot at start and end
+        if(i == 0)
+        {
+            double closestTime = closestDepot(from,  problemInfo, true).second;
+            totalTime += closestTime;
+        }
+        if(i == path.size() - 2)
+        {
+            double closestTime = closestDepot(to,  problemInfo, false).second;
+            totalTime += closestTime;
+        }
+        
 
         if(from == to){continue;}
         mutexFlag.lock();
         double fastestTime = timeCache[{from, to}];
         mutexFlag.unlock();
         if(fastestTime == 0){
-            fastestTime = computePathTravelTime(turnPenalty, findPathBetweenIntersections(turnPenalty, {from, to}));
+            fastestTime = computePathTravelTime(problemInfo.turn_penalty, findPathBetweenIntersections(problemInfo.turn_penalty, {from, to}));
             mutexFlag.lock();
             timeCache[{from, to}] = fastestTime;
             mutexFlag.unlock();
@@ -84,15 +100,14 @@ double getTravelTime(vector<int>& path, vector<DeliveryInf>& deliveries, double 
     return totalTime;
 }
 
-void optimal3EdgeReconstruction(int firstEdgeIndex, int secondEdgeIndex, int thirdEdgeIndex, int firstEdgeDestination, int secondEdgeDestination, int thirdEdgeDestination, vector<IntersectionIdx>& path, vector<DeliveryInf>& deliveries, double turnPenalty, double& bestTime, vector<IntersectionIdx>& bestRoute)
+void optimal3EdgeReconstruction(int firstEdgeIndex, int secondEdgeIndex, int thirdEdgeIndex, int firstEdgeDestination, int secondEdgeDestination, int thirdEdgeDestination, vector<IntersectionIdx>& path, CourierProblemInfo problemInfo, double& bestTime, vector<IntersectionIdx>& bestRoute)
 {
     mutexFlag.lock();
     vector<IntersectionIdx> pathCopy = path;
-    vector<DeliveryInf> copyDels = deliveries;
     mutexFlag.unlock();
     vector<IntersectionIdx> newPath = threeoptSwap(pathCopy, firstEdgeIndex, secondEdgeIndex, thirdEdgeIndex, firstEdgeDestination, secondEdgeDestination, thirdEdgeDestination);
-    if(!validPath(newPath, copyDels)){return;}
-    double newTime = getTravelTime(newPath, deliveries, turnPenalty);
+    if(!validPath(newPath, problemInfo)){return;}
+    double newTime = getTravelTime(newPath, problemInfo);
     mutexFlag.lock();
     if(newTime < bestTime)
     {
@@ -102,15 +117,14 @@ void optimal3EdgeReconstruction(int firstEdgeIndex, int secondEdgeIndex, int thi
     mutexFlag.unlock();
 }
 
-void basic2NodeReconstruction(int firstNode, int secondNode, vector<IntersectionIdx>& path, vector<DeliveryInf>& deliveries, double turnPenalty, double& oldTime, double& improvement)
+void basic2NodeReconstruction(int firstNode, int secondNode, vector<IntersectionIdx>& path, CourierProblemInfo problemInfo,  double& oldTime, double& improvement)
 {
     mutexFlag.lock();
-    vector<IntersectionIdx> copyPath = path;
-    vector<DeliveryInf> copyDels = deliveries;
+    vector<IntersectionIdx> pathCopy = path;
     mutexFlag.unlock();
-    vector<IntersectionIdx> newPath = twooptSwap(path, firstNode, secondNode);
-    if(!validPath(newPath, copyDels)){return;}
-    double newTime = getTravelTime(newPath, deliveries, turnPenalty);
+    vector<IntersectionIdx> newPath = twooptSwap(pathCopy, firstNode, secondNode);
+    if(!validPath(newPath, problemInfo)){return;}
+    double newTime = getTravelTime(newPath, problemInfo);
     mutexFlag.lock();
     double localImprovement =  oldTime - newTime;
     if(localImprovement > improvement)
@@ -122,14 +136,14 @@ void basic2NodeReconstruction(int firstNode, int secondNode, vector<Intersection
     mutexFlag.unlock();
 }
 
-bool validPath(vector<IntersectionIdx>& path,vector<DeliveryInf>& deliveries)
+bool validPath(vector<IntersectionIdx>& path,CourierProblemInfo problemInfo)
 {
-    //assume deliveries are in order of pickup
+    //assume (*problemInfo.deliveries) are in order of pickup
     int deliveryIndex = 0;
     map<int, bool> seen;
     for(int i = 0; i < path.size(); i++)
     {
-        if(path[i] > deliveries.size() && seen[path[i] - deliveries.size()] == false)
+        if(path[i] > (*problemInfo.deliveries).size() && seen[path[i] - (*problemInfo.deliveries).size()] == false)
         {
             return false;
         }
@@ -138,7 +152,7 @@ bool validPath(vector<IntersectionIdx>& path,vector<DeliveryInf>& deliveries)
     return true;
 } 
 
-void optimize3Opt(vector<int>& path, double turnPenalty, vector<DeliveryInf>& deliveries)
+void optimize3Opt(vector<int>& path,  CourierProblemInfo problemInfo)
 {
     double improvement = DBL_MAX;
     double oldTime = 0;
@@ -147,7 +161,7 @@ void optimize3Opt(vector<int>& path, double turnPenalty, vector<DeliveryInf>& de
     {
         improvement = 0;
         //go through all eligible nodes to make improvements
-        double oldTime = getTravelTime(path, deliveries, turnPenalty);
+        double oldTime = getTravelTime(path, problemInfo);
 
         
 
@@ -178,7 +192,7 @@ void optimize3Opt(vector<int>& path, double turnPenalty, vector<DeliveryInf>& de
                                 while(activeThreadCount(threads) < 30);
                                 thread t(optimal3EdgeReconstruction,firstEdgeIndex, secondEdgeIndex, thirdEdgeIndex, 
                                 toIndices[firstEdgeDestinationIndex], toIndices[secondEdgeDestinationIndex], toIndices[thirdEdgeDestinationIndex],
-                                ref(path), ref(deliveries), turnPenalty, ref(bestTime), ref(bestRoute));
+                                ref(path), problemInfo, ref(bestTime), ref(bestRoute));
                                 
                                 threads.push_back(move(t));
                                 
@@ -219,7 +233,7 @@ void optimize3Opt(vector<int>& path, double turnPenalty, vector<DeliveryInf>& de
 
 
 
-void optimize2Opt(vector<int>& path, double turnPenalty, vector<DeliveryInf>& deliveries)
+void optimize2Opt(vector<int>& path,  CourierProblemInfo problemInfo)
 {
     double improvement = DBL_MAX;
     double oldTime = 0;
@@ -229,7 +243,7 @@ void optimize2Opt(vector<int>& path, double turnPenalty, vector<DeliveryInf>& de
     {
         improvement = 0;
         //go through all eligible nodes to make improvements
-        double oldTime = getTravelTime(path, deliveries, turnPenalty);
+        double oldTime = getTravelTime(path, problemInfo);
         vector<thread> threads;
         for(int i = 0; i < pathSize - 1; i++)
         {
@@ -237,7 +251,7 @@ void optimize2Opt(vector<int>& path, double turnPenalty, vector<DeliveryInf>& de
             {
                 while(activeThreadCount(threads) < 30);
                 
-                thread t(basic2NodeReconstruction, i, j, ref(path), ref(deliveries), turnPenalty, ref(oldTime), ref(improvement));
+                thread t(basic2NodeReconstruction, i, j, ref(path), problemInfo, ref(oldTime), ref(improvement));
                 threads.push_back(move(t));
                 if(forceQuit){break;}
             }
@@ -254,7 +268,7 @@ void optimize2Opt(vector<int>& path, double turnPenalty, vector<DeliveryInf>& de
     }
 }
 
-void randomIntersections(vector<int>& toAdd, vector<DeliveryInf>& deliveries, int size)
+void randomIntersections(vector<int>& toAdd, std::vector<DeliveryInf>& deliveries, vector<IntersectionIdx>& depots, int size)
 {
     //srand(time(NULL));
     vector<IntersectionIdx> list;
@@ -265,6 +279,8 @@ void randomIntersections(vector<int>& toAdd, vector<DeliveryInf>& deliveries, in
         toAdd.push_back(i);
         toAdd.push_back(i + size);
         deliveries.push_back({pick, drop});
+
+        depots.push_back(rand()%osmhelp::getNumIntersections());
     }
     return;
 }

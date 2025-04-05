@@ -24,7 +24,10 @@
 #include "m1.h"
 #include "m2.h"
 #include "m3.h"
+#include "m4.h"
 #include "2opt.h"
+#include <vector>
+#include "CourierProblemInfo.h"
 
 //Program exit codes
 constexpr int SUCCESS_EXIT_CODE = 0;        //Everyting went OK
@@ -85,7 +88,6 @@ int main(int argc, char** argv) {
     //Clean-up the map data and related data structures
     loadFeatures();
     drawMap();
-    std::cout << "Closing map\n";
     //draw graphical interface
     closeMap(); 
 

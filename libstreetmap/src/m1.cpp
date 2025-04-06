@@ -18,11 +18,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
- 
+#pragma once
 #include <iostream>
 #include "m1.h"
 #include "m2.h"
 #include "m3.h"
+#include "m4Helper.h"
 #include "loading_utils.h"
 #include "nodeIDHelper.h"
 #include "StreetsDatabaseAPI.h"
@@ -39,8 +40,16 @@
 #include <map>
 #include <iomanip>
 #include <set>
+#include <mutex>
+#include <chrono>
 
 using namespace std;
+using std::chrono::high_resolution_clock;
+using std::chrono::duration_cast;
+using std::chrono::duration;
+using std::chrono::milliseconds;
+
+mutex mutexLocker;
 //cache vectors
 //takes intersection index and returns vector of indices of all connected street segments
 static vector<vector<StreetSegmentIdx>*> intersectionToStreetSegments;
@@ -69,6 +78,7 @@ static vector<double> travelTimeCache;
 int numIntersections = 0;
 int numStreetSegments = 0;
 int numStreets = 0;
+int activeThreads = 0;
 
 //New for M4
 const double kDefaultTurnPenalty = 10;
@@ -674,15 +684,101 @@ std::vector<StreetSegmentIdx>* getIntersectionStreetSegments(IntersectionIdx int
     return intersectionToStreetSegments[intersectionIndex]; //get pointer for curve point vector of street segments and return it
 }
 
+void assignCluster(IntersectionIdx currIntersection, vector<LatLon> centroids, int k)
+{
+    int closestCentroid;
+    double lowestCentroidDistance;
+    mutexLocker.lock();
+    //cout << "starting" << endl;
+    LatLon point1 = intersectionPoints[currIntersection];
+    mutexLocker.unlock();
+    //Find the distance between the current intersection and every centroid
+    for(int currCentroid = 0; currCentroid < k; currCentroid++){
+        LatLon point2 = centroids[currCentroid];
+        double distanceFromCentroid = findDistanceBetweenTwoPoints(point1,point2);
+        
+        //identify the closest centroid to that intersection
+        if((currCentroid == 0) || (distanceFromCentroid <= lowestCentroidDistance)){
+
+            closestCentroid = currCentroid;
+            lowestCentroidDistance = distanceFromCentroid;
+        }
+    }
+    mutexLocker.lock();
+    //cout << "done!" << endl;
+    clusters[closestCentroid].push_back(currIntersection);
+    intersectionToCluster[currIntersection] = closestCentroid;
+    mutexLocker.unlock();
+    return;
+}
+
+void findCentroid(int currCluster, vector<LatLon>& centroids)
+{
+    double meanLattitude = 0.0;
+    double meanLongitude = 0.0;
+    
+    mutexLocker.lock();
+    int numClusterIntersections = clusters[currCluster].size();
+    mutexLocker.unlock();
+    //cout << currCluster << ": " << numClusterIntersections << ",  ";
+
+    double LargestLat, LargestLon, SmallestLat, SmallestLon;
+    int LargestLatIntersection, LargestLonIntersection, SmallestLatIntersection, SmallestLonIntersection;
+
+    for(int i = 0; i < numClusterIntersections; i++){
+
+        mutexLocker.lock();
+        IntersectionIdx currIntersection = clusters[currCluster][i];
+
+        //calculate mean position
+        LatLon currPosition = intersectionPoints[currIntersection];
+        mutexLocker.unlock();
+
+        double currLat = currPosition.latitude();
+        double currLon = currPosition.longitude();
+
+        meanLattitude += currLat;
+        meanLongitude += currLon;
+
+        //identify the edges of the cluster
+        if((i == 0) || currLat >= LargestLat){
+            LargestLat = currLat;
+            LargestLatIntersection = currIntersection;
+        }
+        if((i == 0) || currLon >= LargestLon){
+            LargestLon = currLon;
+            LargestLonIntersection = currIntersection;
+        }
+        if((i == 0) || currLat <= SmallestLat){
+            SmallestLat = currLat;
+            SmallestLatIntersection = currIntersection;
+        }
+        if((i == 0) || currLon <= SmallestLon){
+            SmallestLon = currLon;
+            SmallestLonIntersection = currIntersection;
+        }
+    }
+    LatLon meanPos = LatLon(meanLattitude/numClusterIntersections,meanLongitude/numClusterIntersections);
+    mutexLocker.lock();
+    clusterEdges.push_back({LargestLatIntersection,LargestLonIntersection,SmallestLatIntersection,SmallestLonIntersection});
+
+    //New centroid located at the mean position of all intersections in cluster
+    centroids[currCluster] = meanPos;
+    activeThreads--;
+    mutexLocker.unlock();
+}
 
 //Used in loadMap to group intersections on map into k number of clusters
 void loadClusters(int k){
-
+    
     clusters.resize(k);
 
     //Each cluster has a centroid (Center point of cluster)
-    LatLon centroids[k];
-    LatLon prevCentroids[k];
+    vector<LatLon> centroids;
+    vector<LatLon> prevCentroids;
+
+    centroids.resize(k);
+    prevCentroids.resize(k);
 
     //initialize centroids as random intersections
     for(int i = 0; i < k; i++){
@@ -706,86 +802,44 @@ void loadClusters(int k){
         }
         
         //Assign every intersection to a cluster
-        for(int currIntersection = 0; currIntersection < numIntersections; currIntersection++){
-
-            int closestCentroid;
-            double lowestCentroidDistance;
-            
-            //Find the distance between the current intersection and every centroid
-            for(int currCentroid = 0; currCentroid < k; currCentroid++){
-
-                double distanceFromCentroid = findDistanceBetweenTwoPoints(intersectionPoints[currIntersection],centroids[currCentroid]);
-                
-                //identify the closest centroid to that intersection
-                if((currCentroid == 0) || (distanceFromCentroid <= lowestCentroidDistance)){
-
-                    closestCentroid = currCentroid;
-                    lowestCentroidDistance = distanceFromCentroid;
-                }
-            }
-
-            clusters[closestCentroid].push_back(currIntersection);
-
-            intersectionToCluster[currIntersection] = closestCentroid;
+        cout << "assigning clusters" << endl;
+        auto t1 = std::chrono::high_resolution_clock::now();
+        vector<thread> threads;
+        
+        for(IntersectionIdx currIntersection = 0; currIntersection < numIntersections; currIntersection++){
+            limitThreadCount(threads, 30);
+            //cout << "adding thread with current count at " << threads.size() << endl;
+            thread t(assignCluster, currIntersection, centroids, k);
+            threads.push_back(move(t));
         }
 
+
+        for(int threadIndex = 0; threadIndex < threads.size(); threadIndex++)
+        {
+            threads[threadIndex].join();
+            //cout << "thread " << threadIndex << "/" << threads.size() << " done" << endl;
+        }
         //cout << "Clusters Sizes: ";
 
+        vector<thread> centroidThreads;
         //find the new centroid of each cluster
         for(int currCluster = 0; currCluster < k; currCluster++){
-            
-            double meanLattitude = 0.0;
-            double meanLongitude = 0.0;
-            
-            int numClusterIntersections = clusters[currCluster].size();
-            //cout << currCluster << ": " << numClusterIntersections << ",  ";
+            limitThreadCount(centroidThreads, 30);
+            thread t(findCentroid, currCluster, ref(centroids));
+            centroidThreads.push_back(move(t));
+        }
 
-            double LargestLat, LargestLon, SmallestLat, SmallestLon;
-            int LargestLatIntersection, LargestLonIntersection, SmallestLatIntersection, SmallestLonIntersection;
-
-            for(int i = 0; i < numClusterIntersections; i++){
-
-                IntersectionIdx currIntersection = clusters[currCluster][i];
-
-                //calculate mean position
-                LatLon currPosition = intersectionPoints[currIntersection];
-
-                double currLat = currPosition.latitude();
-                double currLon = currPosition.longitude();
-
-                meanLattitude += currLat;
-                meanLongitude += currLon;
-
-                //identify the edges of the cluster
-                if((i == 0) || currLat >= LargestLat){
-                    LargestLat = currLat;
-                    LargestLatIntersection = currIntersection;
-                }
-                if((i == 0) || currLon >= LargestLon){
-                    LargestLon = currLon;
-                    LargestLonIntersection = currIntersection;
-                }
-                if((i == 0) || currLat <= SmallestLat){
-                    SmallestLat = currLat;
-                    SmallestLatIntersection = currIntersection;
-                }
-                if((i == 0) || currLon <= SmallestLon){
-                    SmallestLon = currLon;
-                    SmallestLonIntersection = currIntersection;
-                }
-            }
-
-            clusterEdges.push_back({LargestLatIntersection,LargestLonIntersection,SmallestLatIntersection,SmallestLonIntersection});
-
-            //New centroid located at the mean position of all intersections in cluster
-            centroids[currCluster] = LatLon(meanLattitude/numClusterIntersections,meanLongitude/numClusterIntersections);
+        for(int threadIndex = 0; threadIndex < centroidThreads.size(); threadIndex++)
+        {
+            centroidThreads[threadIndex].join();
         }
         //cout << endl;
 
         //compare centroids to previous centroids to see if they have convergerd
         bool flag = true;
-        for(int currCluster = 0; currCluster < k; currCluster++){
 
+        vector<thread> compareCentroidThreads;
+        for(int currCluster = 0; currCluster < k; currCluster++){
             if(!(centroids[currCluster] == prevCentroids[currCluster])){
                 
                 flag = false;
@@ -795,6 +849,13 @@ void loadClusters(int k){
         }
 
         centroidsConvereged = flag;
+        
+        auto t2 = std::chrono::high_resolution_clock::now();
+
+        int ms_int = duration_cast<milliseconds>(t2 - t1).count();
+
+        cout << "done assinging clusters in " << ms_int << " ms" << endl;
+
     }
 
 }

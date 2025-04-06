@@ -3,6 +3,7 @@
 #include "m2.h"
 #include "m3.h"
 #include "m4.h"
+#include "m1.h"
 #include "m4Helper.h"
 #include "ezgl/point.hpp"
 #include "stdio.h"
@@ -35,19 +36,6 @@ vector<int> twooptSwap(vector<int>& path, int indexA, int indexB)
     return temp;
 }
 
-int activeThreadCount(vector<thread>& threads)
-{
-    int threadCount = 0;
-    for(int i = 0; i < threads.size(); i++)
-    {
-        if(!threads[i].joinable())
-        {
-            threadCount++;
-        }
-    }
-    return threadCount;
-}
-
 vector<int> threeoptSwap(vector<int>& path, int indexA, int indexB, int indexC, int Ato, int Bto, int Cto)
 {
     vector<int> temp = twooptSwap(path, indexA, Ato);
@@ -55,8 +43,6 @@ vector<int> threeoptSwap(vector<int>& path, int indexA, int indexB, int indexC, 
     temp = twooptSwap(temp, indexC, Cto);
     return temp;
 }
-
-map<pair<IntersectionIdx,IntersectionIdx>, double> timeCache;
 
 double getTravelTime(vector<int>& path, CourierProblemInfo problemInfo)
 {
@@ -86,15 +72,13 @@ double getTravelTime(vector<int>& path, CourierProblemInfo problemInfo)
         
 
         if(from == to){continue;}
+
         mutexFlag.lock();
-        double fastestTime = timeCache[{from, to}];
+        ClusterIdx fromCluster = getIntersectionCluster(from);
+        ClusterIdx toCluster = getIntersectionCluster(to);
+        double fastestTime = getClustersTravelTime(fromCluster, toCluster);
         mutexFlag.unlock();
-        if(fastestTime == 0){
-            fastestTime = computePathTravelTime(problemInfo.turn_penalty, findPathBetweenIntersections(problemInfo.turn_penalty, {from, to}));
-            mutexFlag.lock();
-            timeCache[{from, to}] = fastestTime;
-            mutexFlag.unlock();
-        }
+
         totalTime += fastestTime;
     }
     return totalTime;
@@ -136,6 +120,7 @@ void basic2NodeReconstruction(int firstNode, int secondNode, vector<Intersection
 {
     mutexFlag.lock();
     vector<IntersectionIdx> pathCopy = path;
+    int n = problemInfo.deliveries->size();
     mutexFlag.unlock();
     vector<IntersectionIdx> newPath = twooptSwap(pathCopy, firstNode, secondNode);
     if(!validPath(newPath, problemInfo)){return;}
@@ -218,7 +203,7 @@ void optimize3Opt(vector<int>& path,  CourierProblemInfo problemInfo)
                             for(int thirdEdgeDestinationIndex = secondEdgeDestinationIndex; thirdEdgeDestinationIndex < 3; thirdEdgeDestinationIndex++)
                             {
                                 if(firstEdgeDestinationIndex == 0 && secondEdgeDestinationIndex == 0 && thirdEdgeDestinationIndex == 0){continue;} //in this case the path is the same
-                                while(activeThreadCount(threads) < 30);
+                                limitThreadCount(threads, 30);
                                 thread t(optimal3EdgeReconstruction,firstEdgeIndex, secondEdgeIndex, thirdEdgeIndex, 
                                 toIndices[firstEdgeDestinationIndex], toIndices[secondEdgeDestinationIndex], toIndices[thirdEdgeDestinationIndex],
                                 ref(path), problemInfo, ref(bestTime), ref(bestRoute));
@@ -278,8 +263,7 @@ void optimize2Opt(vector<int>& path,  CourierProblemInfo problemInfo)
         {
             for(int j = i + 2; j < pathSize; j++)
             {
-                while(activeThreadCount(threads) < 30);
-                
+                limitThreadCount(threads, 30);
                 thread t(basic2NodeReconstruction, i, j, ref(path), problemInfo, ref(oldTime), ref(improvement));
                 threads.push_back(move(t));
                 if(forceQuit){break;}

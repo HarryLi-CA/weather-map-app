@@ -70,19 +70,6 @@ int main(int argc, char** argv) {
 
     std::cout << "Successfully loaded map '" << map_path << "'\n";
 
-    // findStreetIdsFromPartialStreetName("Air");
-
-    // std::cout << "Closing map\n";
-    // closeMap(); 
-
-    // load_success = loadMap(map_path);
-    // if(!load_success) {
-    //     std::cerr << "Failed to load map '" << map_path << "'\n";
-    //     return ERROR_EXIT_CODE;
-    // }
-
-    // std::cout << "Successfully loaded map '" << map_path << "'\n";
-
     // //Clean-up the map data and related data structures
 
     //Clean-up the map data and related data structures

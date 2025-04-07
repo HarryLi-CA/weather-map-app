@@ -40,6 +40,7 @@ PathFinder::PathFinder(){
     //mSTOpposite = new MinSegmentTree(osmhelp::getNumStreetSegments()*2);
     //cout << "done start: " <<(clock() -t)/(double)CLOCKS_PER_SEC << endl;
 }
+
 PathFinder::~PathFinder(){
     //clock_t t = clock();
     //cout<<"begin free" << endl;
@@ -63,6 +64,29 @@ PathFinder::~PathFinder(){
     
     // delete mSTCorrect;
     // delete mSTOpposite;
+}
+
+void PathFinder::clear()
+{
+    for(int i =0; i < closed1.size(); i++){
+        //if(!closed1[i]->isPath)
+            delete closed1[i];
+        closed1[i] = nullptr;
+    }
+    //cout<<"begin free 2" << endl;
+    for(int i =0; i < closed2.size(); i++){
+        //if(!closed2[i]->isPath)
+            delete closed2[i];
+        closed2[i] = nullptr;
+    }
+    //cout<< "free closed" << endl;
+    for(int i =0; i < open1.currentItemCount; i++)
+        delete open1.items[i];
+    for(int i =0; i < open2.currentItemCount; i++)
+        delete open2.items[i];
+
+    closed1.clear();
+    closed2.clear();
 }
 
 vector<Point*> PathFinder::calculatePathArray(const double turn_penalty, const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids){

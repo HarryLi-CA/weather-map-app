@@ -33,16 +33,17 @@ std::vector<CourierSubPath> travelingCourier(
     getCheapTravelTime(path, cPI); //cache path travel time
     cout << "switching to simulated annealing" << endl;
     
-    double timeLimit = 30;
+    double timeLimit = 40;
     setForceQuit(false);
     atomic<bool> isForceQuit = false;
 
     int maxSAThreads = 30;
+    int explorationThreads = 30;
     vector<thread> annealingThreads;
 
-    for(int i = 0; i < maxSAThreads; i++)
+    for(int i = 0; i < maxSAThreads/explorationThreads; i++)
     {
-        thread sA(simulatedAnnealing, ref(path), ref(cPI), ref(isForceQuit), deliveries);
+        thread sA(simulatedAnnealing, ref(path), ref(cPI), ref(isForceQuit), deliveries, explorationThreads);
         annealingThreads.push_back(move(sA));
     }
     
@@ -61,7 +62,7 @@ std::vector<CourierSubPath> travelingCourier(
         }
     }
     isForceQuit = true;
-    for(int i = 0; i < maxSAThreads; i++)
+    for(int i = 0; i < maxSAThreads/explorationThreads; i++)
     {
         annealingThreads[i].join();
     }

@@ -312,7 +312,7 @@ void optimize2Opt(vector<int>& path,  CourierProblemInfo problemInfo)
     done = false;
     mutexFlag.unlock();
 
-    while(improvement > 0)
+    while(improvement > 1000)
     {
         improvement = 0;
         //go through all eligible nodes to make improvements
@@ -336,7 +336,7 @@ void optimize2Opt(vector<int>& path,  CourierProblemInfo problemInfo)
         {
             threads[tIndex].join();
         }
-        //cout << "improvement = " << improvement << endl;
+        cout << "improvement = " << improvement << endl;
 
         if(forceQuit){cout << "force quit" << endl; break;}
     }

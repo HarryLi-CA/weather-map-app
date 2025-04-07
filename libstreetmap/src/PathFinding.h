@@ -62,4 +62,6 @@ class PathFinder{
     vector<Point*> getNeighbours(Point* current, double turn_penalty, bool isOpposite);
 
     double getMinGCost(bool isOpposite);
+
+    void clear();
 };

@@ -15,8 +15,10 @@ using namespace std;
 mutex annealingFlag;
 const double START_TEMP = 10000;
 const double END_TEMP = 1e-3;
-const double COOLING_RATE = 0.995;
-const int MAX_ITER = 10;
+const double COOLING_RATE = 0.999;
+const int MAX_ITER = 100;
+int finished = 0;
+int threadCount = 30;
 
 //swaoneighbourSolution
 vector<int> neighbourSolution(vector<int> route, const CourierProblemInfo& cPI) {
@@ -31,8 +33,34 @@ vector<int> neighbourSolution(vector<int> route, const CourierProblemInfo& cPI) 
     return {};
 }
 
+void exploreIteration(vector<int>& currRoute, double& currCost, double& bestCost, vector<int>& bestRoute, double temp, CourierProblemInfo cPI, atomic<bool> &forceQuit)
+{
+    for (int i = 0; i < MAX_ITER && !forceQuit; i++){
+        vector<int> newRoute = neighbourSolution(currRoute, cPI);
+        // cout<<"testskjdg"<<endl;
+        if(newRoute.size() > 0)
+        { 
+            // cout<<"test"<<endl;
+            double newCost = getCheapTravelTime(newRoute, cPI);
+            // cout<<"test2"<<endl;
+            double delta = newCost - currCost;
+
+            if (delta < 0 || exp(-delta / temp) > (double)rand() / RAND_MAX) {
+                annealingFlag.lock();
+                currRoute = newRoute;
+                currCost = newCost;
+                if (currCost < bestCost) {
+                    bestRoute = currRoute;
+                    bestCost = currCost;
+                }
+                annealingFlag.unlock();
+            }
+        }
+    }
+}
+
 vector<int> simulatedAnnealing(vector<int> &bestRoute
-, const CourierProblemInfo& cPI, atomic<bool> &forceQuit, vector<DeliveryInf> deliveryCopy) {
+, const CourierProblemInfo& cPI, atomic<bool> &forceQuit, vector<DeliveryInf> deliveryCopy, int explorationThreadCount) {
     annealingFlag.unlock();
     //cout << "start annealing" << endl;
     double bestCost = getCheapTravelTime(bestRoute, cPI);
@@ -62,36 +90,22 @@ vector<int> simulatedAnnealing(vector<int> &bestRoute
     }
 
     //cout << "done initial randomization" << endl;
-
+    vector<thread> explorationThreads;
     while (temp > END_TEMP && !forceQuit) {
-        for (int i = 0; i < MAX_ITER && !forceQuit; i++){
-                // cout<<"tests12345"<<endl;
-            vector<int> newRoute = neighbourSolution(currRoute, cPI);
-                // cout<<"testskjdg"<<endl;
-            if(newRoute.size() > 0)
-            {
-                // cout<<"test"<<endl;
-                double newCost = getCheapTravelTime(newRoute, cPI);
-                // cout<<"test2"<<endl;
-                double delta = newCost - currCost;
-
-                if (delta < 0 || exp(-delta / temp) > (double)rand() / RAND_MAX) {
-                    currRoute = newRoute;
-                    currCost = newCost;
-                    if (currCost < bestCost) {
-                        annealingFlag.lock();
-                        bestRoute = currRoute;
-                        bestCost = currCost;
-                        annealingFlag.unlock();
-                    }
-                }
-            }
-                // cout<<"test3"<<endl;
-        }
+        limitThreadCount(explorationThreads, explorationThreadCount);
+        thread thr(exploreIteration, ref(currRoute), ref(currCost), ref(bestCost), ref(bestRoute), temp, cPI, ref(forceQuit));
+        
+        explorationThreads.push_back(move(thr));
+            // cout<<"test3"<<endl;
         temp *= COOLING_RATE; // Reduce temperature
                 // cout<<"test4"<<endl;
     }
+    for(int threadIndex = 0; threadIndex < explorationThreads.size(); threadIndex++)
+    {
+        explorationThreads[threadIndex].join();
+    }
     //cout << "ending at temp " << temp << endl;
+    //annealingFlag.lock();
     forceQuit = true;
     //cout << temp << endl;
     return bestRoute;

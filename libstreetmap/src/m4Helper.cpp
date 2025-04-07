@@ -30,7 +30,7 @@ pair<IntersectionIdx, double> closestDepot(IntersectionIdx intIdx,const CourierP
     for (int i = 0; i < nDepots; i++)
     {
         IntersectionIdx curDepot = (*cPI.depots)[i];
-        double curDist = (isStart ? findDistanceBetweenTwoPoints(osmhelp::getIntersectionPosition(intIdx), osmhelp::getIntersectionPosition(curDepot)):  findDistanceBetweenTwoPoints(osmhelp::getIntersectionPosition(curDepot), osmhelp::getIntersectionPosition(intIdx)))/osmhelp::getSpeedLimitMaximum();
+        double curDist = isStart ? magnitude(osmhelp::getPoint2dOfIntersections(intIdx) - osmhelp::getPoint2dOfIntersections(curDepot)):  magnitude(osmhelp::getPoint2dOfIntersections(curDepot)- osmhelp::getPoint2dOfIntersections(intIdx));
         if(curDist < minTime){
             minTime = curDist;
             closeDepot = curDepot;

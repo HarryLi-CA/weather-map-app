@@ -205,6 +205,8 @@ bool validPath(vector<IntersectionIdx>& path,CourierProblemInfo problemInfo)
     int n = (*problemInfo.deliveries).size();
     for(int i = 0; i < path.size(); i++)
     {
+        if(seen[path[i]])
+            return false;
         if(path[i] >= n && seen[path[i] - n] == false)
         {
             return false;

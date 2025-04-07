@@ -71,7 +71,7 @@ std::vector<CourierSubPath> travelingCourier(
     
     cout << "switching to 2 opt" << endl;
 
-    timeLimit = 45;
+    timeLimit = 44.5;
 
     setForceQuit(false);
     thread twoOpt(optimize2Opt, ref(path), ref(cPI));
@@ -131,7 +131,7 @@ std::vector<CourierSubPath> travelingCourier(
         if(i == 0)
         {
             IntersectionIdx fromDepot = closestDepot(from, cPI, true).first;
-            cout<< fromDepot << endl;
+            //cout<< fromDepot << endl;
             vector<StreetSegmentIdx> fromPath = cachedPath(fromDepot, from, cPI);
             CourierSubPath fdSP{{fromDepot, from}, fromPath};
             realPath.push_back(fdSP);

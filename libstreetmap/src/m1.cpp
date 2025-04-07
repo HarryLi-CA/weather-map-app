@@ -135,11 +135,13 @@ bool loadMap(std::string map_streets_database_filename) {
         loadStreetSegmentPoint(streetSegmentPoints,streetSpeedLimitCache,streetSegmentIndex);
         loadStreetIntersections(streetToIntersections,streetToIntersectionsHelper,streetSegmentIndex);
     }
+    this_thread::sleep_for(1000s);
     //wait for all intersection threads
     cout << "done!" << endl;
 
     load_successful = true; //Make sure this is updated to reflect whether
                             //loading the map succeeded or failed
+
 
     return load_successful;
 }

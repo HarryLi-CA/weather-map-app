@@ -1,3 +1,4 @@
+#pragma once
 #include "m2.h"
 #include "ezgl/point.hpp"
 #include "stdio.h"

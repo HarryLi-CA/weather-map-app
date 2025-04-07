@@ -21,3 +21,4 @@ bool validPath(vector<IntersectionIdx>& path,CourierProblemInfo problemInfo); //
 void optimal3EdgeReconstruction(int firstEdgeIndex, int secondEdgeIndex, int thirdEdgeIndex, int firstEdgeDestination, int secondEdgeDestination, int thirdEdgeDestination, vector<IntersectionIdx>& path, CourierProblemInfo problemInfo, double& bestTime, vector<IntersectionIdx>& bestRoute); //helper function for multithreading 3opt
 void basic2NodeReconstruction(int firstNode, int secondNode, vector<IntersectionIdx>& path, CourierProblemInfo problemInfo, double& oldTime, double& improvement); //helper function for multithreading 2opt
 void setForceQuit(bool _forceQuit); //setter function to set force quit and disable all 2opt/3opt operations at the next eligible instance
+bool getDone(); //getter function to check whether 2opt/3opt operations are complete

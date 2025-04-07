@@ -18,6 +18,7 @@ using namespace std;
 
 std::mutex mutexFlag;
 bool forceQuit = false;
+bool done = false;
 
 vector<int> twooptSwap(vector<int>& path, int indexA, int indexB)
 {
@@ -43,6 +44,8 @@ vector<int> threeoptSwap(vector<int>& path, int indexA, int indexB, int indexC, 
     temp = twooptSwap(temp, indexC, Cto);
     return temp;
 }
+
+map<pair<IntersectionIdx, IntersectionIdx>, double> timeCache;
 
 double getTravelTime(vector<int>& path, CourierProblemInfo problemInfo)
 {
@@ -74,9 +77,15 @@ double getTravelTime(vector<int>& path, CourierProblemInfo problemInfo)
         if(from == to){continue;}
 
         mutexFlag.lock();
-        ClusterIdx fromCluster = getIntersectionCluster(from);
-        ClusterIdx toCluster = getIntersectionCluster(to);
-        double fastestTime = getClustersTravelTime(fromCluster, toCluster);
+        // ClusterIdx fromCluster = getIntersectionCluster(from);
+        // ClusterIdx toCluster = getIntersectionCluster(to);
+        // double fastestTime = getClustersTravelTime(fromCluster, toCluster);
+        double fastestTime = timeCache[{from, to}];
+        if(fastestTime == 0)
+        {
+            timeCache[{from, to}] = computePathTravelTime(problemInfo.turn_penalty, findPathBetweenIntersections(problemInfo.turn_penalty, {from, to}));
+            fastestTime = timeCache[{from, to}];
+        }
         mutexFlag.unlock();
 
         totalTime += fastestTime;
@@ -112,6 +121,7 @@ void optimal3EdgeReconstruction(int firstEdgeIndex, int secondEdgeIndex, int thi
             bestTime = newTime;
             bestRoute = newPath;
         }
+        if(forceQuit){mutexFlag.unlock(); return;}
         mutexFlag.unlock();
     }
 }
@@ -146,6 +156,7 @@ void basic2NodeReconstruction(int firstNode, int secondNode, vector<Intersection
             oldTime = newTime; //set time of old best path to time of new best path
             improvement = localImprovement;
         }
+        if(forceQuit){mutexFlag.unlock(); return;}
         mutexFlag.unlock();
     }
 }
@@ -157,7 +168,7 @@ bool validPath(vector<IntersectionIdx>& path,CourierProblemInfo problemInfo)
     map<int, bool> seen;
     for(int i = 0; i < path.size(); i++)
     {
-        if(path[i] > (*problemInfo.deliveries).size() && seen[path[i] - (*problemInfo.deliveries).size()] == false)
+        if(path[i] >= (*problemInfo.deliveries).size() && seen[path[i] - (*problemInfo.deliveries).size()] == false)
         {
             return false;
         }
@@ -171,6 +182,9 @@ void optimize3Opt(vector<int>& path,  CourierProblemInfo problemInfo)
     double improvement = DBL_MAX;
     double oldTime = 0;
     int pathSize = path.size();
+    mutexFlag.lock();
+    done = false;
+    mutexFlag.unlock();
     while(improvement > 0)
     {
         improvement = 0;
@@ -238,9 +252,12 @@ void optimize3Opt(vector<int>& path,  CourierProblemInfo problemInfo)
             }
             if(forceQuit){break;}
         }
-        cout << "improvement: " << improvement << endl;
+        //cout << "improvement: " << improvement << endl;
         if(forceQuit){break;}
     }
+    mutexFlag.lock();
+    done = true;
+    mutexFlag.unlock();
     
 }
 
@@ -252,6 +269,10 @@ void optimize2Opt(vector<int>& path,  CourierProblemInfo problemInfo)
     double improvement = DBL_MAX;
     double oldTime = 0;
     int pathSize = path.size();
+    mutexFlag.lock();
+    //cout << "starting 2opt" << endl;
+    done = false;
+    mutexFlag.unlock();
 
     while(improvement > 0)
     {
@@ -263,6 +284,7 @@ void optimize2Opt(vector<int>& path,  CourierProblemInfo problemInfo)
         {
             for(int j = i + 2; j < pathSize; j++)
             {
+                //cout << "creating thread: " << threads.size() << endl;
                 limitThreadCount(threads, 30);
                 thread t(basic2NodeReconstruction, i, j, ref(path), problemInfo, ref(oldTime), ref(improvement));
                 threads.push_back(move(t));
@@ -271,14 +293,19 @@ void optimize2Opt(vector<int>& path,  CourierProblemInfo problemInfo)
             if(forceQuit){break;}
         }
 
+        //cout << "waiting on threads" << endl;
         for(int tIndex = 0; tIndex < threads.size(); tIndex++)
         {
             threads[tIndex].join();
         }
-        cout << "improvement = " << improvement << endl;
+        //cout << "improvement = " << improvement << endl;
 
         if(forceQuit){break;}
     }
+    mutexFlag.lock();
+    //cout << "done 2opt" << endl;
+    done = true;
+    mutexFlag.unlock();
 }
 
 void randomIntersections(vector<int>& toAdd, std::vector<DeliveryInf>& deliveries, vector<IntersectionIdx>& depots, int size)
@@ -301,4 +328,9 @@ void randomIntersections(vector<int>& toAdd, std::vector<DeliveryInf>& deliverie
 void setForceQuit(bool _forceQuit)
 {
     forceQuit = _forceQuit;
+}
+
+bool getDone()
+{
+    return done;
 }

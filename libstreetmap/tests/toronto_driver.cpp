@@ -5,7 +5,6 @@
 
 #include "m1.h"
 #include "m2.h"
-
 namespace ezgl {
 	extern void set_disable_event_loop (bool new_setting);
 }
@@ -27,6 +26,8 @@ int main(int argc, char** argv) {
 
     //Run the unit tests
     int num_failures = UnitTest::RunAllTests();
+
+    closeMap();
 
     return num_failures;
 }

@@ -83,8 +83,8 @@ vector<Point*> PathFinder::calculatePathArray(const double turn_penalty, const s
     //cout << "path found: " <<totalTime/(double)CLOCKS_PER_SEC<< endl;
     //cout << "got path" << endl;
     vector<Point*> out = {};
-    if(pathCorrect == nullptr && pathOpposite == nullptr)
-        cout << "Error: Path Not Found\n";
+    // if(pathCorrect == nullptr && pathOpposite == nullptr)
+    //     //cout << "Error: Path Not Found\n";
     if(pathCorrect !=nullptr)
         out = pathCorrect->retracePath(out, false);
     //cout << "path1 complete" << endl;

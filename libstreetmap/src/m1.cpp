@@ -168,13 +168,17 @@ bool loadMap(std::string map_streets_database_filename) {
     }
 
     //Load Clusters
+    auto t1 = std::chrono::high_resolution_clock::now();
     intersectionToCluster.resize(numIntersections);
-    loadClusters(numClusters);
+    //loadClusters(numClusters);
     //loadClusterTravelTimes();
-    loadClusterTravelTimesByEdges();
+    auto t2 = std::chrono::high_resolution_clock::now();
+    cout << "done loading clusters in " << (duration_cast<milliseconds>(t2 - t1).count()/1000.0) << " s" << endl;
+    
+    //loadClusterTravelTimesByEdges();
 
-    cout << getIntersectionCluster((int)numIntersections/2) << endl;
-    cout << getClustersTravelTime((int)numClusters/2,2) << endl;
+    // cout << getIntersectionCluster((int)numIntersections/2) << endl;
+    // cout << getClustersTravelTime((int)numClusters/2,2) << endl;
 
     //wait for all intersection threads
     cout << "done!" << endl;
@@ -216,10 +220,11 @@ void closeMap() {
     intersectionToCluster.clear();
     intersectionPoints.clear();
 
-    for(int i = 0; i < numClusters; i++){
+    for(int i = 0; i < clusters.size(); i++){
         clusters[i].clear();
         clusterEdges[i].clear();
     }
+    
     clusters.clear();
     clusterEdges.clear();
     
@@ -772,6 +777,7 @@ void findCentroid(int currCluster, vector<LatLon>& centroids)
 void loadClusters(int k){
     
     clusters.resize(k);
+    double t0 = 0;
 
     //Each cluster has a centroid (Center point of cluster)
     vector<LatLon> centroids;
@@ -854,7 +860,9 @@ void loadClusters(int k){
 
         int ms_int = duration_cast<milliseconds>(t2 - t1).count();
 
-        cout << "done assinging clusters in " << ms_int << " ms" << endl;
+        t0 += ms_int;
+
+        cout << "done assinging clusters in " << t0 << " ms" << endl;
 
     }
 
@@ -905,6 +913,42 @@ void loadClusterTravelTimes(){
 }
 
 //Finds the lowest travel time between every cluster by using the intersections on the edges of the clusters
+
+
+void loadSpecificClusterTravelTimesByEdges(ClusterIdx startCluster, ClusterIdx endCluster){
+    
+    //for every cluster, find the lowest travel time to every other cluster
+
+    for(int startClusterIntersection = 0; startClusterIntersection < 4; startClusterIntersection++){
+        
+        //find the travel time between a starting intersection and an ending intersection in every cluster
+
+        if(endCluster != startCluster){
+
+            //find travel time for every edge in the other cluster
+            int numEndIntersections = clusters[endCluster].size();
+            for(int endClusterIntersection = 0; endClusterIntersection < 4; endClusterIntersection++){
+
+                std::vector<StreetSegmentIdx> path = findPathBetweenIntersections(kDefaultTurnPenalty, {clusterEdges[startCluster][startClusterIntersection],clusterEdges[endCluster][endClusterIntersection]});
+                double travelTime = computePathTravelTime(kDefaultTurnPenalty, path);
+
+                if(endClusterIntersection == 0 && startClusterIntersection == 0){
+                    if(travelTime > 0){
+                        clusterTravelTimes.insert({{startCluster,endCluster},travelTime});
+                    } else{
+                        clusterTravelTimes.insert({{startCluster,endCluster},999999999});
+                    }
+
+                }else if((travelTime > 0) && (travelTime <= clusterTravelTimes[{startCluster,endCluster}])){
+                    clusterTravelTimes[{startCluster,endCluster}] = travelTime;
+                }
+            }
+        }
+
+    }
+
+}
+
 void loadClusterTravelTimesByEdges(){
     
     //for every cluster, find the lowest travel time to every other cluster
@@ -943,6 +987,11 @@ void loadClusterTravelTimesByEdges(){
 
 double getClustersTravelTime(ClusterIdx startCluster, ClusterIdx endCluster){
     if((startCluster >= 0 && startCluster < numClusters) && (endCluster >= 0 && endCluster < numClusters)){
+        if(startCluster == endCluster){return 0;}
+        if(clusterTravelTimes[{startCluster,endCluster}] == 0)
+        {
+            loadSpecificClusterTravelTimesByEdges(startCluster, endCluster);
+        }
         return clusterTravelTimes[{startCluster,endCluster}];
     } else{
         return -1;

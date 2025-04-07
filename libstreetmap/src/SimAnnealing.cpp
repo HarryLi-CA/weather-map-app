@@ -15,7 +15,7 @@ using namespace std;
 mutex annealingFlag;
 const double START_TEMP = 10000;
 const double END_TEMP = 1e-3;
-const double COOLING_RATE = 0.995;
+const double COOLING_RATE = 0.999;
 const int MAX_ITER = 100;
 int finished = 0;
 int threadCount = 30;

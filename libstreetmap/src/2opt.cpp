@@ -49,6 +49,7 @@ vector<int> threeoptSwap(vector<int>& path, int indexA, int indexB, int indexC, 
 }
 
 map<pair<IntersectionIdx, IntersectionIdx>, double> timeCache;
+unordered_map<IntersectionIdx, unordered_map<IntersectionIdx, double>> distDoubleCache;
 map<pair<IntersectionIdx, IntersectionIdx>, double> distCache;
 map<pair<IntersectionIdx, IntersectionIdx>, vector<StreetSegmentIdx>> pathCache;
 
@@ -57,9 +58,9 @@ double getCheapTravelTime(vector<int>& path, CourierProblemInfo problemInfo)
     double totalTime = 0;
     int n = (*problemInfo.deliveries).size();
     //find fastest route between every point
+    mutexFlag.lock();
     for(int i = 0; i < path.size() - 1; i++)
     {
-        mutexFlag.lock();
         DeliveryInf dFrom = (*problemInfo.deliveries)[path[i]%n];
         DeliveryInf dTo = (*problemInfo.deliveries)[path[i+1]%n];
         
@@ -68,15 +69,18 @@ double getCheapTravelTime(vector<int>& path, CourierProblemInfo problemInfo)
         
         if(from == to){mutexFlag.unlock(); continue;}
         //mutexFlag.lock();
-        double distance = distCache[{from, to}];
-        if(distance == 0)
+
+        if(distDoubleCache[from][to] == 0)
         {
-            distance = findDistanceBetweenTwoPoints(osmhelp::getIntersectionPosition(from), osmhelp::getIntersectionPosition(to)) / osmhelp::getSpeedLimitMaximum();
-            distCache[{from, to}] = distance;
+            //distDoubleCache[from] = unordered_map<IntersectionIdx, double>();
+            distDoubleCache[from][to] = findDistanceBetweenTwoPoints(osmhelp::getIntersectionPosition(from), osmhelp::getIntersectionPosition(to)) / osmhelp::getSpeedLimitMaximum();
         }
-        mutexFlag.unlock();
+        double distance = distDoubleCache[from][to];
+        //cout << "dist: " << distance << endl;
+        ;
         totalTime += distance;
     }
+    mutexFlag.unlock();
     return totalTime;
 }
 

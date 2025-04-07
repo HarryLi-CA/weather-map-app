@@ -71,7 +71,7 @@ std::vector<CourierSubPath> travelingCourier(
     
     cout << "switching to 2 opt" << endl;
 
-    timeLimit = 44.5;
+    timeLimit = 42;
 
     setForceQuit(false);
     thread twoOpt(optimize2Opt, ref(path), ref(cPI));
@@ -90,7 +90,7 @@ std::vector<CourierSubPath> travelingCourier(
     }
     setForceQuit(true);
     twoOpt.join();
-    cout << "switching to 3opt" << endl;
+    
     //timeLimit = 48;
 
     setForceQuit(false);
@@ -100,8 +100,8 @@ std::vector<CourierSubPath> travelingCourier(
     elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
 
     if(elapsedSeconds < timeLimit){
-
-    thread threeOpt(optimize3Opt, ref(path), ref(cPI));
+        cout << "switching to 3opt" << endl;
+        thread threeOpt(optimize3Opt, ref(path), ref(cPI));
         lastSeconds = elapsedSeconds + 1;
         while(elapsedSeconds < timeLimit && getDone() == false)
         {

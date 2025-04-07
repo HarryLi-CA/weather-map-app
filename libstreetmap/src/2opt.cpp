@@ -201,7 +201,7 @@ bool validPath(vector<IntersectionIdx>& path,CourierProblemInfo problemInfo)
 {
     //assume (*problemInfo.deliveries) are in order of pickup
     unordered_map<int, bool> seen;
-    int seenCount = 0;
+    //int seenCount = 0;
     int n = (*problemInfo.deliveries).size();
     for(int i = 0; i < path.size(); i++)
     {
@@ -211,14 +211,14 @@ bool validPath(vector<IntersectionIdx>& path,CourierProblemInfo problemInfo)
         {
             return false;
         }
-        if(!seen[path[i]])
-        {
-            seenCount++;
-            seen[path[i]] = true;
-        }
+        // if(!seen[path[i]])
+        // {
+        //     seenCount++;
+        //     seen[path[i]] = true;
+        // }
         
     }
-    return (seenCount == n*2);
+    return true;
 } 
 
 void optimize3Opt(vector<int>& path,  CourierProblemInfo problemInfo)

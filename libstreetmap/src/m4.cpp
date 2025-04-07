@@ -70,7 +70,7 @@ std::vector<CourierSubPath> travelingCourier(
     
     cout << "switching to 2 opt" << endl;
 
-    timeLimit = 48;
+    timeLimit = 45;
     thread twoOpt(optimize2Opt, ref(path), ref(cPI));
 
     t2 = high_resolution_clock::now();

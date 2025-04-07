@@ -204,6 +204,8 @@ bool validPath(vector<IntersectionIdx>& path,CourierProblemInfo problemInfo)
     unordered_map<int, bool> seen;
     for(int i = 0; i < path.size(); i++)
     {
+        if(seen[path[i]])
+            return false;
         if(path[i] >= (*problemInfo.deliveries).size() && seen[path[i] - (*problemInfo.deliveries).size()] == false)
         {
             return false;

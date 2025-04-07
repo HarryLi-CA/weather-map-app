@@ -211,6 +211,7 @@ bool validPath(vector<IntersectionIdx>& path,CourierProblemInfo problemInfo)
         {
             return false;
         }
+        seen[path[i]] = true;
         // if(!seen[path[i]])
         // {
         //     seenCount++;

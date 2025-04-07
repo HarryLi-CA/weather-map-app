@@ -71,9 +71,10 @@ std::vector<CourierSubPath> travelingCourier(
     
     cout << "switching to 2 opt" << endl;
 
-    timeLimit = 45;
-    thread twoOpt(optimize2Opt, ref(path), ref(cPI));
+    timeLimit = 48;
 
+    setForceQuit(false);
+    thread twoOpt(optimize2Opt, ref(path), ref(cPI));
     t2 = high_resolution_clock::now();
     elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
     lastSeconds = elapsedSeconds + 1;
@@ -118,7 +119,7 @@ std::vector<CourierSubPath> travelingCourier(
     cout << "joined threads" << endl;
     vector<CourierSubPath> realPath;
     //cout << "n = " << deliveries.size() << endl;
-    for(int i = 0; i < path.size() - 1; i++)
+    for(int i = 0; i < path.size()-1; i++)
     {
         int fromIndex = path[i];
         int toIndex = path[i + 1];
@@ -129,6 +130,7 @@ std::vector<CourierSubPath> travelingCourier(
         if(i == 0)
         {
             IntersectionIdx fromDepot = closestDepot(from, cPI, true).first;
+            cout<< fromDepot << endl;
             vector<StreetSegmentIdx> fromPath = cachedPath(fromDepot, from, cPI);
             CourierSubPath fdSP{{fromDepot, from}, fromPath};
             realPath.push_back(fdSP);
@@ -141,9 +143,10 @@ std::vector<CourierSubPath> travelingCourier(
 
         realPath.push_back(cSP);
         //cout << "added mid-path" << endl;
-        if(i == path.size() - 2)
+        if(i == path.size()-2)
         {
             IntersectionIdx toDepot = closestDepot(to, cPI, false).first;
+            cout<< toDepot << endl;
             vector<StreetSegmentIdx> toPath = cachedPath(to, toDepot, cPI);
             CourierSubPath tdSP{{to, toDepot}, toPath};
             realPath.push_back(tdSP);

@@ -41,16 +41,19 @@ std::vector<CourierSubPath> travelingCourier(
         if((int)elapsedSeconds > lastSeconds)
         {
             lastSeconds = elapsedSeconds;
-            //cout << "Elapsed: " << elapsedSeconds << "s" << endl;
+            cout << "Elapsed: " << elapsedSeconds << "s" << endl;
         }
     }
     setForceQuit(true);
-    cout << "switching to 3opt" << endl;
     twoOpt.join();
+    cout << "switching to 3opt" << endl;
     timeLimit = 48;
-    setForceQuit(false);
-    thread threeOpt(optimize3Opt, ref(path), ref(cPI));
 
+    setForceQuit(false);
+    setDone(false);
+
+    thread threeOpt(optimize3Opt, ref(path), ref(cPI));
+    
     t2 = high_resolution_clock::now();
     elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
     lastSeconds = elapsedSeconds + 1;

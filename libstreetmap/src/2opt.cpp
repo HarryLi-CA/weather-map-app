@@ -242,7 +242,6 @@ void optimize3Opt(vector<int>& path,  CourierProblemInfo problemInfo)
                     {
                         threads[i].join();
                     }
-                    cout << "FQ: " << forceQuit << endl;
                     if(forceQuit){break;}
 
                     double localImprovement =  oldTime - bestTime;
@@ -260,11 +259,12 @@ void optimize3Opt(vector<int>& path,  CourierProblemInfo problemInfo)
             if(forceQuit){break;}
         }
         //cout << "improvement: " << improvement << endl;
-        if(forceQuit){cout << "FQ" << endl; break;}
+        if(forceQuit){cout << "force quit" << endl; break;}
     }
     mutexFlag.lock();
     done = true;
     mutexFlag.unlock();
+    cout << "exiting function" << endl;
     
 }
 
@@ -314,6 +314,7 @@ void optimize2Opt(vector<int>& path,  CourierProblemInfo problemInfo)
     //cout << "done 2opt" << endl;
     done = true;
     mutexFlag.unlock();
+    cout << "exiting function" << endl;
 }
 
 void randomIntersections(vector<int>& toAdd, std::vector<DeliveryInf>& deliveries, vector<IntersectionIdx>& depots, int size)
@@ -336,11 +337,18 @@ void randomIntersections(vector<int>& toAdd, std::vector<DeliveryInf>& deliverie
 void setForceQuit(bool _forceQuit)
 {
     forceQuit = _forceQuit;
+    cout << "FQ = " << forceQuit << endl;
 }
 
 bool getDone()
 {
     return done;
+}
+
+void setDone(bool _done)
+{
+    done = _done;
+    cout << "done = " << done << endl;
 }
 
 vector<StreetSegmentIdx> cachedPath(IntersectionIdx from, IntersectionIdx to, CourierProblemInfo problemInfo)

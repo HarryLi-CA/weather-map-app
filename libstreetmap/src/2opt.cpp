@@ -56,9 +56,9 @@ map<pair<IntersectionIdx, IntersectionIdx>, vector<StreetSegmentIdx>> pathCache;
 double getCheapTravelTime(vector<int>& path, CourierProblemInfo problemInfo)
 {
     double totalTime = 0;
-    int n = (*problemInfo.deliveries).size();
     //find fastest route between every point
     mutexFlag.lock();
+    int n = (*problemInfo.deliveries).size();
     for(int i = 0; i < path.size() - 1; i++)
     {
         DeliveryInf dFrom = (*problemInfo.deliveries)[path[i]%n];
@@ -67,7 +67,7 @@ double getCheapTravelTime(vector<int>& path, CourierProblemInfo problemInfo)
         IntersectionIdx from = (path[i] < n) ? dFrom.pickUp : dFrom.dropOff;
         IntersectionIdx to = (path[i+1] < n) ? dTo.pickUp : dTo.dropOff;
         
-        if(from == to){mutexFlag.unlock(); continue;}
+        if(from == to){continue;}
         //mutexFlag.lock();
 
         if(distDoubleCache[from][to] == 0)
@@ -204,9 +204,10 @@ void basic2NodeReconstruction(int firstNode, int secondNode, vector<Intersection
 bool validPath(vector<IntersectionIdx>& path,CourierProblemInfo problemInfo)
 {
     //assume (*problemInfo.deliveries) are in order of pickup
-    unordered_map<int, bool> seen;
     //int seenCount = 0;
     int n = (*problemInfo.deliveries).size();
+    vector<bool> seen;
+    seen.resize(n*2, false);
     for(int i = 0; i < path.size(); i++)
     {
         if(seen[path[i]])

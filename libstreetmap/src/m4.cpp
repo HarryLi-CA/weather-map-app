@@ -44,7 +44,7 @@ std::vector<CourierSubPath> travelingCourier(
     auto t2 = high_resolution_clock::now();
     double elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
     int lastSeconds = elapsedSeconds + 1;
-
+    cout << "size: " << deliveries.size() << endl;
     while(elapsedSeconds < timeLimit){
         cout << "new cycle" << endl;
         isForceQuit = false;
@@ -74,6 +74,7 @@ std::vector<CourierSubPath> travelingCourier(
         {
             annealingThreads[i].join();
         }
+        if(deliveries.size() <= 10){break;} //speed up small checks
     }
 
     cout << "valid path: " << validPath(path, cPI) << endl;

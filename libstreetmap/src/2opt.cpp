@@ -183,7 +183,7 @@ void basic2NodeReconstruction(int firstNode, int secondNode, vector<Intersection
             newPath[newPath.size() - 1] = temp;
         }
         if(newPath[0] >= n){continue;}
-        double newTime = getTravelTime(newPath, problemInfo);
+        double newTime = getCheapTravelTime(newPath, problemInfo);
         mutexFlag.lock();
         double localImprovement =  oldTime - newTime;
         if(localImprovement > improvement && validPath(newPath, problemInfo))
@@ -316,7 +316,7 @@ void optimize2Opt(vector<int>& path,  CourierProblemInfo problemInfo)
     {
         improvement = 0;
         //go through all eligible nodes to make improvements
-        double oldTime = getTravelTime(path, problemInfo);
+        double oldTime = getCheapTravelTime(path, problemInfo);
         vector<thread> threads;
         for(int i = 0; i < pathSize - 1; i++)
         {

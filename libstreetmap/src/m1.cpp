@@ -18,10 +18,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
- 
+#pragma once
 #include <iostream>
 #include "m1.h"
 #include "m2.h"
+#include "m3.h"
+#include "m4Helper.h"
 #include "loading_utils.h"
 #include "nodeIDHelper.h"
 #include "StreetsDatabaseAPI.h"
@@ -38,8 +40,16 @@
 #include <map>
 #include <iomanip>
 #include <set>
+#include <mutex>
+#include <chrono>
 
 using namespace std;
+using std::chrono::high_resolution_clock;
+using std::chrono::duration_cast;
+using std::chrono::duration;
+using std::chrono::milliseconds;
+
+mutex mutexLocker;
 //cache vectors
 //takes intersection index and returns vector of indices of all connected street segments
 static vector<vector<StreetSegmentIdx>*> intersectionToStreetSegments;
@@ -68,7 +78,22 @@ static vector<double> travelTimeCache;
 int numIntersections = 0;
 int numStreetSegments = 0;
 int numStreets = 0;
+int activeThreads = 0;
 
+//New for M4
+const double kDefaultTurnPenalty = 10;
+//number of clusters of intersections to create
+const int numClusters = 25; //set to 25 for now so that loading isnt crazy long
+//Array of vectors of intersections, the index of the array corresponds with a cluster, each cluster has a vector of intersections ascociated with it
+static vector<vector<IntersectionIdx>> clusters;
+//map with intersection index and clusterID
+static vector<ClusterIdx> intersectionToCluster;
+//Takes a intersectionIdx and returns it's LatLon
+static vector<LatLon> intersectionPoints;
+//Takes two clusterIdxs and returns the smallest travel time between them, order dependant: first clusterIDx = start, second clusterIdx = end
+static unordered_map<pair<ClusterIdx,ClusterIdx>,double,StreetPairHash,StreetPairEqual> clusterTravelTimes;
+//Vector with each element representing a cluster, each cluster has a vector of 4 intersections that represent the edges of that cluster
+static vector<vector<IntersectionIdx>> clusterEdges;
 
 // loadMap will be called with the name of the file that stores the "layer-2"
 // map data accessed through StreetsDatabaseAPI: the street and intersection 
@@ -122,6 +147,12 @@ bool loadMap(std::string map_streets_database_filename) {
 
         //load the container twoStreetsToIntersections with all street pairs that meet at intersectionIndex
         loadTwoStreetsIntersections(twoStreetsToIntersections,*intersectionToStreetSegments[intersectionIndex],intersectionIndex);
+
+        //load each intersection's LatLon
+        LatLon coords = osmhelp::getIntersectionPosition(intersectionIndex);
+        //cout << coords.latitude() << ", " << coords.longitude() << endl;
+        intersectionPoints.push_back(coords);
+        //cout << intersectionPoints[intersectionIndex].latitude() << ", " << intersectionPoints[intersectionIndex].longitude() << endl;
     }
     loadStreetToStreetSegments(streetToStreetSegments);
     for(StreetIdx streetIndex = 0; streetIndex < numStreets; streetIndex++)
@@ -135,7 +166,20 @@ bool loadMap(std::string map_streets_database_filename) {
         loadStreetSegmentPoint(streetSegmentPoints,streetSpeedLimitCache,streetSegmentIndex);
         loadStreetIntersections(streetToIntersections,streetToIntersectionsHelper,streetSegmentIndex);
     }
-    this_thread::sleep_for(1000s);
+
+    //Load Clusters
+    auto t1 = std::chrono::high_resolution_clock::now();
+    intersectionToCluster.resize(numIntersections);
+    //loadClusters(numClusters);
+    //loadClusterTravelTimes();
+    auto t2 = std::chrono::high_resolution_clock::now();
+    cout << "done loading clusters in " << (duration_cast<milliseconds>(t2 - t1).count()/1000.0) << " s" << endl;
+    
+    //loadClusterTravelTimesByEdges();
+
+    // cout << getIntersectionCluster((int)numIntersections/2) << endl;
+    // cout << getClustersTravelTime((int)numClusters/2,2) << endl;
+
     //wait for all intersection threads
     cout << "done!" << endl;
 
@@ -173,6 +217,19 @@ void closeMap() {
     twoStreetsToIntersections.clear();
 
     streetNames.clear();
+
+    intersectionToCluster.clear();
+    intersectionPoints.clear();
+
+    for(int i = 0; i < clusters.size(); i++){
+        clusters[i].clear();
+        clusterEdges[i].clear();
+    }
+    
+    clusters.clear();
+    clusterEdges.clear();
+    
+    clusterTravelTimes.clear();
 
     clearIdHelper(); // marks OSMID hashtable for reset
     closeStreetDatabase();
@@ -631,4 +688,313 @@ std::vector<LatLon>* getStreetSegmentPoints(StreetSegmentIdx streetSegmentIndex)
 std::vector<StreetSegmentIdx>* getIntersectionStreetSegments(IntersectionIdx intersectionIndex)
 {
     return intersectionToStreetSegments[intersectionIndex]; //get pointer for curve point vector of street segments and return it
+}
+
+void assignCluster(IntersectionIdx currIntersection, vector<LatLon> centroids, int k)
+{
+    int closestCentroid;
+    double lowestCentroidDistance;
+    mutexLocker.lock();
+    //cout << "starting" << endl;
+    LatLon point1 = intersectionPoints[currIntersection];
+    mutexLocker.unlock();
+    //Find the distance between the current intersection and every centroid
+    for(int currCentroid = 0; currCentroid < k; currCentroid++){
+        LatLon point2 = centroids[currCentroid];
+        double distanceFromCentroid = findDistanceBetweenTwoPoints(point1,point2);
+        
+        //identify the closest centroid to that intersection
+        if((currCentroid == 0) || (distanceFromCentroid <= lowestCentroidDistance)){
+
+            closestCentroid = currCentroid;
+            lowestCentroidDistance = distanceFromCentroid;
+        }
+    }
+    mutexLocker.lock();
+    //cout << "done!" << endl;
+    clusters[closestCentroid].push_back(currIntersection);
+    intersectionToCluster[currIntersection] = closestCentroid;
+    mutexLocker.unlock();
+    return;
+}
+
+void findCentroid(int currCluster, vector<LatLon>& centroids)
+{
+    double meanLattitude = 0.0;
+    double meanLongitude = 0.0;
+    
+    mutexLocker.lock();
+    int numClusterIntersections = clusters[currCluster].size();
+    mutexLocker.unlock();
+    //cout << currCluster << ": " << numClusterIntersections << ",  ";
+
+    double LargestLat, LargestLon, SmallestLat, SmallestLon;
+    int LargestLatIntersection, LargestLonIntersection, SmallestLatIntersection, SmallestLonIntersection;
+
+    for(int i = 0; i < numClusterIntersections; i++){
+
+        mutexLocker.lock();
+        IntersectionIdx currIntersection = clusters[currCluster][i];
+
+        //calculate mean position
+        LatLon currPosition = intersectionPoints[currIntersection];
+        mutexLocker.unlock();
+
+        double currLat = currPosition.latitude();
+        double currLon = currPosition.longitude();
+
+        meanLattitude += currLat;
+        meanLongitude += currLon;
+
+        //identify the edges of the cluster
+        if((i == 0) || currLat >= LargestLat){
+            LargestLat = currLat;
+            LargestLatIntersection = currIntersection;
+        }
+        if((i == 0) || currLon >= LargestLon){
+            LargestLon = currLon;
+            LargestLonIntersection = currIntersection;
+        }
+        if((i == 0) || currLat <= SmallestLat){
+            SmallestLat = currLat;
+            SmallestLatIntersection = currIntersection;
+        }
+        if((i == 0) || currLon <= SmallestLon){
+            SmallestLon = currLon;
+            SmallestLonIntersection = currIntersection;
+        }
+    }
+    LatLon meanPos = LatLon(meanLattitude/numClusterIntersections,meanLongitude/numClusterIntersections);
+    mutexLocker.lock();
+    clusterEdges.push_back({LargestLatIntersection,LargestLonIntersection,SmallestLatIntersection,SmallestLonIntersection});
+
+    //New centroid located at the mean position of all intersections in cluster
+    centroids[currCluster] = meanPos;
+    activeThreads--;
+    mutexLocker.unlock();
+}
+
+//Used in loadMap to group intersections on map into k number of clusters
+void loadClusters(int k){
+    
+    clusters.resize(k);
+    double t0 = 0;
+
+    //Each cluster has a centroid (Center point of cluster)
+    vector<LatLon> centroids;
+    vector<LatLon> prevCentroids;
+
+    centroids.resize(k);
+    prevCentroids.resize(k);
+
+    //initialize centroids as random intersections
+    for(int i = 0; i < k; i++){
+
+        int currIntIdx = (int) numIntersections/k*i; //could be problem
+        //int currIntIdx = rand() % numIntersections;
+
+        centroids[i] = intersectionPoints[currIntIdx];
+
+        prevCentroids[i] = LatLon(0,0);
+    }
+
+    bool centroidsConvereged = false;
+
+    //Repeatedly create clusters until clusters cannot be improved anymore
+    while(!centroidsConvereged){
+
+        //clear previous clusters
+        for(int i = 0; i < k; i++){
+            clusters[i].clear();
+        }
+        
+        //Assign every intersection to a cluster
+        cout << "assigning clusters" << endl;
+        auto t1 = std::chrono::high_resolution_clock::now();
+        vector<thread> threads;
+        
+        for(IntersectionIdx currIntersection = 0; currIntersection < numIntersections; currIntersection++){
+            limitThreadCount(threads, 30);
+            //cout << "adding thread with current count at " << threads.size() << endl;
+            thread t(assignCluster, currIntersection, centroids, k);
+            threads.push_back(move(t));
+        }
+
+
+        for(int threadIndex = 0; threadIndex < threads.size(); threadIndex++)
+        {
+            threads[threadIndex].join();
+            //cout << "thread " << threadIndex << "/" << threads.size() << " done" << endl;
+        }
+        //cout << "Clusters Sizes: ";
+
+        vector<thread> centroidThreads;
+        //find the new centroid of each cluster
+        for(int currCluster = 0; currCluster < k; currCluster++){
+            limitThreadCount(centroidThreads, 30);
+            thread t(findCentroid, currCluster, ref(centroids));
+            centroidThreads.push_back(move(t));
+        }
+
+        for(int threadIndex = 0; threadIndex < centroidThreads.size(); threadIndex++)
+        {
+            centroidThreads[threadIndex].join();
+        }
+        //cout << endl;
+
+        //compare centroids to previous centroids to see if they have convergerd
+        bool flag = true;
+
+        vector<thread> compareCentroidThreads;
+        for(int currCluster = 0; currCluster < k; currCluster++){
+            if(!(centroids[currCluster] == prevCentroids[currCluster])){
+                
+                flag = false;
+            }
+
+            prevCentroids[currCluster] = centroids[currCluster];
+        }
+
+        centroidsConvereged = flag;
+        
+        auto t2 = std::chrono::high_resolution_clock::now();
+
+        int ms_int = duration_cast<milliseconds>(t2 - t1).count();
+
+        t0 += ms_int;
+
+        cout << "done assinging clusters in " << t0 << " ms" << endl;
+
+    }
+
+}
+
+ClusterIdx getIntersectionCluster(IntersectionIdx intersection){
+   
+    if(intersection >= 0 && intersection < numIntersections){
+
+        return intersectionToCluster[intersection];
+
+    }else{
+
+        return -1;
+    }
+
+}
+
+void loadClusterTravelTimes(){
+    
+    // //for every cluster, find the lowest travel time to every other cluster
+    // for(int startCluster = 0; startCluster < numClusters; startCluster++){
+
+    //     //look at every intersection in the cluster to see what could get the lowest time
+    //     int numStartIntersections = clusters[startCluster].size();
+    //     for(int startClusterIntersection = 0; startClusterIntersection < numStartIntersections; startClusterIntersection++){
+            
+    //         //find the travel time between a starting intersection and an ending intersection in every cluster
+    //         for(int endCluster = 0; endCluster < numClusters; endCluster++){
+
+    //             if(endCluster != startCluster){
+
+    //                 //find travel time for every intersection in the other cluster
+    //                 int numEndIntersections = clusters[endCluster].size();
+    //                 for(int endClusterIntersection = 0; endClusterIntersection < numEndIntersections; endClusterIntersection++){
+
+    //                     std::vector<StreetSegmentIdx> path = findPathBetweenIntersections(kDefaultTurnPenalty, {clusters[startCluster][startClusterIntersection],clusters[endCluster][endClusterIntersection]});
+    //                     double travelTime = computePathTravelTime(kDefaultTurnPenalty, path);
+
+    //                     if((endClusterIntersection == 0 && startClusterIntersection == 0) ||  travelTime <= clusterTravelTimes[{startCluster,endCluster}]){
+    //                         clusterTravelTimes[{startCluster,endCluster}] = travelTime;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+}
+
+//Finds the lowest travel time between every cluster by using the intersections on the edges of the clusters
+
+
+void loadSpecificClusterTravelTimesByEdges(ClusterIdx startCluster, ClusterIdx endCluster){
+    
+    //for every cluster, find the lowest travel time to every other cluster
+
+    for(int startClusterIntersection = 0; startClusterIntersection < 4; startClusterIntersection++){
+        
+        //find the travel time between a starting intersection and an ending intersection in every cluster
+
+        if(endCluster != startCluster){
+
+            //find travel time for every edge in the other cluster
+            int numEndIntersections = clusters[endCluster].size();
+            for(int endClusterIntersection = 0; endClusterIntersection < 4; endClusterIntersection++){
+
+                std::vector<StreetSegmentIdx> path = findPathBetweenIntersections(kDefaultTurnPenalty, {clusterEdges[startCluster][startClusterIntersection],clusterEdges[endCluster][endClusterIntersection]});
+                double travelTime = computePathTravelTime(kDefaultTurnPenalty, path);
+
+                if(endClusterIntersection == 0 && startClusterIntersection == 0){
+                    if(travelTime > 0){
+                        clusterTravelTimes.insert({{startCluster,endCluster},travelTime});
+                    } else{
+                        clusterTravelTimes.insert({{startCluster,endCluster},999999999});
+                    }
+
+                }else if((travelTime > 0) && (travelTime <= clusterTravelTimes[{startCluster,endCluster}])){
+                    clusterTravelTimes[{startCluster,endCluster}] = travelTime;
+                }
+            }
+        }
+
+    }
+
+}
+
+void loadClusterTravelTimesByEdges(){
+    
+    //for every cluster, find the lowest travel time to every other cluster
+    for(ClusterIdx startCluster = 0; startCluster < numClusters; startCluster++){
+
+        for(int startClusterIntersection = 0; startClusterIntersection < 4; startClusterIntersection++){
+            
+            //find the travel time between a starting intersection and an ending intersection in every cluster
+            for(ClusterIdx endCluster = 0; endCluster < numClusters; endCluster++){
+
+                if(endCluster != startCluster){
+
+                    //find travel time for every edge in the other cluster
+                    int numEndIntersections = clusters[endCluster].size();
+                    for(int endClusterIntersection = 0; endClusterIntersection < 4; endClusterIntersection++){
+
+                        std::vector<StreetSegmentIdx> path = findPathBetweenIntersections(kDefaultTurnPenalty, {clusterEdges[startCluster][startClusterIntersection],clusterEdges[endCluster][endClusterIntersection]});
+                        double travelTime = computePathTravelTime(kDefaultTurnPenalty, path);
+
+                        if(endClusterIntersection == 0 && startClusterIntersection == 0){
+                            if(travelTime > 0){
+                                clusterTravelTimes.insert({{startCluster,endCluster},travelTime});
+                            } else{
+                                clusterTravelTimes.insert({{startCluster,endCluster},999999999});
+                            }
+
+                        }else if((travelTime > 0) && (travelTime <= clusterTravelTimes[{startCluster,endCluster}])){
+                            clusterTravelTimes[{startCluster,endCluster}] = travelTime;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+double getClustersTravelTime(ClusterIdx startCluster, ClusterIdx endCluster){
+    if((startCluster >= 0 && startCluster < numClusters) && (endCluster >= 0 && endCluster < numClusters)){
+        if(startCluster == endCluster){return 0;}
+        if(clusterTravelTimes[{startCluster,endCluster}] == 0)
+        {
+            loadSpecificClusterTravelTimesByEdges(startCluster, endCluster);
+        }
+        return clusterTravelTimes[{startCluster,endCluster}];
+    } else{
+        return -1;
+    }
 }

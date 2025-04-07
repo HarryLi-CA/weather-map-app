@@ -1,4 +1,3 @@
-
 #pragma once
 #include "m4.h"
 #include <vector>

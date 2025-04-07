@@ -24,7 +24,10 @@
 #include "m1.h"
 #include "m2.h"
 #include "m3.h"
+#include "m4.h"
 #include "2opt.h"
+#include <vector>
+#include "CourierProblemInfo.h"
 
 //Program exit codes
 constexpr int SUCCESS_EXIT_CODE = 0;        //Everyting went OK
@@ -67,25 +70,11 @@ int main(int argc, char** argv) {
 
     std::cout << "Successfully loaded map '" << map_path << "'\n";
 
-    // findStreetIdsFromPartialStreetName("Air");
-
-    std::cout << "Closing map\n";
-    closeMap(); 
-
-    load_success = loadMap(map_path);
-    if(!load_success) {
-        std::cerr << "Failed to load map '" << map_path << "'\n";
-        return ERROR_EXIT_CODE;
-    }
-
-    std::cout << "Successfully loaded map '" << map_path << "'\n";
-
     // //Clean-up the map data and related data structures
 
     //Clean-up the map data and related data structures
     loadFeatures();
     drawMap();
-    std::cout << "Closing map\n";
     //draw graphical interface
     closeMap(); 
 

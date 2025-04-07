@@ -3,6 +3,7 @@
 #include <math.h>
 #include "CourierProblemInfo.h"
 #include "m4Helper.h"
+#include <thread>
 
 using namespace std;
 
@@ -25,4 +26,14 @@ pair<IntersectionIdx, double> closestDepot(IntersectionIdx intIdx,const CourierP
         }
     }
     return make_pair(closeDepot, minTime);
+}
+
+
+void limitThreadCount(vector<std::thread>& threadContainer, int limit)
+{
+    while(threadContainer.size() >= limit)
+    {
+        threadContainer[0].join();
+        threadContainer.erase(threadContainer.begin());
+    }
 }

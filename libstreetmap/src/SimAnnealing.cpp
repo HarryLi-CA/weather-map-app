@@ -21,6 +21,7 @@ vector<int> neighbourSolution(vector<int> route, const CourierProblemInfo& cPI) 
     if (i > j) swap(i, j);
 
     swap(route[i], route[j]);
+    cout<< route[i] << " " << route[j] << endl;
 
     if(validPath(route, cPI))
         return route;

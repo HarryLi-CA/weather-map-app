@@ -55,7 +55,7 @@ std::vector<CourierSubPath> travelingCourier(
     cout << "switching to 2 opt" << endl;
 
     timeLimit = 30;
-    thread threeOpt(optimize2Opt, ref(path), ref(cPI));
+    thread twoOpt(optimize2Opt, ref(path), ref(cPI));
 
     t2 = high_resolution_clock::now();
     elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
@@ -67,33 +67,35 @@ std::vector<CourierSubPath> travelingCourier(
         if((int)elapsedSeconds > lastSeconds)
         {
             lastSeconds = elapsedSeconds;
-            //cout << "Elapsed: " << elapsedSeconds << "s" << endl;
-        }
-    }
-    setForceQuit(true);
-    cout << "switching to 3opt" << endl;
-    threeOpt.join();
-    timeLimit = 45;
-    setForceQuit(false);
-    thread twoOpt(optimize3Opt, ref(path), ref(cPI));
-
-    t2 = high_resolution_clock::now();
-    elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
-    lastSeconds = elapsedSeconds + 1;
-    while(elapsedSeconds < timeLimit && getDone() == false)
-    {
-        t2 = high_resolution_clock::now();
-        elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
-        if((int)elapsedSeconds > lastSeconds)
-        {
-            lastSeconds = elapsedSeconds;
-            //cout << "Elapsed: " << elapsedSeconds << "s" << endl;
+            cout << "Elapsed: " << elapsedSeconds << "s" << endl;
         }
     }
     setForceQuit(true);
     twoOpt.join();
-    //cout << "joined threads" << endl;
+    cout << "switching to 3opt" << endl;
+    timeLimit = 48;
 
+    setForceQuit(false);
+    setDone(false);
+
+    thread threeOpt(optimize3Opt, ref(path), ref(cPI));
+    
+    t2 = high_resolution_clock::now();
+    elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
+    lastSeconds = elapsedSeconds + 1;
+    while(elapsedSeconds < timeLimit && getDone() == false)
+    {
+        t2 = high_resolution_clock::now();
+        elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
+        if((int)elapsedSeconds > lastSeconds)
+        {
+            lastSeconds = elapsedSeconds;
+            cout << "Elapsed: " << elapsedSeconds << "s" << endl;
+        }
+    }
+    setForceQuit(true);
+    threeOpt.join();
+    cout << "joined threads" << endl;
     vector<CourierSubPath> realPath;
     //cout << "n = " << deliveries.size() << endl;
     for(int i = 0; i < path.size() - 1; i++)
@@ -103,17 +105,17 @@ std::vector<CourierSubPath> travelingCourier(
         int n = deliveries.size();
         IntersectionIdx from = (fromIndex < n) ? (deliveries[fromIndex%n].pickUp) : (deliveries[fromIndex%n].dropOff);
         IntersectionIdx to = (toIndex < n) ? (deliveries[toIndex%n].pickUp) : (deliveries[toIndex%n].dropOff);
-        //cout << fromIndex << ": " << from << endl;
+        //cout << fromIndex << " (" << fromIndex%n << "): " << from << endl;
         if(i == 0)
         {
             IntersectionIdx fromDepot = closestDepot(from, cPI, true).first;
-            vector<StreetSegmentIdx> fromPath = findPathBetweenIntersections(cPI.turn_penalty, {fromDepot, from});
+            vector<StreetSegmentIdx> fromPath = cachedPath(fromDepot, from, cPI);
             CourierSubPath fdSP{{fromDepot, from}, fromPath};
             realPath.push_back(fdSP);
             //cout << "added from depot" << endl;
         }
         //cout << from << " -> " << to << endl;
-        vector<StreetSegmentIdx> subPath = findPathBetweenIntersections(cPI.turn_penalty, {from, to});
+        vector<StreetSegmentIdx> subPath = cachedPath(from, to, cPI);
 
         CourierSubPath cSP{{from, to}, subPath};
 
@@ -122,12 +124,16 @@ std::vector<CourierSubPath> travelingCourier(
         if(i == path.size() - 2)
         {
             IntersectionIdx toDepot = closestDepot(to, cPI, false).first;
-            vector<StreetSegmentIdx> toPath = findPathBetweenIntersections(cPI.turn_penalty, {to, toDepot});
+            vector<StreetSegmentIdx> toPath = cachedPath(to, toDepot, cPI);
             CourierSubPath tdSP{{to, toDepot}, toPath};
             realPath.push_back(tdSP);
             //cout << "added to depot" << endl;
         }
     }
-    cout << "found path" << endl;
+
+    t2 = high_resolution_clock::now();
+    elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
+
+    cout << "found path at " << elapsedSeconds << "s" << endl;
     return realPath;
 }

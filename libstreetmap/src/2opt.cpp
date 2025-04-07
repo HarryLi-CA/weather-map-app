@@ -13,12 +13,15 @@
 #include <thread>
 #include <mutex>
 #include <map>
+#include <unordered_map>
 
 using namespace std;
 
 std::mutex mutexFlag;
 bool forceQuit = false;
 bool done = false;
+
+
 
 vector<int> twooptSwap(vector<int>& path, int indexA, int indexB)
 {
@@ -46,6 +49,7 @@ vector<int> threeoptSwap(vector<int>& path, int indexA, int indexB, int indexC, 
 }
 
 map<pair<IntersectionIdx, IntersectionIdx>, double> timeCache;
+map<pair<IntersectionIdx, IntersectionIdx>, vector<StreetSegmentIdx>> pathCache;
 
 double getTravelTime(vector<int>& path, CourierProblemInfo problemInfo)
 {
@@ -83,7 +87,9 @@ double getTravelTime(vector<int>& path, CourierProblemInfo problemInfo)
         double fastestTime = timeCache[{from, to}];
         if(fastestTime == 0)
         {
-            timeCache[{from, to}] = computePathTravelTime(problemInfo.turn_penalty, findPathBetweenIntersections(problemInfo.turn_penalty, {from, to}));
+            auto results = cachedPath(from, to, problemInfo);
+            timeCache[{from, to}] = computePathTravelTime(problemInfo.turn_penalty, results);
+            pathCache[{from, to}] = results;
             fastestTime = timeCache[{from, to}];
         }
         mutexFlag.unlock();
@@ -116,7 +122,7 @@ void optimal3EdgeReconstruction(int firstEdgeIndex, int secondEdgeIndex, int thi
         if(newPath[0] >= n){continue;}
         double newTime = getTravelTime(newPath, problemInfo);
         mutexFlag.lock();
-        if(newTime < bestTime)
+        if(newTime < bestTime && validPath(newPath, problemInfo))
         {
             bestTime = newTime;
             bestRoute = newPath;
@@ -150,7 +156,7 @@ void basic2NodeReconstruction(int firstNode, int secondNode, vector<Intersection
         double newTime = getTravelTime(newPath, problemInfo);
         mutexFlag.lock();
         double localImprovement =  oldTime - newTime;
-        if(localImprovement > improvement)
+        if(localImprovement > improvement && validPath(newPath, problemInfo))
         {
             path = newPath; //set path to better path
             oldTime = newTime; //set time of old best path to time of new best path
@@ -165,7 +171,7 @@ bool validPath(vector<IntersectionIdx>& path,CourierProblemInfo problemInfo)
 {
     //assume (*problemInfo.deliveries) are in order of pickup
     int deliveryIndex = 0;
-    map<int, bool> seen;
+    unordered_map<int, bool> seen;
     for(int i = 0; i < path.size(); i++)
     {
         if(path[i] >= (*problemInfo.deliveries).size() && seen[path[i] - (*problemInfo.deliveries).size()] == false)
@@ -183,6 +189,7 @@ void optimize3Opt(vector<int>& path,  CourierProblemInfo problemInfo)
     double oldTime = 0;
     int pathSize = path.size();
     mutexFlag.lock();
+    setForceQuit(false);
     done = false;
     mutexFlag.unlock();
     while(improvement > 0)
@@ -235,7 +242,6 @@ void optimize3Opt(vector<int>& path,  CourierProblemInfo problemInfo)
                     {
                         threads[i].join();
                     }
-
                     if(forceQuit){break;}
 
                     double localImprovement =  oldTime - bestTime;
@@ -253,11 +259,12 @@ void optimize3Opt(vector<int>& path,  CourierProblemInfo problemInfo)
             if(forceQuit){break;}
         }
         //cout << "improvement: " << improvement << endl;
-        if(forceQuit){break;}
+        if(forceQuit){cout << "force quit" << endl; break;}
     }
     mutexFlag.lock();
     done = true;
     mutexFlag.unlock();
+    cout << "exiting function" << endl;
     
 }
 
@@ -270,6 +277,7 @@ void optimize2Opt(vector<int>& path,  CourierProblemInfo problemInfo)
     double oldTime = 0;
     int pathSize = path.size();
     mutexFlag.lock();
+    setForceQuit(false);
     //cout << "starting 2opt" << endl;
     done = false;
     mutexFlag.unlock();
@@ -300,12 +308,13 @@ void optimize2Opt(vector<int>& path,  CourierProblemInfo problemInfo)
         }
         //cout << "improvement = " << improvement << endl;
 
-        if(forceQuit){break;}
+        if(forceQuit){cout << "force quit" << endl; break;}
     }
     mutexFlag.lock();
     //cout << "done 2opt" << endl;
     done = true;
     mutexFlag.unlock();
+    cout << "exiting function" << endl;
 }
 
 void randomIntersections(vector<int>& toAdd, std::vector<DeliveryInf>& deliveries, vector<IntersectionIdx>& depots, int size)
@@ -328,9 +337,27 @@ void randomIntersections(vector<int>& toAdd, std::vector<DeliveryInf>& deliverie
 void setForceQuit(bool _forceQuit)
 {
     forceQuit = _forceQuit;
+    cout << "FQ = " << forceQuit << endl;
 }
 
 bool getDone()
 {
     return done;
+}
+
+void setDone(bool _done)
+{
+    done = _done;
+    cout << "done = " << done << endl;
+}
+
+vector<StreetSegmentIdx> cachedPath(IntersectionIdx from, IntersectionIdx to, CourierProblemInfo problemInfo)
+{
+    vector<StreetSegmentIdx> result = pathCache[{from, to}];
+    if(result.size() == 0)
+    {
+        result = findPathBetweenIntersections(problemInfo.turn_penalty, {from, to});
+        pathCache[{from, to}] = result;
+    }
+    return result;
 }

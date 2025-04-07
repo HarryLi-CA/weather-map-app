@@ -12,6 +12,7 @@ using namespace std;
 vector<int>  twooptSwap(vector<int>& path, int indexA, int indexB); //helper function to reverse an array from [0] to [indexB] as 2 discrete elements around indexA
 void optimize2Opt(vector<int>& path, CourierProblemInfo problemInfo); //optimizes closed path using 2op algorithm
 double getTravelTime(vector<int>& path, CourierProblemInfo problemInfo); //find travel time that goes through a set of arbitrary paths (will use k-clustering once implemented)
+double getCheapTravelTime(vector<int>& path, CourierProblemInfo problemInfo); //find rough estimation of travel time 
 void randomIntersections(vector<int>& toAdd, std::vector<DeliveryInf>& deliveries, vector<IntersectionIdx>& depots, int size); //helper function to return a list of random intersections
 void optimize3Opt(vector<int>& path, CourierProblemInfo problemInfo);
 vector<int> threeoptSwap(vector<int>& path, int indexA, int indexB, int indexC);

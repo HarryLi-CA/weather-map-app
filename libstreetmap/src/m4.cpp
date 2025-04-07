@@ -30,11 +30,22 @@ std::vector<CourierSubPath> travelingCourier(
         path.push_back(i + deliveries.size());
     }
 
+    getCheapTravelTime(path, cPI); //cache path travel time
     cout << "switching to simulated annealing" << endl;
-    double timeLimit = 15;
+    
+    double timeLimit = 30;
     setForceQuit(false);
     atomic<bool> isForceQuit = false;
-    thread sA(simulatedAnnealing, ref(path), ref(cPI), ref(isForceQuit));
+
+    int maxSAThreads = 30;
+    vector<thread> annealingThreads;
+
+    for(int i = 0; i < maxSAThreads; i++)
+    {
+        thread sA(simulatedAnnealing, ref(path), ref(cPI), ref(isForceQuit), deliveries);
+        annealingThreads.push_back(move(sA));
+    }
+    
 
     auto t2 = high_resolution_clock::now();
     double elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
@@ -46,15 +57,20 @@ std::vector<CourierSubPath> travelingCourier(
         if((int)elapsedSeconds > lastSeconds)
         {
             lastSeconds = elapsedSeconds;
-            //cout << "Elapsed: " << elapsedSeconds << "s" << endl;
+            cout << "Elapsed: " << elapsedSeconds << "s" << endl;
         }
     }
     isForceQuit = true;
-    sA.join();
+    for(int i = 0; i < maxSAThreads; i++)
+    {
+        annealingThreads[i].join();
+    }
+
+    cout << "valid path: " << validPath(path, cPI) << endl;
     
     cout << "switching to 2 opt" << endl;
 
-    timeLimit = 30;
+    timeLimit = 48;
     thread twoOpt(optimize2Opt, ref(path), ref(cPI));
 
     t2 = high_resolution_clock::now();
@@ -73,28 +89,31 @@ std::vector<CourierSubPath> travelingCourier(
     setForceQuit(true);
     twoOpt.join();
     cout << "switching to 3opt" << endl;
-    timeLimit = 48;
+    //timeLimit = 48;
 
     setForceQuit(false);
     setDone(false);
 
-    thread threeOpt(optimize3Opt, ref(path), ref(cPI));
-    
     t2 = high_resolution_clock::now();
     elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
-    lastSeconds = elapsedSeconds + 1;
-    while(elapsedSeconds < timeLimit && getDone() == false)
-    {
-        t2 = high_resolution_clock::now();
-        elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
-        if((int)elapsedSeconds > lastSeconds)
+
+    if(elapsedSeconds < timeLimit){
+
+    thread threeOpt(optimize3Opt, ref(path), ref(cPI));
+        lastSeconds = elapsedSeconds + 1;
+        while(elapsedSeconds < timeLimit && getDone() == false)
         {
-            lastSeconds = elapsedSeconds;
-            cout << "Elapsed: " << elapsedSeconds << "s" << endl;
+            t2 = high_resolution_clock::now();
+            elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
+            if((int)elapsedSeconds > lastSeconds)
+            {
+                lastSeconds = elapsedSeconds;
+                cout << "Elapsed: " << elapsedSeconds << "s" << endl;
+            }
         }
+        setForceQuit(true);
+        threeOpt.join();
     }
-    setForceQuit(true);
-    threeOpt.join();
     cout << "joined threads" << endl;
     vector<CourierSubPath> realPath;
     //cout << "n = " << deliveries.size() << endl;

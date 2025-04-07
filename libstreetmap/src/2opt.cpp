@@ -49,7 +49,37 @@ vector<int> threeoptSwap(vector<int>& path, int indexA, int indexB, int indexC, 
 }
 
 map<pair<IntersectionIdx, IntersectionIdx>, double> timeCache;
+map<pair<IntersectionIdx, IntersectionIdx>, double> distCache;
 map<pair<IntersectionIdx, IntersectionIdx>, vector<StreetSegmentIdx>> pathCache;
+
+double getCheapTravelTime(vector<int>& path, CourierProblemInfo problemInfo)
+{
+    double totalTime = 0;
+    int n = (*problemInfo.deliveries).size();
+    //find fastest route between every point
+    for(int i = 0; i < path.size() - 1; i++)
+    {
+        mutexFlag.lock();
+        DeliveryInf dFrom = (*problemInfo.deliveries)[path[i]%n];
+        DeliveryInf dTo = (*problemInfo.deliveries)[path[i+1]%n];
+        
+        IntersectionIdx from = (path[i] < n) ? dFrom.pickUp : dFrom.dropOff;
+        IntersectionIdx to = (path[i+1] < n) ? dTo.pickUp : dTo.dropOff;
+        
+        if(from == to){mutexFlag.unlock(); continue;}
+        //mutexFlag.lock();
+        double distance = distCache[{from, to}];
+        if(distance == 0)
+        {
+            distance = findDistanceBetweenTwoPoints(osmhelp::getIntersectionPosition(from), osmhelp::getIntersectionPosition(to));
+            distCache[{from, to}] = distance;
+        }
+        mutexFlag.unlock();
+        totalTime += distance;
+    }
+    return totalTime;
+}
+
 
 double getTravelTime(vector<int>& path, CourierProblemInfo problemInfo)
 {

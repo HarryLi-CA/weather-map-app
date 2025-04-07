@@ -41,30 +41,39 @@ std::vector<CourierSubPath> travelingCourier(
     int explorationThreads = 30;
     vector<thread> annealingThreads;
 
-    for(int i = 0; i < maxSAThreads/explorationThreads; i++)
-    {
-        thread sA(simulatedAnnealing, ref(path), ref(cPI), ref(isForceQuit), deliveries, explorationThreads);
-        annealingThreads.push_back(move(sA));
-    }
-    
-
     auto t2 = high_resolution_clock::now();
     double elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
     int lastSeconds = elapsedSeconds + 1;
-    while(elapsedSeconds < timeLimit && !isForceQuit)
-    {
+
+    while(elapsedSeconds < timeLimit){
+        cout << "new cycle" << endl;
+        isForceQuit = false;
+        annealingThreads.clear();
+        for(int i = 0; i < maxSAThreads/explorationThreads; i++)
+        {
+            thread sA(simulatedAnnealing, ref(path), ref(cPI), ref(isForceQuit), deliveries, explorationThreads);
+            annealingThreads.push_back(move(sA));
+        }
+        
+
         t2 = high_resolution_clock::now();
         elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
-        if((int)elapsedSeconds > lastSeconds)
+        lastSeconds = elapsedSeconds + 1;
+        while(elapsedSeconds < timeLimit && !isForceQuit)
         {
-            lastSeconds = elapsedSeconds;
-            cout << "Elapsed: " << elapsedSeconds << "s" << endl;
+            t2 = high_resolution_clock::now();
+            elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
+            if((int)elapsedSeconds > lastSeconds)
+            {
+                lastSeconds = elapsedSeconds;
+                cout << "Elapsed: " << elapsedSeconds << "s" << endl;
+            }
         }
-    }
-    isForceQuit = true;
-    for(int i = 0; i < maxSAThreads/explorationThreads; i++)
-    {
-        annealingThreads[i].join();
+        isForceQuit = true;
+        for(int i = 0; i < maxSAThreads/explorationThreads; i++)
+        {
+            annealingThreads[i].join();
+        }
     }
 
     cout << "valid path: " << validPath(path, cPI) << endl;

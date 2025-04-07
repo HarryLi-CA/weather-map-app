@@ -3,8 +3,10 @@
 #include <vector>
 #include "CourierProblemInfo.h"
 #include "2opt.h"
+#include "SimAnnealing.h"
 #include "thread"
 #include <chrono>
+#include <atomic>
 
 using std::chrono::high_resolution_clock;
 using std::chrono::duration_cast;
@@ -17,6 +19,8 @@ std::vector<CourierSubPath> travelingCourier(
     const std::vector<DeliveryInf>& deliveries,
     const std::vector<IntersectionIdx>& depots)
 {
+
+    auto t1 = high_resolution_clock::now();
     cout << "finding path" << endl;
     CourierProblemInfo cPI{turn_penalty,&deliveries, &depots};
     vector<int> path;
@@ -26,14 +30,36 @@ std::vector<CourierSubPath> travelingCourier(
         path.push_back(i + deliveries.size());
     }
 
-    auto t1 = high_resolution_clock::now();
-    double timeLimit = 30;
+    cout << "switching to simulated annealing" << endl;
+    double timeLimit = 15;
     setForceQuit(false);
-    thread threeOpt(optimize2Opt, ref(path), ref(cPI));
+    atomic<bool> isForceQuit = false;
+    thread sA(simulatedAnnealing, ref(path), ref(cPI), ref(isForceQuit));
 
     auto t2 = high_resolution_clock::now();
     double elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
     int lastSeconds = elapsedSeconds + 1;
+    while(elapsedSeconds < timeLimit && !isForceQuit)
+    {
+        t2 = high_resolution_clock::now();
+        elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
+        if((int)elapsedSeconds > lastSeconds)
+        {
+            lastSeconds = elapsedSeconds;
+            //cout << "Elapsed: " << elapsedSeconds << "s" << endl;
+        }
+    }
+    isForceQuit = true;
+    sA.join();
+    
+    cout << "switching to 2 opt" << endl;
+
+    timeLimit = 30;
+    thread threeOpt(optimize2Opt, ref(path), ref(cPI));
+
+    t2 = high_resolution_clock::now();
+    elapsedSeconds =  duration_cast<milliseconds>(t2 - t1).count()/1000;
+    lastSeconds = elapsedSeconds + 1;
     while(elapsedSeconds < timeLimit && getDone() == false)
     {
         t2 = high_resolution_clock::now();
@@ -45,7 +71,7 @@ std::vector<CourierSubPath> travelingCourier(
         }
     }
     setForceQuit(true);
-    cout << "switching to 2opt" << endl;
+    cout << "switching to 3opt" << endl;
     threeOpt.join();
     timeLimit = 45;
     setForceQuit(false);

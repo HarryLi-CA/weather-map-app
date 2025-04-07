@@ -71,7 +71,7 @@ double getCheapTravelTime(vector<int>& path, CourierProblemInfo problemInfo)
         double distance = distCache[{from, to}];
         if(distance == 0)
         {
-            distance = findDistanceBetweenTwoPoints(osmhelp::getIntersectionPosition(from), osmhelp::getIntersectionPosition(to));
+            distance = findDistanceBetweenTwoPoints(osmhelp::getIntersectionPosition(from), osmhelp::getIntersectionPosition(to)) / osmhelp::getSpeedLimitMaximum();
             distCache[{from, to}] = distance;
         }
         mutexFlag.unlock();

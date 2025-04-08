@@ -33,7 +33,7 @@ std::vector<CourierSubPath> travelingCourier(
     getCheapTravelTime(path, cPI); //cache path travel time
     cout << "switching to simulated annealing" << endl;
     
-    double timeLimit = 30;
+    double timeLimit = 39;
     setForceQuit(false);
     atomic<bool> isForceQuit = false;
 
@@ -81,7 +81,7 @@ std::vector<CourierSubPath> travelingCourier(
     
     cout << "switching to 2 opt" << endl;
 
-    timeLimit = 42;
+    timeLimit = 43;
 
     setForceQuit(false);
     thread twoOpt(optimize2Opt, ref(path), ref(cPI));

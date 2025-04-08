@@ -15,8 +15,8 @@ using namespace std;
 mutex annealingFlag;
 const double START_TEMP = 1000;
 const double END_TEMP = 1e-3;
-const double COOLING_RATE = 0.999;
-const int MAX_ITER = 100;
+const double COOLING_RATE = 0.99998;
+const int MAX_ITER = 10;
 int finished = 0;
 int threadCount = 30;
 
@@ -33,7 +33,7 @@ vector<int> neighbourSolution(vector<int> route, const CourierProblemInfo& cPI) 
     return {};
 }
 
-void exploreIteration(vector<int>& currRoute, double& currCost, double& bestCost, vector<int>& bestRoute, double temp, CourierProblemInfo cPI, atomic<bool> &forceQuit)
+void exploreIteration(vector<int>& currRoute, double& currCost, double& bestCost, vector<int>& bestRoute, double temp, const CourierProblemInfo cPI, atomic<bool> &forceQuit)
 {
     for (int i = 0; i < MAX_ITER && !forceQuit; i++){
         vector<int> newRoute = neighbourSolution(currRoute, cPI);

@@ -101,7 +101,7 @@ std::vector<CourierSubPath> travelingCourier(
     setForceQuit(true);
     twoOpt.join();
     
-    //timeLimit = 48;
+    timeLimit = 46;
 
     setForceQuit(false);
     setDone(false);

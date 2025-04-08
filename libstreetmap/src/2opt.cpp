@@ -68,6 +68,26 @@ double getCheapTravelTime(vector<int>& path, CourierProblemInfo problemInfo)
         IntersectionIdx to = (path[i+1] < n) ? dTo.pickUp : dTo.dropOff;
         
         if(from == to){continue;}
+
+        if(i == 0)
+        {
+            IntersectionIdx closestInt = closestDepot(from,  problemInfo, true).first;
+            if(distDoubleCache[closestInt][from] == 0)
+            {
+                distDoubleCache[closestInt][from] = findDistanceBetweenTwoPoints(osmhelp::getIntersectionPosition(closestInt), osmhelp::getIntersectionPosition(from));
+            }
+            totalTime += distDoubleCache[closestInt][from];
+        }
+
+        if(i == path.size() - 2)
+        {
+            IntersectionIdx closestInt = closestDepot(to,  problemInfo, false).first;
+            if(distDoubleCache[to][closestInt] == 0)
+            {
+                distDoubleCache[to][closestInt] = findDistanceBetweenTwoPoints(osmhelp::getIntersectionPosition(to), osmhelp::getIntersectionPosition(closestInt));
+            }
+            totalTime += distDoubleCache[to][closestInt];
+        }
         //mutexFlag.lock();
 
         if(distDoubleCache[from][to] == 0)

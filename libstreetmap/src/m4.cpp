@@ -101,7 +101,7 @@ std::vector<CourierSubPath> travelingCourier(
     setForceQuit(true);
     twoOpt.join();
     
-    timeLimit = 46;
+    timeLimit = 37;
 
     setForceQuit(false);
     setDone(false);
@@ -130,11 +130,11 @@ std::vector<CourierSubPath> travelingCourier(
     vector<CourierSubPath> realPath;
     //cout << "n = " << deliveries.size() << endl;
     cout << "valid path: " << validPath(path, cPI) << endl;
+    int n = deliveries.size();
     for(int i = 0; i < path.size()-1; i++)
     {
         int fromIndex = path[i];
         int toIndex = path[i + 1];
-        int n = deliveries.size();
         IntersectionIdx from = (fromIndex < n) ? (deliveries[fromIndex%n].pickUp) : (deliveries[fromIndex%n].dropOff);
         IntersectionIdx to = (toIndex < n) ? (deliveries[toIndex%n].pickUp) : (deliveries[toIndex%n].dropOff);
         //cout << fromIndex << " (" << fromIndex%n << "): " << from << endl;

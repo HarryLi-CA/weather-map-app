@@ -15,6 +15,8 @@
 #include <map>
 #include <unordered_map>
 
+#define MAX_THREADS 30
+
 using namespace std;
 
 std::mutex mutexFlag;
@@ -288,7 +290,7 @@ void optimize3Opt(vector<int>& path,  CourierProblemInfo problemInfo)
                             for(int thirdEdgeDestinationIndex = secondEdgeDestinationIndex; thirdEdgeDestinationIndex < 3; thirdEdgeDestinationIndex++)
                             {
                                 if(firstEdgeDestinationIndex == 0 && secondEdgeDestinationIndex == 0 && thirdEdgeDestinationIndex == 0){continue;} //in this case the path is the same
-                                limitThreadCount(threads, 30);
+                                limitThreadCount(threads, MAX_THREADS);
                                 thread t(optimal3EdgeReconstruction,firstEdgeIndex, secondEdgeIndex, thirdEdgeIndex, 
                                 toIndices[firstEdgeDestinationIndex], toIndices[secondEdgeDestinationIndex], toIndices[thirdEdgeDestinationIndex],
                                 ref(path), problemInfo, ref(bestTime), ref(bestRoute));
@@ -357,7 +359,7 @@ void optimize2Opt(vector<int>& path,  CourierProblemInfo problemInfo)
             for(int j = i + 2; j < pathSize; j++)
             {
                 //cout << "creating thread: " << threads.size() << endl;
-                limitThreadCount(threads, 30);
+                limitThreadCount(threads, MAX_THREADS);
                 thread t(basic2NodeReconstruction, i, j, ref(path), problemInfo, ref(oldTime), ref(improvement));
                 threads.push_back(move(t));
                 if(forceQuit){break;}

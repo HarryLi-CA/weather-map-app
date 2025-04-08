@@ -81,7 +81,7 @@ std::vector<CourierSubPath> travelingCourier(
     
     cout << "switching to 2 opt" << endl;
 
-    timeLimit = 43;
+    timeLimit = 41;
 
     setForceQuit(false);
     thread twoOpt(optimize2Opt, ref(path), ref(cPI));
@@ -101,7 +101,7 @@ std::vector<CourierSubPath> travelingCourier(
     setForceQuit(true);
     twoOpt.join();
     
-    timeLimit = 37;
+    timeLimit = 46;
 
     setForceQuit(false);
     setDone(false);

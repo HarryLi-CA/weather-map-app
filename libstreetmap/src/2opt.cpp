@@ -132,7 +132,7 @@ double getTravelTime(vector<int>& path, CourierProblemInfo problemInfo)
     }
     return totalTime;
 }
-
+//M4_Public_Hard_NewYork
 void optimal3EdgeReconstruction(int firstEdgeIndex, int secondEdgeIndex, int thirdEdgeIndex, int firstEdgeDestination, int secondEdgeDestination, int thirdEdgeDestination, vector<IntersectionIdx>& path, CourierProblemInfo problemInfo, double& bestTime, vector<IntersectionIdx>& bestRoute)
 {
     mutexFlag.lock();
@@ -154,7 +154,7 @@ void optimal3EdgeReconstruction(int firstEdgeIndex, int secondEdgeIndex, int thi
             newPath[newPath.size() - 1] = temp;
         }
         if(newPath[0] >= n){continue;}
-        double newTime = getTravelTime(newPath, problemInfo);
+        double newTime = getCheapTravelTime(newPath, problemInfo);
         mutexFlag.lock();
         if(newTime < bestTime && validPath(newPath, problemInfo))
         {
@@ -240,7 +240,7 @@ void optimize3Opt(vector<int>& path,  CourierProblemInfo problemInfo)
     {
         improvement = 0;
         //go through all eligible nodes to make improvements
-        double oldTime = getTravelTime(path, problemInfo);
+        double oldTime = getCheapTravelTime(path, problemInfo);
 
         
 
@@ -302,7 +302,7 @@ void optimize3Opt(vector<int>& path,  CourierProblemInfo problemInfo)
             }
             if(forceQuit){break;}
         }
-        //cout << "improvement: " << improvement << endl;
+        cout << "improvement: " << improvement << endl;
         if(forceQuit){cout << "force quit" << endl; break;}
     }
     mutexFlag.lock();
@@ -326,7 +326,7 @@ void optimize2Opt(vector<int>& path,  CourierProblemInfo problemInfo)
     done = false;
     mutexFlag.unlock();
 
-    while(improvement > 1000)
+    while(improvement > 100)
     {
         improvement = 0;
         //go through all eligible nodes to make improvements
